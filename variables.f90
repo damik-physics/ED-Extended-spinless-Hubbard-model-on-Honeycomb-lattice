@@ -9,9 +9,9 @@ module variables
     ! Hamiltonian and basis
     integer(kind=8)              :: nOff, nDi, nDiOff, nDi_dp, nnz 
     integer(kind=8), allocatable :: basis_states(:), abasis(:), bbasis(:), mombasis(:), period(:), orbits2D(:,:,:)
-    integer(kind=8), allocatable :: occ(:,:), hamOff(:,:), hamDi(:), rc(:,:), rcOff(:,:), rcDi(:)
+    integer(kind=8), allocatable :: occ(:,:), hamOff(:,:), hamDi(:,:), rc(:,:), rcOff(:,:), rcDi(:)
     double precision, allocatable:: ham(:), ham_dp(:,:), hamOff_dp(:), hamDi_dp(:)
-    double complex, allocatable  :: ham_dc(:), hamOff_dc(:), hamDi_dc(:,:), hamDi_off_dc(:)
+    double complex, allocatable  :: ham_dc(:), hamOff_dc(:), hamDi_dc(:,:), hamDi_dc_2(:), hamDi_off_dc(:)
 
     ! Eigenvalues and eigenvectors
     double precision, allocatable:: energies(:), eigstate(:,:), evals(:), gs(:), norm(:), norm2D(:,:)
@@ -35,7 +35,7 @@ module variables
     integer                      :: v1_thrds = 1, v2_thrds = 1, dis_thrds = 1, thread_num, thread_num_2, num_thrds
 
     ! File and type
-    character                    :: type*1, dir*100, param_list*200
+    character                    :: type*1, dir*1000, param_list*1000
 
     ! Parameters
     double precision             :: v1, v2

@@ -58,12 +58,12 @@ implicit none
                 
                 if(id == 1) then ! Hopping for irreducible representations in 1D 
                     ! call hopping(flag_dp)
-                    call hopping(othrds, tilted, nHel, tilt, l2, l1, ucx, ucy, sites, nnBonds, dim, basis_states, bsites, norm, xtransl, ytransl, symmetrize, id, mir, rot, refl, c6, t, rcoff, rcdi, parities, dplcts, hamOff_dp, hamDi_dp, nOff, nDiOff)
+                    call hopping_irrep(othrds, tilted, nHel, tilt, l2, l1, ucx, ucy, sites, nnBonds, dim, basis_states, bsites, norm, xtransl, ytransl, symmetrize, id, mir, rot, refl, c6, t, rcoff, rcdi, parities, dplcts, hamOff_dp, hamDi_dp, nOff, nDiOff)
                 else if(id == 2) then ! Hopping for irreducible representations in 2D (currently not supported)
                     ! call hopping(flag_dp, flag_2D)
-                    call hopping_irrep2D(othrds, tilted, nHel, tilt, l2, l1, sites, nnBonds, dim, basis_states, orbsize, orbits2D, phases, norm2D, bsites, xtransl, ytransl, symmetrize, id, mir, rot, refl, c6, t, rcoff, rcdi, parities, dplcts, hamOff_dc, hamDi_dc, nOff, nDiOff)
+                    call hopping_irrep2D(othrds, tilted, nHel, tilt, l2, l1, sites, nnBonds, dim, basis_states, orbsize, orbits2D, phases2D, norm2D, bsites, xtransl, ytransl, symmetrize, id, mir, rot, refl, c6, t, rcoff, rcdi, parities, dplcts, hamOff_dc, hamDi_dc_2, nOff, nDiOff)
                     ! call diagonal(flag_dp, flag_2D)
-                    call diagonal(sites, dim, bsites, hexsites, orbsize, orbits2D, phases, norm2D, hamDi_dc, occ)
+                    call diagonal_irrep2D(sites, dim, bsites, hexsites, orbsize, orbits2D, phases2D, norm2D, hamDi_dc, occ)
                 end if 
             else if(ti == 1 .and. ((k1 .ne. 0) .or. (k2 .ne. 0))) then ! If translation symmetry is used and k1 or k2 are not zero, generate the Hamiltonian with the hopping procedure for complex entries. Currently only supported for 1D irreps. 
                 call hopping(unit, param_list, tilted, nHel, tilt, l2, l1, ucx, ucy, sites, nnBonds, dim, basis_states, bsites, norm, xtransl, ytransl, t, k1, k2, rcoff, hamOff_dc, nOff)
@@ -71,8 +71,7 @@ implicit none
         end if
         
         !Generates diagonal part of the Hamiltonian if it does not exist yet.
-        if(id == 1 .and. (.not.(exist2) .or. .not.(exist3))) call diagonal(flag_i) 
-        ! if(id == 1 .and. (.not.(exist2) .or. .not.(exist3))) call diagonal(unit, param_list, sites, nnBonds, nnnBonds, dim, bsites, hexsites, basis_states, hamDi, occ, nDi) 
+        if(id == 1 .and. (.not.(exist2) .or. .not.(exist3))) call diagonal(unit, param_list, sites, nnBonds, nnnBonds, dim, bsites, hexsites, basis_states, hamDi, occ, nDi) 
         
         ! Saves the Hamiltonian to file if it does not exist yet.
         if(id == 1 .and. (.not.(exist1) .or. .not.(exist2) .or. .not.(exist3))) call save_ham(type, param_list, unit, ti, sites, nOff, nDi, hamDi, hamOff, rcoff, hamOff_dp, hamOff_dc, occ)
@@ -660,7 +659,8 @@ implicit none
         !Local variables
         integer                       :: signrep = 1, dbl = 0, order, info, s = 0, k = 0, l1 = 0, l2 = 0, parity = 0
         integer(kind=8)               :: i = 0, j = 0, loc = 0, rep = 0, pos = 0, rowst = 0, newst = 0, state = 0, cntr = 0, cntrj = 0, n_temp = 0, arrsize = 0
-        integer(kind=8), allocatable  :: rc_temp(:,:), rcdi_temp(:), parities_temp(:), dplcts_temp(:), cntr_di(:,:)
+        integer(kind=8), allocatable  :: rc_temp(:,:), rcdi_temp(:), cntr_di(:,:)
+        integer        , allocatable  :: parities_temp(:), dplcts_temp(:)
         double precision              :: sign = 1.d0, signstate = 1.d0, h_add = 0.d0 
         double precision, allocatable :: ham_temp(:), hamDi_temp(:)
         
@@ -806,7 +806,7 @@ implicit none
                 ham(cntr)    = ham_temp(i)
                 rc(cntr,1)   = rc_temp(i,1)
                 rc(cntr,2)   = rc_temp(i,2)
-                parities(cntr)   = parities_temp(i)
+                parities(cntr) = parities_temp(i)
                 dplcts(cntr) = dplcts_temp(i)
             end if 
         end do
@@ -1046,14 +1046,16 @@ implicit none
         double precision, intent(in) :: t, id, par(6), rot(5), norm(dim,2)
         double complex, allocatable, intent(in) :: phases(:,:,:)
         
-        integer(kind=8), intent(out) :: nnz, nDi 
-        integer(kind=8), allocatable, intent(out) :: rc(:,:), rcdi(:), parities(:), dplcts(:)
-        double complex, allocatable, intent(out) :: ham(:), hamDi(:)
+        integer,         allocatable, intent(out) :: parities(:), dplcts(:)
+        integer(kind=8),              intent(out) :: nnz, nDi 
+        integer(kind=8), allocatable, intent(out) :: rc(:,:), rcdi(:)
+        double complex,  allocatable, intent(out) :: ham(:), hamDi(:)
         
         !Local variables
         integer :: s, c, d, o, l1, l2, parity, sign = 1, signrep, dbl, order, site1, site2
         integer(kind=8) :: i, j, loc, rep, pos, rowst, rowIndx, colIndx, newst, state, cntr, cntrjc, n_temp, arrsize 
-        integer(kind=8), allocatable :: rc_temp(:,:), rcdi_temp(:), parities_temp(:), dplcts_temp(:), cntr_di(:,:)
+        integer(kind=8), allocatable :: rc_temp(:,:), rcdi_temp(:), cntr_di(:,:)
+        integer        , allocatable :: parities_temp(:), dplcts_temp(:)
         double precision, parameter :: tol = 1.0e-14
         double complex :: h_add, coeff, newcf 
         double complex, allocatable :: ham_temp(:), hamDi_temp(:)
@@ -1292,8 +1294,7 @@ implicit none
     ! end subroutine diagonal
 
     ! Version with variable arguments
-    subroutine diagonal(unit, parameters, sites, nbonds, nbonds2, dim, bsites, bsites2, basis, &
-                        ham, occ, nnz)
+    subroutine diagonal(unit, parameters, sites, nbonds, nbonds2, dim, bsites, bsites2, basis, ham, occ, nnz)
 
         implicit none
 
@@ -1414,82 +1415,20 @@ implicit none
 
     end subroutine diagonal_dp
 
-    subroutine diagonal_irrep2D(flag1, flag2)
-
-        implicit none
-        integer, intent(in) :: flag2 ! Integer flag for 2D irreps
-        double precision, intent(in) :: flag1 ! Double precision flag 
-        ! integer, intent(in)                       :: sites, orbsize
-        ! integer(kind=8), intent(in)               :: dim
-        ! integer, allocatable, intent(in)          :: trisites(:,:), hexsites(:,:)
-        ! integer(kind=8), allocatable, intent(in)  :: orbits(:,:,:)
-        ! double precision, allocatable, intent(in) :: norm(:,:)
-        ! double complex, allocatable, intent(in)   :: phases(:,:,:)
-        
-        ! integer(kind=8), allocatable, intent(out) :: occ(:,:)
-        ! double complex, allocatable, intent(out)  :: ham(:,:)
-
-        integer          :: m, s, c, o, site1, site2 
-        integer(kind=8)  :: j = 0, arrsize = 0, state, rowIndx
-        double precision :: cntr_v = 0.d0, cntr_v2 = 0.d0
-        
-        arrsize = 2 * dim !Each representative has two basis states in 2D irrep.
-        if(allocated(occ)) deallocate(occ)
-        if(allocated(ham)) deallocate(ham)
-        allocate(occ(sites,arrsize))
-        allocate(ham(arrsize,2))
-        occ = 0 
-        ham = 0.d0  
-        do j = 1, dim !Representatives
-            do c = 1, 2 !First and second basis state of 2D irrep 
-                cntr_v  = 0
-                cntr_v2 = 0
-                rowIndx = 2*(j-1) + c
-                do o = 1, orbsize
-                    state = orbits(j, o, c)
-                    do m = 0, sites - 1 !m goes through all digits of each configuration
-                        if(btest(state, m)) occ(m + 1, rowIndx) = occ(m + 1, rowIndx) + 1
-                    end do
-
-                    do s = 1, 3 !Loop runs over the three different NN-bonds
-                        site1 = trisites(1,s)
-                        site2 = trisites(2,s)
-                    
-                        if(btest(state, site1-1) .eqv. btest(state, site2-1)) cntr_v = cntr_v + 1
-                        if(btest(state, site1-1) .neqv. btest(state, site2-1)) cntr_v = cntr_v - 1
-                    end do
-
-                    site1 = hexsites(1, s)
-                    site2 = hexsites(2, s)
-                    
-                    if(btest(state, site1-1) .eqv. btest(state, site2-1))  cntr_v2 = cntr_v2 + 1
-                    if(btest(state, site1-1) .neqv. btest(state, site2-1)) cntr_v2 = cntr_v2 - 1
-                    
-                    ham(rowIndx, 1) = ham(rowIndx, 1) + phases(j, o, c) * cntr_v / sqrt(norm(j, c))
-                    ham(rowIndx, 2) = ham(rowIndx, 2) + phases(j, o, c) * cntr_v2 / sqrt(norm(j, c))
-                end do !Loop over orbit of irrep basis states (o)
-            end do !Loop over irrep basis states (c)
-        end do !Loop over representatives (j)
-
-        print*,'Generated diagonal Hamiltonian.'
-        print*, ''
-
-    end subroutine diagonal_irrep2D
-    
-    ! Version with variable arguments
-    ! subroutine diagonal_irrep2D(sites, dim, trisites, hexsites, orbsize, orbits, phases, norm, ham, occ)
+    ! subroutine diagonal_irrep2D(flag1, flag2)
 
     !     implicit none
-
-    !     integer, intent(in)                       :: sites, orbsize
-    !     integer(kind=8), intent(in)               :: dim
-    !     integer, allocatable, intent(in)          :: trisites(:,:), hexsites(:,:)
-    !     integer(kind=8), allocatable, intent(in)  :: orbits(:,:,:)
-    !     double precision, allocatable, intent(in) :: norm(:,:)
-    !     double complex, allocatable, intent(in)   :: phases(:,:,:)
+    !     integer, intent(in) :: flag2 ! Integer flag for 2D irreps
+    !     double precision, intent(in) :: flag1 ! Double precision flag 
+    !     ! integer, intent(in)                       :: sites, orbsize
+    !     ! integer(kind=8), intent(in)               :: dim
+    !     ! integer, allocatable, intent(in)          :: trisites(:,:), hexsites(:,:)
+    !     ! integer(kind=8), allocatable, intent(in)  :: orbits(:,:,:)
+    !     ! double precision, allocatable, intent(in) :: norm(:,:)
+    !     ! double complex, allocatable, intent(in)   :: phases(:,:,:)
         
-    !     integer(kind=8), allocatable, intent(out) :: occ(:,:)
-    !     double complex, allocatable, intent(out)  :: ham(:,:)
+    !     ! integer(kind=8), allocatable, intent(out) :: occ(:,:)
+    !     ! double complex, allocatable, intent(out)  :: ham(:,:)
 
     !     integer          :: m, s, c, o, site1, site2 
     !     integer(kind=8)  :: j = 0, arrsize = 0, state, rowIndx
@@ -1537,6 +1476,68 @@ implicit none
     !     print*, ''
 
     ! end subroutine diagonal_irrep2D
+    
+    ! Version with variable arguments
+    subroutine diagonal_irrep2D(sites, dim, trisites, hexsites, orbsize, orbits, phases, norm, ham, occ)
+
+        implicit none
+
+        integer, intent(in)                       :: sites, orbsize
+        integer(kind=8), intent(in)               :: dim
+        integer, allocatable, intent(in)          :: trisites(:,:), hexsites(:,:)
+        integer(kind=8), allocatable, intent(in)  :: orbits(:,:,:)
+        double precision, allocatable, intent(in) :: norm(:,:)
+        double complex, allocatable, intent(in)   :: phases(:,:,:)
+        
+        integer(kind=8), allocatable, intent(out) :: occ(:,:)
+        double complex, allocatable, intent(out)  :: ham(:,:)
+
+        integer          :: m, s, c, o, site1, site2 
+        integer(kind=8)  :: j = 0, arrsize = 0, state, rowIndx
+        double precision :: cntr_v = 0.d0, cntr_v2 = 0.d0
+        
+        arrsize = 2 * dim !Each representative has two basis states in 2D irrep.
+        if(allocated(occ)) deallocate(occ)
+        if(allocated(ham)) deallocate(ham)
+        allocate(occ(sites,arrsize))
+        allocate(ham(arrsize,2))
+        occ = 0 
+        ham = 0.d0  
+        do j = 1, dim !Representatives
+            do c = 1, 2 !First and second basis state of 2D irrep 
+                cntr_v  = 0
+                cntr_v2 = 0
+                rowIndx = 2*(j-1) + c
+                do o = 1, orbsize
+                    state = orbits(j, o, c)
+                    do m = 0, sites - 1 !m goes through all digits of each configuration
+                        if(btest(state, m)) occ(m + 1, rowIndx) = occ(m + 1, rowIndx) + 1
+                    end do
+
+                    do s = 1, 3 !Loop runs over the three different NN-bonds
+                        site1 = trisites(1,s)
+                        site2 = trisites(2,s)
+                    
+                        if(btest(state, site1-1) .eqv. btest(state, site2-1)) cntr_v = cntr_v + 1
+                        if(btest(state, site1-1) .neqv. btest(state, site2-1)) cntr_v = cntr_v - 1
+                    end do
+
+                    site1 = hexsites(1, s)
+                    site2 = hexsites(2, s)
+                    
+                    if(btest(state, site1-1) .eqv. btest(state, site2-1))  cntr_v2 = cntr_v2 + 1
+                    if(btest(state, site1-1) .neqv. btest(state, site2-1)) cntr_v2 = cntr_v2 - 1
+                    
+                    ham(rowIndx, 1) = ham(rowIndx, 1) + phases(j, o, c) * cntr_v / sqrt(norm(j, c))
+                    ham(rowIndx, 2) = ham(rowIndx, 2) + phases(j, o, c) * cntr_v2 / sqrt(norm(j, c))
+                end do !Loop over orbit of irrep basis states (o)
+            end do !Loop over irrep basis states (c)
+        end do !Loop over representatives (j)
+
+        print*,'Generated diagonal Hamiltonian.'
+        print*, ''
+
+    end subroutine diagonal_irrep2D
 
     subroutine diagonal_p(parity, p1, p2, p3, refl1, refl2, refl3, sites, nbonds, nbonds2, dim, bsites, bsites2, basis, ham, occ, nnz)
 
@@ -1795,7 +1796,7 @@ implicit none
 
         !Staggered sublattice potential: +1 on A lattice, -1 on B lattice
         do j = 1, sites 
-            slstaggering(j) = (-1)**(j-ab)
+            slstaggering(j) = int((-1)**(j-ab), kind=4)
         end do 
         
         call random_number(rand)
@@ -1854,7 +1855,7 @@ implicit none
 
         !Staggered sublattice potential: +1 on A lattice, -1 on B lattice
         do j = 1, sites 
-            slstaggering(j) = (-1)**(j-ab)
+            slstaggering(j) = int((-1)**(j-ab), kind=4)
         end do 
         
         call random_number(rand)

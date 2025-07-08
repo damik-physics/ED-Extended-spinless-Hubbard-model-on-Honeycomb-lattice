@@ -32,7 +32,7 @@ module utilities
             if(allocated(occ))         deallocate(occ)
             if(allocated(dplcts))      deallocate(dplcts)
             if(allocated(eigstate_dc)) deallocate(eigstate_dc)
-            if(allocated(basis))       deallocate(basis)
+            if(allocated(basis_states)) deallocate(basis_states)
         else ! Deallocate all dynamically allocated arrays of outer loops
             if(allocated(xy))          deallocate(xy)
             if(allocated(xtransl))     deallocate(xtransl)

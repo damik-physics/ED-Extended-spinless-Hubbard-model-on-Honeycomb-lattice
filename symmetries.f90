@@ -91,8 +91,8 @@ module symmetries
             integer(kind=8), allocatable, intent(inout) :: orbits(:)
             double complex, intent(inout) :: phase
 
-            integer :: nx, ny, rowst, edgeA, edgeB, flag
-            integer(kind=8) :: i, t, tx, ty, sign 
+            integer :: nx, ny, flag
+            integer(kind=8) :: rowst, edgeA, edgeB, i, t, tx, ty, sign 
             double precision :: shift(2)
 
             

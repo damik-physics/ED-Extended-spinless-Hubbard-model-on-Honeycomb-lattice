@@ -510,10 +510,7 @@ module lattice
         bsites(2,xcounter + 1:xcounter  + ycounter) = bsites_temp(2,nbx + 1:nbx  + ycounter)
 
         deallocate(bsites_temp)
-        write (name,"('L=',i0,'ucx=',i0, &
-            'ucy=',i0,'pat=',a2 &
-            ,'BC=',a,'.dat')") nn,ucx,ucy,pattern,&
-            bc
+        write (name,"('L=',i0,'ucx=',i0,'ucy=',i0,'pat=',a2,'BC=',a,'.dat')") nn,ucx,ucy,pattern,bc
         name = trim_name(name)
         name=dir//"NN_lattice_"//name
         open(unit=31, file=name)
@@ -522,9 +519,7 @@ module lattice
         end do
         close(31)
 
-        write (name,"('L=',i0,'ucx=',i0, &
-            'ucy=',i0,'pat=',a2 &
-            ,'BC=',a,'.dat')") nn,ucx,ucy,pattern,bc
+        write (name,"('L=',i0,'ucx=',i0,'ucy=',i0,'pat=',a2,'BC=',a,'.dat')") nn,ucx,ucy,pattern,bc
         name = trim_name(name)
         name=dir//"NN_xy_"//name
         open(unit=32, file=name)
@@ -897,9 +892,7 @@ module lattice
         ! phase(1:xcounter) = phase(1:xcounter)
         ! phase(xcounter + 1:xcounter +  ycounter) = phase(nbx + 1:nbx +  ycounter)
 
-        write (name,"('L=',i0,'ucx=',i0, &
-            'ucy=',i0,'pat=',a2 &
-            ,'BC=',a,'.dat')") nn,ucx,ucy,pattern,bc
+        write (name,"('L=',i0,'ucx=',i0,'ucy=',i0,'pat=',a2,'BC=',a,'.dat')") nn,ucx,ucy,pattern,bc
         name = trim_name(name)
         name=dir//"NNN_lattice_"//name
         open(unit=32, file=name)
@@ -909,9 +902,7 @@ module lattice
 
         close(32)
 
-        write (name,"('L=',i0,'ucx=',i0, &
-            'ucy=',i0,'pat=',a2 &
-            ,'BC=',a,'.dat')") nn,ucx,ucy,pattern,bc
+        write (name,"('L=',i0,'ucx=',i0,'ucy=',i0,'pat=',a2,'BC=',a,'.dat')") nn,ucx,ucy,pattern,bc
         name = trim_name(name)
         name=dir//"NNN_xy_"//name
         open(unit=32, file=name)

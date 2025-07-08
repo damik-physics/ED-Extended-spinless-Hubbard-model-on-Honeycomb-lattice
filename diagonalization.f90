@@ -8,16 +8,22 @@ module diagonalization
     !               Diagonalization                !
     !----------------------------------------------!
 
-    subroutine diagonalize(dir, conf, nev, ncv, full, v1, v2, threads, parameters, type, basis, bsites, hexsites, occ, noff, ndi, ndi_off, hamoff, hamdi, hamoff_d, hamdi_d, hamoff_c, hamdi_c, hamdi_off_c, ham, ham_c, ham_d, ham_dc, norm, rcoff, rcdi, rc, prts, dplcts, nnz, ndeg, unit, nest, mode, energies, eigstate, eigstate_c, gs, gs_c)
-        
-        use variables_tmi
+    subroutine diagonalize(dir, irrep, conf, nev, ncv, full, v1, v2, threads, parameters, type, basis, bsites, hexsites, occ, noff, ndi, ndi_off, hamoff, hamdi, hamoff_d, hamdi_d, hamoff_c, hamdi_c, hamdi_off_c, ham, ham_c, ham_d, ham_dc, norm, rcoff, rcdi, rc, prts, dplcts, nnz, ndeg, unit, nest, mode, energies, eigstate, eigstate_c, gs, gs_c)
+
+    ! Old subroutine interface     
+    ! subroutine diagonalize(dir, conf, nev, ncv, full, v1, v2, threads, parameters, type, basis, bsites, hexsites, occ, noff, ndi, ndi_off, hamoff, hamdi, hamoff_d, hamdi_d, hamoff_c, hamdi_c, hamdi_off_c, ham, ham_c, ham_d, ham_dc, norm, rcoff, rcdi, rc, prts, dplcts, nnz, ndeg, unit, nest, mode, energies, eigstate, eigstate_c, gs, gs_c)
+
+        use input_variables, only: nDis, nevmax, nev0, arpack, mkl, feast, degeneracy, rvec, ti, otf, symmetrize, dis, t, mass, pattern, particles, filling, nev, ncv, nevext, n_st, ncv0, exact
+
+        use variables, only: sites, dim
+
         implicit none 
         
         integer, intent(in) :: conf, threads
         integer, intent(inout) :: nev, ncv, full, nest, unit, noff, ndi, ndi_off
         ! integer(kind=8), intent(in) :: dim
         double precision, intent(in) :: v1, v2
-        character(len=*), intent(in) :: dir, parameters, type, mode
+        character(len=*), intent(in) :: dir, irrep, parameters, type, mode
         integer, allocatable, intent(inout) :: occ(:,:), hamoff(:,:), rcoff(:,:), rcdi(:), hamdi(:,:), prts(:), dplcts(:), bsites(:,:), hexsites(:,:)
         integer(kind=8), allocatable, intent(inout) :: basis(:)
         double precision, allocatable, intent(inout) :: hamoff_d(:), hamdi_d(:), norm(:)
@@ -31,7 +37,7 @@ module diagonalization
         double precision :: Emin = 0.d0, Emax = 0.d0
         logical :: symmetric, append 
         
-        if((ndis > 1) .and. (dis .ne. 0.d0) .and. (conf > 1)) then 
+        if((nDis > 1) .and. (dis .ne. 0.d0) .and. (conf > 1)) then 
             append = .true.
         else 
             append = .false.
@@ -39,7 +45,7 @@ module diagonalization
         
         100 format(1000(x,A,x,F6.4,x,A,x,F6.4))
 
-        if(full == 0) then
+            if(full == 0) then
             if(type == "R") then 
                 if(ti == 0) then 
                     call unify(t, v1, v2, dis, mass, pattern, sites, occ, noff, ndi, hamoff, hamdi, ham, rc, nnz)
@@ -56,14 +62,14 @@ module diagonalization
                             call lanczos_d_otf(dir, parameters, unit, threads, dim, sites, sites/2*3, sites*3, nev, ncv, nest, t, v1, v2, mode, rvec, basis, bsites, hexsites, energies, eigstate)
                         end if 
                         if(rvec) call check_d(dim, nnz, nev, nest, energies, eigstate)                  
-                        call save(dir, "R", parameters, append, conf, unit, 3, dim, states, nev, nest, ndis, rvec, energies, eigstate)
+                        call save(dir, "R", parameters, append, conf, unit, 3, dim, states, nev, nest, nDis, rvec, energies, eigstate)
                     end if 
                     if(mkl == 1) then 
                         print*,''
                         write(*,100) '---------------- START MKL DIAGONALIZATION: V1 =', v1, ' V2 =', v2, ' -------------------'
                         call lanczos_mkl(dim, nev, ncv, nest, nnz, ham, rc, energies, eigstate) 
                         if(rvec) call check_d(dim, nnz, nev, nest, energies, eigstate)                  
-                        call save(dir, "R", parameters, append, conf, unit, 2, dim, states, nev, nest, ndis, rvec, energies, eigstate)
+                        call save(dir, "R", parameters, append, conf, unit, 2, dim, states, nev, nest, nDis, rvec, energies, eigstate)
                     end if 
                     if(degeneracy == 1) call gsdeg(dir, rvec, unit, parameters, dim, nev, nest, deg, energies, eigstate, ndeg, gs)     
                     if(degeneracy == 2 .and. rvec) call qgsdeg_d(dir, unit, parameters, dim, nev, nest, energies, eigstate, ndeg, gs)
@@ -79,7 +85,7 @@ module diagonalization
                         if(degeneracy == 1) call gsdeg(dir, rvec, unit, parameters, dim, nev, nest, deg, energies, eigstate, ndeg, gs)
                         if(degeneracy == 2 .and. rvec) call qgsdeg_d(dir, unit, parameters, dim, nev, nest, energies, eigstate, ndeg, gs)
                         if(rvec) call check_d(dim, nnz, nev, nest, energies, eigstate, ndeg = ndeg, rc = rc, mat = ham) 
-                        call save(dir, "R", parameters, append, conf, unit, 3, dim, states, nev, nest, ndis, rvec, energies, eigstate)    
+                        call save(dir, "R", parameters, append, conf, unit, 3, dim, states, nev, nest, nDis, rvec, energies, eigstate)    
                         if(degeneracy == 1) call gsdeg(dir, rvec, unit, parameters, dim, nev, nest, deg, energies, eigstate, ndeg, gs)
                         if(degeneracy == 2 .and. rvec) call qgsdeg_d(dir, unit, parameters, dim, nev, nest, energies, eigstate, ndeg, gs)
                     end if 
@@ -91,7 +97,7 @@ module diagonalization
                         if(degeneracy == 1) call gsdeg(dir, rvec, unit, parameters, dim, nev, nest, deg, energies, eigstate, ndeg, gs)
                         if(degeneracy == 2 .and. rvec) call qgsdeg_d(dir, unit, parameters, dim, nev, nest, energies, eigstate, ndeg, gs)
                         if(rvec) call check_d(dim, nnz, nev, nest, energies, eigstate, ndeg = ndeg, rc = rc, mat = ham) 
-                        call save(dir, "R", parameters, append, conf, unit, 2, dim, states, nev, nest, ndis, rvec, energies, eigstate)
+                        call save(dir, "R", parameters, append, conf, unit, 2, dim, states, nev, nest, nDis, rvec, energies, eigstate)
                         if(degeneracy == 1) call gsdeg(dir, rvec, unit, parameters, dim, nev, nest, deg, energies, eigstate, ndeg, gs)     
                         if(degeneracy == 2 .and. rvec) call qgsdeg_d(dir, unit, parameters, dim, nev, nest, energies, eigstate, ndeg, gs)    
                     end if 
@@ -111,7 +117,7 @@ module diagonalization
                     if(degeneracy == 1) call gsdeg(dir, rvec, unit, parameters, dim, nev, nest, deg, energies, eigstate, ndeg, gs)
                     if(degeneracy == 2 .and. rvec) call qgsdeg_d(dir, unit, parameters, dim, nev, nest, energies, eigstate, ndeg, gs)
                     if(rvec) call check_d(dim, nnz, nev, nest, energies, eigstate, ndeg = ndeg, rc = rc, mat = ham)
-                    call save(dir, "R", parameters, append, conf, unit, 1, dim, states, nev, nest, ndis, rvec, energies, eigstate)
+                    call save(dir, "R", parameters, append, conf, unit, 1, dim, states, nev, nest, nDis, rvec, energies, eigstate)
                     if(degeneracy == 1) call gsdeg(dir, rvec, unit, parameters, dim, nev, nest, deg, energies, eigstate, ndeg, gs)
                     if(degeneracy == 2 .and. rvec) call qgsdeg_d(dir, unit, parameters, dim, nev, nest, energies, eigstate, ndeg, gs)
                 end if                          
@@ -129,7 +135,7 @@ module diagonalization
 
                 call lanczos_c(threads, dim, nev, ncv, nest, mode, rvec, nnz, ham_c, rc, energies, eigstate_c)
                 if(rvec) call check_c(dim, .False., nev, nest, energies, eigstate_c)
-                call save(dir, "C", parameters, append, conf, unit, 3, dim, states, nev, nest, ndis, rvec, energies, st_c=eigstate_c)          
+                call save(dir, "C", parameters, append, conf, unit, 3, dim, states, nev, nest, nDis, rvec, energies, st_c=eigstate_c)          
                 if(degeneracy == 1) call gsdeg(dir, rvec, unit, parameters, dim, nev, nest, deg, energies, eigstate_c, ndeg, gs_c)      
                 if(degeneracy == 2 .and. rvec) call qgsdeg_c(dir, unit, parameters, dim, nev, nest, energies, eigstate_c, ndeg, gs_c)
                 if(feast == 1) then 
@@ -142,7 +148,7 @@ module diagonalization
                     print*,'---------------- START COMPLEX FEAST DIAGONALIZATION: V1 =', v1, ' V2 =', v2, ' -------------------'
                     call cfeast(dim, nnz, nev0, nest, rc, ham_c, Emin, Emax, nev, energies, eigstate_c)
                     if(rvec) call check_c(dim, .True., nev, nest, energies, eigstate_c)
-                    call save(dir, "C", parameters, append, conf, unit, 1, dim, states, nev, nest, ndis, rvec, energies, st_c=eigstate_c)           
+                    call save(dir, "C", parameters, append, conf, unit, 1, dim, states, nev, nest, nDis, rvec, energies, st_c=eigstate_c)           
                     if(degeneracy == 1) call gsdeg(dir, rvec, unit, parameters, dim, nev, nest, deg, energies, eigstate_c, ndeg, gs_c)            
                     if(degeneracy == 2 .and. rvec) call qgsdeg_c(dir, unit, parameters, dim, nev, nest, energies, eigstate_c, ndeg, gs_c)                      
                 end if 
@@ -175,7 +181,7 @@ module diagonalization
                     if(degeneracy == 2 .and. rvec) call qgsdeg_d(dir, unit, parameters, dim, nev, nest, energies, eigstate, ndeg, gs)
                     if(rvec) call check_d(dim, nnz, nev, nest, energies, eigstate, ndeg = ndeg)
                 end if
-                call save(dir, "R", parameters, append, conf, unit, 0, dim, states, nev, nest, ndis, rvec, energies, eigstate)
+                call save(dir, "R", parameters, append, conf, unit, 0, dim, states, nev, nest, nDis, rvec, energies, eigstate)
             else if(type == "C") then 
                 if(rvec) then 
                     if(allocated(eigstate_c)) deallocate(eigstate_c)
@@ -187,7 +193,7 @@ module diagonalization
                     call gsdeg(dir, rvec, unit, parameters, dim, nev, nest, deg, energies, eigstate_c, ndeg, gs_c)
                     if(rvec) call check_c(dim, .True., nev, nest, energies, eigstate_c)
                 end if
-                call save(dir, "C", parameters, append, conf, unit, 0, dim, states, nev, nest, ndis, rvec, energies, st_c = eigstate_c)
+                call save(dir, "C", parameters, append, conf, unit, 0, dim, states, nev, nest, nDis, rvec, energies, st_c = eigstate_c)
             end if 
         end if
 

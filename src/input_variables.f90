@@ -6,7 +6,7 @@ implicit none
 
     ! Lattice parameters
     integer   :: ucx = 3, ucy = 3, tilted = 1     
-    character :: cluster*4 = '18A', bc*1 = 'p' 
+    character :: cluster*3 = '18A', bc*1 = 'p' 
         ! ucx, ucy: Number of unit cells in x (horizontal) and y (vertical) directions
         ! tilted: Flag to use tilted clusters (1 = yes, 0 = no)
         ! cluster: Cluster name, e.g. '18A' for a 18-site cluster
@@ -14,7 +14,7 @@ implicit none
 
     ! Symmetization parameters
     integer          :: symmetrize = 0, p1 = 1, p2 = 1, p3 = 1, ti = 0, k0 = 0  
-    character(len=2) :: irrep = 'A1' 
+    character        :: irrep*2 = 'A1' 
         ! ti = 1: Include translation symmetry, k0 = 1: Only k=0 sector
         ! symmetrize = 1: Symmetrization flag; compute basis in irreducible representation
         ! irrep = 'B2': Compute basis in irreducible representation B2 (currently supported irreps = {A1, A2, B1, B2})
@@ -24,7 +24,7 @@ implicit none
 
     ! Output parameters
     integer          :: corr = 0, curr = 0, refbonds = 3, states = 0
-    double precision :: deg = 10.**(-10)
+    double precision :: deg = 1.0d-10 
         ! corr = 1: Calculate single-operator correlation functions
         ! curr = 1: Calculate current-current correlation functions
         ! deg: Threshold for considering eigenvalues degenerate, i.e. Abs(E_{i}-E_{i-1}) <= deg are degenerate

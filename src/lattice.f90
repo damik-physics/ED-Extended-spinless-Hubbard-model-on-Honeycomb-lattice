@@ -8,6 +8,8 @@ module lattice
 
     subroutine define_lattice(dir, tilted, ucx, ucy, nnbonds, nnnbonds, bc, pattern, cluster, bsites, hexsites, latticevecs, alattice, blattice, xyA, xyB, asitesbonds, bsitesbonds, cntrA, cntrB, nHel, tilt, phase, xy, xtransl, ytransl, reflections, nnnVec)
 
+        ! use clusters 
+
         implicit none
 
         integer, intent(in) :: ucx, ucy, tilted

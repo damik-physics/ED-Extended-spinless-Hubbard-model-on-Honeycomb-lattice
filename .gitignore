@@ -1,0 +1,11 @@
+/*output/
+/*.dat
+/exe*
+/.DS_Store
+fort.20
+*.dat
+*.mod
+*.o
+work_in_progress.f90
+/.venv/*
+*old*

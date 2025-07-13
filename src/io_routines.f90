@@ -1,6 +1,7 @@
 module io_routines 
 
     use functions 
+    use file_utils
     
     implicit none 
 
@@ -15,25 +16,15 @@ module io_routines
     contains 
 
     subroutine save_momenta(dir, cluster, unit, genCluster, sites, particles, bc, pattern, k1_max, k2_max)
-        
+
         implicit none 
         
-        integer,          intent(in) :: unit, genCluster, sites, particles, k1_max, k2_max
-        character(len=*), intent(in) :: dir, cluster, bc, pattern
+        integer,          intent(in), optional :: unit, genCluster, sites, particles, k1_max, k2_max
+        character(len=*), intent(in), optional :: dir, cluster, bc, pattern
 
         integer   :: k1 = 0, k2 = 0 
-        character :: file*300, prefix*300, params*300
 
-        if(genCluster == 0) then 
-            write(prefix, "(a,'_')") cluster 
-            prefix = trim_name(prefix)
-        end if 
-        
-        write (params, "('L=',i0,'N=',i0,'BC=',a,'_pat=',a2'.dat')") sites, particles, bc, pattern
-        params = trim_name(prefix // params)
-        file = trim_name(dir // "momenta_" // params)
-        
-        open(unit, file = file)
+        open(unit=unit, file=trim(outdir)//'momenta.dat', status='replace')
         do k1 = 0, k1_max
             do k2 = 0, k2_max
                 write(unit,*) k1, k2 
@@ -45,19 +36,19 @@ module io_routines
 
     end subroutine save_momenta
 
-    subroutine save_spectrum(dir, type, params, append, conf, unit, dim, states, nev, nest, rvec, en, st_r, st_c)
+    subroutine save_spectrum(type, par, append, conf, unit, dim, states, nev, nest, rvec, en, st_dp, st_c)
         
         implicit none 
         
-        integer,           intent(in)     :: conf, unit, states, nev, nest 
-        integer(kind=8),   intent(in)     :: dim  
-        character(len=*),  intent(in)     :: dir, type, params
-        logical,           intent(in)     :: append, rvec 
-        double precision,  intent(in), optional :: en(dim), st_r(dim, nest) 
-        double complex,    intent(in), optional :: st_c(dim, nest) 
+        integer,           intent(in) :: conf, unit, states, nev, nest 
+        integer(kind=8),   intent(in) :: dim  
+        character(len=*),  intent(in) :: type, par
+        logical,           intent(in) :: append, rvec 
+        double precision,  intent(in) :: en(dim), st_dp(dim, nest) 
+        double complex,    intent(in) :: st_c(dim, nest) 
 
         integer         :: j = 0
-        character       :: file*300, file2*300, appchar*20
+        character       :: file*256, appchar*20
 
         100 format(1000(F40.30))
         
@@ -66,39 +57,43 @@ module io_routines
         else  
             appchar = 'SEQUENTIAL'
         end if 
+        file = trim(outdir)//'energy_'//par//'.dat'
+        open(unit=unit, file=trim(file), status='replace', access=appchar)
 
-        file = dir // "energies_" // params
-        file2 = dir // "states_" // params
+        ! file = dir // "energies_" // par
+        ! file2 = dir // "states_" // par
         
-        file = trim_name(file)
-        file2 = trim_name(file2)
+        ! file = trim_name(file)
+        ! file2 = trim_name(file2)
 
-        open(unit, file = file, access = appchar)
+        ! open(unit, file = file, access = appchar)
         if(conf == 1) write(unit,*) nev
 
         do j = 1, nev
-            write(unit,100) en(j)
+            write(unit, 100) en(j)
         end do
         close(unit)
 
         if(states == 1 .and. rvec) then
+            file = trim(outdir)//'eigenstates_'//par//'.dat'
             if(type == "R") then 
-                open(unit, file = file2, access = appchar)
+                open(unit=unit, file=trim(file) , status='replace', access=appchar)
+                ! open(unit, file = file2, access = appchar)
                 write(unit,*) dim
                 write(unit,*) nev
                 do j = 1, nest
-                    write(unit,100) st_r(1:dim, j)
+                    write(unit, 100) st_dp(1:dim, j)
                 end do
-                close(unit)
-            else if(type == "C") then 
-                open(unit, file = file2, access = appchar)
+            else if(type == "C") then
+                open(unit=unit, file=trim(file) , status='replace', access=appchar) 
+                ! open(unit, file = file2, access = appchar)
                 write(unit,*) dim
                 write(unit,*) nev
                 do j = 1, nest               
-                    write(unit,100) dble(st_c(1:dim, j)), dimag(st_c(1:dim, j)) 
+                    write(unit, 100) dble(st_c(1:dim, j)), dimag(st_c(1:dim, j)) 
                 end do
-                close(unit)
             end if
+            close(unit)
         end if 
 
 
@@ -106,7 +101,7 @@ module io_routines
 
     end subroutine save_spectrum
 
-    subroutine save_ham(type, params, unit, ti, sites, nnz, nDi, hamDi, ham_i, rc, ham_dp, ham_dc, occ)
+    subroutine save_ham(type, unit, ti, sites, nnz, nDi, hamDi, ham_i, rc, ham_dp, ham_dc, occ)
 
         implicit none 
 
@@ -115,17 +110,19 @@ module io_routines
         integer(kind=8),  intent(in), optional :: hamDi(nDi, 2), ham_i(nnz, 3), rc(nnz, 2), occ(sites, nDi)
         double precision, intent(in), optional :: ham_dp(nnz)
         double complex,   intent(in), optional :: ham_dc(nnz) 
-        character(len=*), intent(in)           :: type, params
+        character(len=*), intent(in)           :: type
 
         integer(kind=8) :: i = 0
-        character       :: file*300, dir*300
+        character       :: dir*1024, file*1024!, dir*256
 
         print*, 'Saving Hamiltonian to disk...'
-        dir = "hamiltonians/"
-        dir = trim_name(dir)
-        file = dir // "hopping_hamiltonian_" // params
-        file = trim_name(file)
-        open(unit, file = file)
+        dir = trim(outdir) // "hamiltonians/"
+        ! dir = trim_name(dir)
+        file = trim(dir) // 'hamiltonian_off_diagonal.dat'
+        ! file = trim_name(file)
+        print*, 'Output directory: ', trim(outdir)
+        print*, 'File: ', trim(file)
+        open(unit, file=trim(file), status='replace')
         write(unit,*) nnz 
         
         if(type == "R" .and. ti == 0) then 
@@ -143,29 +140,126 @@ module io_routines
         end if 
         close(unit)
         
-        file = ""
-        file = trim_name(dir // "diagonal_hamiltonian_" // params)
-        open(unit, file = file)
+        file = trim(dir) // 'hamiltonian_diagonal' // '.dat'
+        ! file = trim(dir // "diagonal_hamiltonian_" // params)
+        open(unit, file=trim(file), status='replace')
         write(unit,*) nDi 
         do i = 1, nDi
             write(unit,*) hamDi(i,1), hamDi(i,2)
         end do 
         close(unit)
 
-        file = trim_name(dir // "occupation_" // params)
-        open(unit, file = file)
+        file = trim(dir) // 'site_occupation' // '.dat'
+        open(unit, file=trim(file), status='replace')
         write(unit,*) nDi 
         do i = 1, nDi
             write(unit,*) occ(1:sites,i)
         end do 
         close(unit)
 
-        print*,'Hamiltonian saved to disk.'
+        print*,'Hamiltonian and site-occupation saved to disk.'
         print*,''
         
         return 
 
     end subroutine save_ham
+
+    subroutine loadham(type, unit, ti, sites, nnz, nDi, hamDi, ham_i, rc, ham_dp, ham_dc, occupation, exist1, exist2, exist3)
+        
+        implicit none 
+        
+        character(len=*), intent(in) :: type
+        integer, intent(in) :: ti, unit, sites  
+        integer(kind=8), intent(out) :: nnz, nDi       
+        integer(kind=8), allocatable, intent(out), optional :: hamDi(:, :), ham_i(:, :), rc(:, :), occupation(:, :)
+        double precision, allocatable, intent(out), optional :: ham_dp(:)
+        double complex, allocatable, intent(out), optional :: ham_dc(:) 
+        logical, intent(out) :: exist1, exist2, exist3
+
+        integer(kind=8) :: i = 0
+        character :: file*2024, dir*1024
+        
+        dir = trim("/hamiltonians/")
+        file = trim(dir) // "hamiltonian_off_diagonal"
+        inquire(file=trim(file), exist=exist1)
+
+        if(exist1) then 
+            open(unit=unit, file=trim(file))
+            read(unit, *) nnz 
+
+            if(type == "R" .and. ti == 0) then 
+                if(allocated(ham_i)) deallocate(ham_i)
+                allocate(ham_i(nnz, 3))
+                ham_i = 0
+                do i = 1, nnz
+                    read(unit,*) ham_i(i,1), ham_i(i,2), ham_i(i,3)
+                end do 
+            else if(type == "R" .and. ti == 1) then 
+                if(allocated(ham_dp)) deallocate(ham_dp)
+                if(allocated(rc)) deallocate(rc)
+                allocate(ham_dp(nnz))
+                allocate(rc(nnz, 2))
+                ham_dp = 0.d0
+                rc = 0
+
+                do i = 1, nnz
+                    read(unit,*) ham_dp(i), rc(i,1), rc(i,2)
+                end do 
+            else if(type == "C" .and. ti == 1) then      
+                if(allocated(ham_dc)) deallocate(ham_dc)
+                if(allocated(rc)) deallocate(rc)
+                allocate(ham_dc(nnz))
+                allocate(rc(nnz, 2))       
+                do i = 1, nnz
+                    read(unit,*) ham_dc(i), rc(i,1), rc(i,2)
+                end do 
+            end if 
+            close(unit)
+            print*,'Off-diagonal Hamiltonian uploaded.'
+            print*,''
+        end if
+
+        if(.not.(exist1)) print*,'Off-diagonal Hamiltonian does not yet exist.'
+
+        file = trim(dir)//"hamiltonian_diagonal"
+        inquire(file=trim(file), exist=exist2)
+
+        if( exist2 ) then 
+            open(unit, file=trim(file))
+            read(unit, *) nDi 
+            if(allocated(hamDi)) deallocate(hamDi)
+            allocate(hamDi(nDi, 2))
+            do i = 1, nDi
+                read(unit,*) hamDi(i,1), hamDi(i,2)
+            end do 
+            close(unit)
+            print*,'Diagonal Hamiltonian uploaded.'
+            print*,''
+        end if 
+        
+        if(.not. (exist2)) print*,'Diagonal Hamiltonian does not yet exist.'
+
+        file = trim(dir)//"site_occupation"
+        inquire(file=trim(file), exist=exist3)
+        if( exist3 ) then 
+            open(unit, file=trim(file))
+            read(unit, *) nDi 
+            if(allocated(occupation)) deallocate(occupation)
+            allocate(occupation(sites, nDi))
+            do i = 1, nDi
+                read(unit,*) occupation(1:sites,i)
+            end do 
+            close(unit)
+            print*,'Occupation uploaded.'
+            print*,''
+        end if 
+
+        if(.not. (exist3)) print*,'Site occupation does not yet exist.'
+        if(.not. (exist3)) print*,''
+
+        return 
+
+    end subroutine loadham
 
     subroutine save_currents(dir, sl, params, append, degeneracy, unit, nbonds, current, bondcurrent)
         
@@ -176,7 +270,7 @@ module io_routines
         character(len=*), intent(in) :: dir, sl, params
         logical,          intent(in) :: append 
 
-        character :: file*500, file2*500, appchar*20, dirq*200
+        character :: file*512, file2*512, appchar*20, dirq*512
 
         100 format(1000(F30.20))
 
@@ -224,7 +318,7 @@ module io_routines
         logical,          intent(in) :: append 
 
         integer   :: i = 0
-        character :: file*300, file2*300, appchar*20
+        character :: file*256, file2*256, appchar*20
 
         100 format(1000(F30.20))
         
@@ -304,7 +398,7 @@ module io_routines
         character(len=*), intent(in)           :: sa, pars, name, dir
 
         integer(kind=8) :: j = 0
-        character       :: file*500
+        character       :: file*512
 
         j = 0 
         
@@ -335,7 +429,7 @@ module io_routines
         character(len=*), intent(in)           :: sa, pars, name, dir
 
         integer(kind=8) :: j = 0
-        character       :: file*500
+        character       :: file*512
 
         j = 0 
         file = trim_name(dir // name // pars)
@@ -368,7 +462,7 @@ module io_routines
         character(len=*), intent(in)           :: sa, pars, name, dir
 
         integer(kind=8) :: j = 0
-        character       :: file*500
+        character       :: file*512
 
         j = 0 
         99 format(1000(F40.30))
@@ -415,7 +509,7 @@ module io_routines
         character(len=*),  intent(in)           :: sa, pars, name, dir
 
         integer(kind=8) :: j = 0
-        character       :: file*500
+        character       :: file*512
 
         j = 0 
         100 format(1000(F40.30))
@@ -455,10 +549,10 @@ module io_routines
         double precision, intent(in) :: v1, v2 
         character(len=*), intent(in) :: pattern 
 
-        character,        intent(out)           :: params*200 
+        character,        intent(out)           :: params*512 
         character,        intent(out), optional :: type*1 
 
-        character :: string*300
+        character :: string*256
 
         if(tilted == 1) then 
             write(string, "(a,'_')") cluster 
@@ -499,7 +593,7 @@ module io_routines
  
         character,        intent(out) :: params*400 
 
-        character :: string*300
+        character :: string*256
 
         if(tilted == 1) then 
             write(string, "(a,'_')") cluster 
@@ -538,7 +632,7 @@ module io_routines
         double complex,   allocatable, intent(out), optional :: ham_dc(:) 
 
         integer   :: i = 0
-        character :: file*300, dir*300
+        character :: file*256, dir*256
         
         dir = "hamiltonians/"
         dir = trim_name(dir)

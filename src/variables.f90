@@ -30,9 +30,10 @@ module variables
     double complex, allocatable  :: phases2D(:,:,:)
 
     ! Calculation control and threading
-    integer                      :: nDeg, unit, units, units_2, refsite, conf, nest, cntrA, cntrB
+    integer                      :: nDeg, unit, refsite, conf, nest, cntrA, cntrB
     integer                      :: nev, ncv, ndv, ndv2, nv, nv2, full, nHel, tilt
     integer                      :: v1_thrds = 1, v2_thrds = 1, dis_thrds = 1, thread_num, thread_num_2, num_thrds
+    integer, allocatable         :: units(:,:), units_2(:,:,:,:)
 
     ! File and type
     character                    :: type*1, dir*1000, param_list*1000

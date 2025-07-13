@@ -1,10 +1,41 @@
 module basis ! Module for defining the basis for the extended Hubbard model on the honeycomb lattice.
     use parameters
     use functions
+    use symmetries
     
     implicit none
     
     contains 
+
+    ! Looks for the state s in the basis and returns its location in loc.
+    subroutine findstate(dim, s, basis, loc)
+
+        implicit none
+
+        integer(kind=8), intent(in) :: dim, basis(dim)
+        integer(kind=8), intent(in) :: s
+        integer(kind=8), intent(out) :: loc
+
+        integer(kind=8) :: left, right, mean
+
+        left = 1
+        right = dim
+        do while (left <= right)
+            mean = floor((left + right)/2.d0)
+            if (basis(mean) < s) then
+                left = mean + 1
+            else if (basis(mean) > s) then
+                right = mean - 1
+            else
+                loc = mean
+                return
+            end if
+        end do
+        loc = -1 !If no state is found
+        return
+
+
+    end subroutine findstate
 
     subroutine make_basis(ti, tilted, pat, nnnVec, sites, particles, dim, symmetrize, ucx, ucy, l1, l2, basis_states, abasis, bbasis, tilt, nHel, k1, k2, xtransl, ytransl, id, par, rot, refl, c6, period, norm, orbsize, orbits2D, phases2D, norm2D)
 
@@ -311,11 +342,11 @@ module basis ! Module for defining the basis for the extended Hubbard model on t
         double precision, intent(out) :: norm
 
         
-        integer(kind=8) :: sr = 0, s0 = 0
+        integer(kind=8) :: sr = 0, s0 = 0, orbit = 1
         integer :: ntot = 0, info = 0, orbsize = 0
-        integer :: sign = 1, orbit = 1, i = 0, n = 0, flag = 0, rt = 0
-        integer, allocatable :: orbits(:)
-        double precision :: k1(2), k2(2), k(2)
+        integer :: i = 0, n = 0, flag = 0, rt = 0
+        integer(kind=8), allocatable :: orbits(:)
+        double precision :: sign = 1.d0, k1(2), k2(2), k(2)
         double precision :: a1(2), a2(2)
         double precision, parameter :: tolerance = 1.0e-8
         double complex :: phase = 0.d0
@@ -345,14 +376,15 @@ module basis ! Module for defining the basis for the extended Hubbard model on t
         
         orbits = 0 
         ! orbits(1) = s
-        sign = 1 
+        sign = 1.d0
         call translation(s0, s, sites, ntot, orbit, orbits, 1, nHel, Lx, Ly, id, sign, a1, a2, xtransl, ytransl, k, phase, info)
+
         if(info < 0) return 
 
         if(irrep == 0) goto 11
         !Reflections 
         do i = 1, 6
-            sign = 1   
+            sign = 1.d0   
             call reflect(s0, s, sites, refl(i,1:sites), sign, info, sr) 
             if(info < 0) return        
             call translation(s0, sr, sites, ntot, orbit, orbits, 1, nHel, Lx, Ly, par(i), sign, a1, a2, xtransl, ytransl, k, phase, info)
@@ -398,11 +430,11 @@ module basis ! Module for defining the basis for the extended Hubbard model on t
         integer, intent(out) :: r
         double precision, intent(out) :: norm
         
-        integer(kind=8) :: sr = 0, s0 = 0
+        integer(kind=8) :: sr = 0, s0 = 0, orbit = 1
         integer :: ntot = 0, orbsize = 0, info = 0
-        integer :: orbit = 1, sign = 1, i = 0, n = 0, flag = 0, rt = 0
-        integer, allocatable :: orbits(:)
-        double precision :: k1(2), k2(2), k(2)
+        integer :: i = 0, n = 0, flag = 0, rt = 0
+        integer(kind=8), allocatable :: orbits(:)
+        double precision :: sign = 1.d0, k1(2), k2(2), k(2)
         double precision :: a1(2), a2(2)
         double precision, parameter :: tolerance = 1.0e-8
         double complex :: phase = 0.d0
@@ -484,10 +516,10 @@ module basis ! Module for defining the basis for the extended Hubbard model on t
         double complex, intent(out) :: phases(orbsize, 2)
 
         integer(kind=8) :: sr = 0, s0 = 0
-        integer :: rep, sign = 1, ntot, info, layers, flag
+        integer :: rep, ntot, info, layers, flag
         integer :: orbit = 1, i, n, rt, c
         ! integer, allocatable :: orbits(:)
-        double precision :: k1(2), k2(2), k(2)
+        double precision :: sign = 1.d0, k1(2), k2(2), k(2)
         double precision :: a1(2), a2(2), dcntr
         double precision, parameter :: tolerance = 1.0e-8
         

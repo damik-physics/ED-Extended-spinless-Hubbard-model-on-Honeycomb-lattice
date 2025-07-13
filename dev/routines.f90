@@ -45,7 +45,7 @@ function trim_name(file_name) !Function to trim file names
 
     implicit none
 
-    character*200 :: trim_name
+    character*512 :: trim_name
     character(len=*):: file_name
     integer :: ls1, ls2, i
 
@@ -327,7 +327,7 @@ subroutine savemom(dir, cluster, unit, gencluster, sites, particles, bc, pattern
     integer, intent(in) :: unit, gencluster, sites, particles, k1_max, k2_max
 
     integer :: k1 = 0, k2 = 0 
-    character :: file*300, prefix*20, params*300
+    character :: file*256, prefix*20, params*256
 
     if(gencluster == 0) then 
         write(prefix, "(a,'_')"), cluster 
@@ -350,7 +350,7 @@ subroutine savemom(dir, cluster, unit, gencluster, sites, particles, bc, pattern
 
 end subroutine savemom
 
-subroutine savespec(dir, type, parameters, append, conf, unit, routine, dim, states, nev, nest, nDis, rvec, en, st_r, st_c)
+subroutine savespec(dir, type, parameters, append, conf, unit, routine, dim, states, nev, nest, nDis, rvec, en, st_dp, st_c)
     
     implicit none 
     
@@ -359,11 +359,11 @@ subroutine savespec(dir, type, parameters, append, conf, unit, routine, dim, sta
     integer(kind=8), intent(in) :: dim  
     integer, intent(in) :: states, nev, nest, nDis
     logical, intent(in) :: append, rvec 
-    double precision, intent(in), optional :: en(dim), st_r(dim, nest) 
+    double precision, intent(in), optional :: en(dim), st_dp(dim, nest) 
     double complex, intent(in), optional :: st_c(dim, nest) 
 
     integer :: j = 0
-    character :: file*300, file2*300, appchar*20
+    character :: file*256, file2*256, appchar*20
 
     100 format(1000(F40.30))
     
@@ -392,7 +392,7 @@ subroutine savespec(dir, type, parameters, append, conf, unit, routine, dim, sta
             write(unit,*) dim
             write(unit,*) nev
             do j = 1, nest
-                write(unit,100) st_r(1:dim, j)
+                write(unit,100) st_dp(1:dim, j)
             end do
             close(unit)
         else if(type == "C") then 
@@ -436,7 +436,7 @@ subroutine savespec(dir, type, parameters, append, conf, unit, routine, dim, sta
     !         write(unit,*) dim
     !         write(unit,*) nev
     !         do j = 1, nest
-    !             write(unit,100) st_r(1:dim, j)
+    !             write(unit,100) st_dp(1:dim, j)
     !         end do
     !         close(unit)
     !     else if(type == "C") then 
@@ -465,7 +465,7 @@ subroutine saveham(spartan, type, parameters, unit, ti, sites, nnz, nDi, hamDi, 
     double complex, intent(in), optional :: ham_dc(nnz) 
 
     integer :: i = 0
-    character :: file*300, dir*100
+    character :: file*256, dir*100
 
     print*, 'Saving Hamiltonian to disk...'
     if(spartan == 0) then 
@@ -529,7 +529,7 @@ subroutine loadham(spartan, type, parameters, unit, ti, sites, nnz, nDi, hamDi, 
     logical, intent(out) :: exist1, exist2, exist3
 
     integer :: i = 0
-    character :: file*300, dir*100
+    character :: file*256, dir*100
     
     if(spartan == 0) then 
         dir = "hamiltonians/"
@@ -633,8 +633,8 @@ subroutine savecurr(dir, sl, parameters, append, degeneracy, unit, full, feast, 
     double precision, intent(in) :: current, bondcurrent(nbonds)
     logical, intent(in) :: append 
 
-    character :: file*500, file2*500, file3*500, file4*500, appchar*20
-    character :: dirq*200
+    character :: file*512, file2*512, file3*512, file4*512, appchar*20
+    character :: dirq*512
     100 format(1000(F30.20))
 
     if(append) then 
@@ -729,7 +729,7 @@ subroutine savecdw(dir, parameters, append, unit, ucx, ucy, nbonds, rho, rhotot)
     logical, intent(in) :: append 
 
     integer :: i = 0
-    character :: file*300, file2*300, appchar*20
+    character :: file*256, file2*256, appchar*20
 
     100 format(1000(F30.20))
      
@@ -808,7 +808,7 @@ subroutine saveI(sa, unit, dir, name, pars, rows, cols, scalar, arr)
     integer, intent(in), optional :: arr(rows, cols) 
     
     integer(kind=8) :: j = 0
-    character :: file*500
+    character :: file*512
 
     j = 0 
     ! 100 format(1000(F40.30))
@@ -842,7 +842,7 @@ subroutine saveI8(sa, unit, dir, name, pars, rows, cols, scalar, arr)
     integer(kind=8), intent(in), optional :: arr(rows, cols) 
     
     integer(kind=8) :: j = 0
-    character :: file*500
+    character :: file*512
     
     j = 0 
     file=trim_name(dir//name//pars)
@@ -878,7 +878,7 @@ subroutine saveD(sa, unit, dir, name, pars, rows, cols, scalar, arr, transp)
     double precision, intent(in), optional :: arr(rows, cols) 
     
     integer(kind=8) :: j = 0
-    character :: file*500
+    character :: file*512
 
     j = 0 
     99 format(1000(F40.30))
@@ -925,7 +925,7 @@ subroutine saveZ(sa, unit, dir, name, pars, rows, cols, scalar, arr, transp)
     double complex, intent(in), optional :: arr(rows, cols) 
     
     integer(kind=8) :: j = 0
-    character :: file*500
+    character :: file*512
 
     j = 0 
     100 format(1000(F40.30))
@@ -960,7 +960,7 @@ subroutine par2(unit, k1, k2, refb, v1, v22, params, type)
     implicit none 
     integer, intent(in) :: unit, k1, k2, refb
     double precision, intent(in) :: v1, v22 
-    character, intent(out) :: params*200 
+    character, intent(out) :: params*512 
     character, intent(out), optional :: type*1 
     
 
@@ -1415,7 +1415,7 @@ subroutine lattice(dir, tilted, ucx, ucy, nnbonds, nnnbonds, bc, pattern, cluste
     double precision, allocatable, intent(out) :: nnnVec(:,:)
     integer, allocatable :: sitecoord(:,:)
     integer :: i, nUC
-    character :: name*200
+    character :: name*512
 
     if(tilted == 0) then     
         call honeycomb(dir, ucx, ucy, bc, pattern, nnbonds, bsites)
@@ -1648,8 +1648,8 @@ subroutine coordinates(dir, unit, ucx, ucy, nbonds, abonds, bbonds, xy, alattice
     integer, allocatable, intent(out) :: xyA(:,:), xyB(:,:)
 
     integer   :: j = 0 
-    character :: filename*300
-    character :: parameters*300
+    character :: filename*256
+    character :: parameters*256
 
     write (parameters,"('L=',i0,'ucx=',i0,'ucy=',i0,'BC=',a,'_pat=',a2'.dat')") 2*ucx*ucy,ucx,ucy,bc,pattern
     parameters = trim_name(parameters)
@@ -1701,7 +1701,7 @@ subroutine honeycomb(dir, ucx, ucy, bc, pattern, nbonds, bsites)
     integer :: nbx, nby
     integer :: s, x1, x2, y1, y2
     integer, allocatable :: xy(:,:)    
-    character :: name*200
+    character :: name*512
 
     !d1 = (0,1)
     !d2 = (-Sqrt[3]/2,-1/2)
@@ -1830,7 +1830,7 @@ subroutine honeycomb_nnn(dir, ucx, ucy, bc, pattern, nbonds, hexsites, latticeve
     integer, allocatable :: cntrAsites(:)
     integer, allocatable :: cntrBsites(:)
     
-    character :: name*200
+    character :: name*512
 
     !Definition of lattice vectors: 
     ! v1 = {sqrt(3), 0}
@@ -2216,7 +2216,7 @@ subroutine honeycomb_nnn2(dir, ucx, ucy, bc, pattern, nbonds, hexsites, latticev
     integer, allocatable :: cntrAsites(:)
     integer, allocatable :: cntrBsites(:)
     
-    character :: name*200
+    character :: name*512
 
     !Definition of lattice vectors: 
     ! v1 = {sqrt(3), 0}
@@ -4344,7 +4344,7 @@ subroutine representative(s, n, Lx, Ly, xtransl, ytransl, r, l1, l2, sign)
 end subroutine representative
 
 !For tilted clusters
-subroutine representative2(s, n, nHel, tilt, Lx, Ly, xtransl, ytransl, r, l1, l2, sign)
+subroutine representative_tilted(s, n, nHel, tilt, Lx, Ly, xtransl, ytransl, r, l1, l2, sign)
     !Finds the representative 'r' state for state 's'. 'n' is the number of sites and 'l' the number of shifts needed to translate 's' to 'r'.
     implicit none
     integer, intent(in) :: n, nHel, tilt 
@@ -4442,7 +4442,7 @@ subroutine representative2(s, n, nHel, tilt, Lx, Ly, xtransl, ytransl, r, l1, l2
 
     return 
 
-end subroutine representative2
+end subroutine representative_tilted
 
 subroutine mirror_rep(r, s, n, nHel, tilt, p, Lx, Ly, refl, xtransl, ytransl, sign, l1, l2)
     !Swap l1 and l2, set nHel = Ly, and tilt < 0, if cluster is not tilted, i.e. rectangular. 
@@ -4698,7 +4698,7 @@ subroutine nevncv(unit, parameters, thresh, exact, nevext, nestext, ncv0, dim, f
     integer(kind=8), intent(in) :: dim
     character(len=*), intent(in) :: parameters
     integer, intent(out) :: full, nev, ncv, nest
-    character*200 :: filename
+    character*512 :: filename
 
     if (exact == 0) then
         if (dim < thresh) then
@@ -5015,7 +5015,7 @@ subroutine khopping_c(unit, parameters, gencluster, nHel, tilt, lx, ly, ucx, ucy
                 l11 = ucx 
                 l22 = ucy
             else if(gencluster == 0) then 
-                call representative2(newst, sites, nHel, tilt, lx, ly, xtransl, ytransl, rep, l1, l2, sign)
+                call representative_tilted(newst, sites, nHel, tilt, lx, ly, xtransl, ytransl, rep, l1, l2, sign)
                 l11 = ly 
                 l22 = lx
             end if 
@@ -5146,7 +5146,7 @@ subroutine hopping_symm(threads, tilted, nHel, tilt, lx, ly, ucx, ucy, sites, nb
             else if(tilted == 1) then 
                 call representative_irrep(newst, sites, nHel, tilt, Lx, Ly, symmetrize, id, par, rot, xtransl, ytransl, refl, c6, rep, l1, l2, sign)
                 ! call representative_irrep2(newst, sites, nHel, tilt, Lx, Ly, symmetrize, id, par, rot, xtransl, ytransl, refl, c6, rep, l1, l2, sign)
-                ! call representative2(newst, sites, nHel, tilt, Lx, Ly, xtransl, ytransl, rep, l1, l2, sign)
+                ! call representative_tilted(newst, sites, nHel, tilt, Lx, Ly, xtransl, ytransl, rep, l1, l2, sign)
             end if 
             
             call findstate(dim, rep, basis, loc) !Finds the location of representative in basis
@@ -9279,7 +9279,7 @@ subroutine gsdeg_d(dir, rvec, unit, parameters, dim, nev, nest, thresh, energies
     double precision, allocatable, intent(out) :: gs(:)
     
     integer :: j 
-    character*300 :: file 
+    character*256 :: file 
 
     ndeg = 1
             
@@ -9330,7 +9330,7 @@ subroutine gsdeg_c(dir, rvec, unit, parameters, dim, nev, nest, thresh, energies
     double complex, allocatable, intent(out) :: gs(:)
     
     integer :: j 
-    character*300 :: file 
+    character*256 :: file 
     
     ndeg = 1
 
@@ -9380,7 +9380,7 @@ subroutine qgsdeg_d(dir, unit, parameters, dim, nev, nest, energies, states, nde
     
     integer :: j
     double precision :: dE(nest-1)
-    character*300 :: file 
+    character*256 :: file 
 
     ndeg = 1
             
@@ -9429,7 +9429,7 @@ subroutine qgsdeg_c(dir, unit, parameters, dim, nev, nest, energies, states, nde
     
     integer :: j
     double precision :: dE(nest-1)
-    character*300 :: file 
+    character*256 :: file 
 
     ndeg = 1
             
@@ -9516,8 +9516,8 @@ subroutine currentcorrelations(dir, ti, tilted, nHel, tilt, threads, conf, degen
     integer, save :: refbond = 0
     double precision :: current = 0.d0 
     double precision, allocatable :: bondcurrent(:)
-    character :: sl*1, dirq*200
-    character, save :: current_parameters*200
+    character :: sl*1, dirq*512
+    character, save :: current_parameters*512
     logical :: append 
     !!$omp threadprivate(refbond, j, nrefb, current, bondcurrent, current_parameters, sl)
     !!$omp threadprivate(refbond, current_parameters)
@@ -10897,7 +10897,7 @@ end subroutine nsteps
 !            Check parallelization         !
 !------------------------------------------!
 
-subroutine parallelcheck()
+subroutine check_parallel()
 
     implicit none
     integer :: num_threads_loc
@@ -11243,7 +11243,7 @@ subroutine current_c(gencluster, nHel, tilt, k1, k2, t, dim, sites, Lx, Ly, basi
                             ! cd_site2 * c_site1 * cd_refs2 * c_refs1
                             newst = ibclr( ibset( newst, site2 - 1 ), site1 - 1 ) !Create on site 2, annihilate on site 1 
                             if(gencluster == 0) then 
-                                call representative2(newst, sites, nHel, tilt, Lx, Ly, xtransl, ytransl, rep, l1, l2, signt)
+                                call representative_tilted(newst, sites, nHel, tilt, Lx, Ly, xtransl, ytransl, rep, l1, l2, signt)
                                 l11 = Ly
                                 l22 = Lx
                             else if(gencluster == 1) then 
@@ -11263,7 +11263,7 @@ subroutine current_c(gencluster, nHel, tilt, k1, k2, t, dim, sites, Lx, Ly, basi
                             ! cd_site1 * c_site2 * cd_refs2 * c_refs1
                             newst = ibclr( ibset( newst, site1 - 1 ), site2 - 1 ) !Create on site 1, annihilate on site 2
                             if(gencluster == 0) then 
-                                call representative2(newst, sites, nHel, tilt, Lx, Ly, xtransl, ytransl, rep, l1, l2, signt)
+                                call representative_tilted(newst, sites, nHel, tilt, Lx, Ly, xtransl, ytransl, rep, l1, l2, signt)
                                 l11 = Ly
                                 l22 = Lx
                             else if(gencluster == 1) then 
@@ -11288,7 +11288,7 @@ subroutine current_c(gencluster, nHel, tilt, k1, k2, t, dim, sites, Lx, Ly, basi
                             ! cd_site2 * c_site1 * cd_refs1 * c_refs2
                             newst = ibclr( ibset( newst, site2 - 1 ), site1 - 1 ) !Create on site 2, annihilate on site 1 
                             if(gencluster == 0) then 
-                                call representative2(newst, sites, nHel, tilt, Lx, Ly, xtransl, ytransl, rep, l1, l2, signt)
+                                call representative_tilted(newst, sites, nHel, tilt, Lx, Ly, xtransl, ytransl, rep, l1, l2, signt)
                                 l11 = Ly
                                 l22 = Lx
                             else if(gencluster == 1) then 
@@ -11309,7 +11309,7 @@ subroutine current_c(gencluster, nHel, tilt, k1, k2, t, dim, sites, Lx, Ly, basi
                             ! cd_site1 * c_site2 * cd_refs1 * c_refs2
                             newst = ibclr( ibset( newst, site1 - 1 ), site2 - 1 ) !Create on site 1, annihilate on site 2
                             if(gencluster == 0) then 
-                                call representative2(newst, sites, nHel, tilt, Lx, Ly, xtransl, ytransl, rep, l1, l2, signt)
+                                call representative_tilted(newst, sites, nHel, tilt, Lx, Ly, xtransl, ytransl, rep, l1, l2, signt)
                                 l11 = Ly
                                 l22 = Lx
                             else if(gencluster == 1) then 
@@ -11421,7 +11421,7 @@ subroutine currmat_c(gencluster, nHel, tilt, dir, unit, filename, sl, ndeg, k1, 
     double precision, allocatable :: currentmat(:,:)
     double precision, allocatable :: bondcurrentmat(:,:,:)
     double complex, allocatable :: psiprime(:), gs(:)
-    character*300 :: name 
+    character*256 :: name 
 
     !!$omp threadprivate(loc, newst, i, j, forward, backwards, signf, signb, current_temp, bondcurrent, psiprime, psiprimeij, psiprimeprime)
 
@@ -11683,7 +11683,7 @@ subroutine currmat_c2(gencluster, nHel, tilt, dir, unit, filename, sl, ndeg, k1,
     double precision, allocatable :: currentmat(:,:)
     double precision, allocatable :: bondcurrentmat(:,:,:)
     double complex, allocatable :: psiprime(:), gs(:)
-    character*300 :: name 
+    character*256 :: name 
 
     !!$omp threadprivate(loc, newst, i, j, forward, backwards, signf, signb, current_temp, bondcurrent, psiprime, psiprimeij, psiprimeprime)
 
@@ -11742,7 +11742,7 @@ subroutine currmat_c2(gencluster, nHel, tilt, dir, unit, filename, sl, ndeg, k1,
                                     ! cd_site2 * c_site1 * cd_refs2 * c_refs1
                                     newst = ibclr( ibset( newst, site2 - 1 ), site1 - 1 ) !Create on site 2, annihilate on site 1 
                                     if(gencluster == 0) then 
-                                        call representative2(newst, sites, nHel, tilt, Lx, Ly, xtransl, ytransl, rep, l1, l2, signt)
+                                        call representative_tilted(newst, sites, nHel, tilt, Lx, Ly, xtransl, ytransl, rep, l1, l2, signt)
                                         l11 = Ly
                                         l22 = Lx
                                     else if(gencluster == 1) then 
@@ -11762,7 +11762,7 @@ subroutine currmat_c2(gencluster, nHel, tilt, dir, unit, filename, sl, ndeg, k1,
                                     ! cd_site1 * c_site2 * cd_refs2 * c_refs1
                                     newst = ibclr( ibset( newst, site1 - 1 ), site2 - 1 ) !Create on site 1, annihilate on site 2
                                     if(gencluster == 0) then 
-                                        call representative2(newst, sites, nHel, tilt, Lx, Ly, xtransl, ytransl, rep, l1, l2, signt)
+                                        call representative_tilted(newst, sites, nHel, tilt, Lx, Ly, xtransl, ytransl, rep, l1, l2, signt)
                                         l11 = Ly
                                         l22 = Lx
                                     else if(gencluster == 1) then 
@@ -11785,7 +11785,7 @@ subroutine currmat_c2(gencluster, nHel, tilt, dir, unit, filename, sl, ndeg, k1,
                                     ! cd_site2 * c_site1 * cd_refs1 * c_refs2
                                     newst = ibclr( ibset( newst, site2 - 1 ), site1 - 1 ) !Create on site 2, annihilate on site 1 
                                     if(gencluster == 0) then 
-                                        call representative2(newst, sites, nHel, tilt, Lx, Ly, xtransl, ytransl, rep, l1, l2, signt)
+                                        call representative_tilted(newst, sites, nHel, tilt, Lx, Ly, xtransl, ytransl, rep, l1, l2, signt)
                                         l11 = Ly
                                         l22 = Lx
                                     else if(gencluster == 1) then 
@@ -11805,7 +11805,7 @@ subroutine currmat_c2(gencluster, nHel, tilt, dir, unit, filename, sl, ndeg, k1,
                                     ! cd_site1 * c_site2 * cd_refs1 * c_refs2
                                     newst = ibclr( ibset( newst, site1 - 1 ), site2 - 1 ) !Create on site 1, annihilate on site 2
                                     if(gencluster == 0) then 
-                                        call representative2(newst, sites, nHel, tilt, Lx, Ly, xtransl, ytransl, rep, l1, l2, signt)
+                                        call representative_tilted(newst, sites, nHel, tilt, Lx, Ly, xtransl, ytransl, rep, l1, l2, signt)
                                         l11 = Ly
                                         l22 = Lx
                                     else if(gencluster == 1) then 
@@ -12066,7 +12066,7 @@ subroutine current_ics_c2(gencluster, nHel, tilt, k1, k2, ndeg, t, dim, sites, L
                                 ! cd_site2 * c_site1 * cd_refs2 * c_refs1
                                 newst = ibclr( ibset( newst, site2 - 1 ), site1 - 1 ) !Create on site 2, annihilate on site 1 
                                 if(gencluster == 0) then 
-                                    call representative2(newst, sites, nHel, tilt, Lx, Ly, xtransl, ytransl, rep, l1, l2, signt)
+                                    call representative_tilted(newst, sites, nHel, tilt, Lx, Ly, xtransl, ytransl, rep, l1, l2, signt)
                                     l11 = Ly
                                     l22 = Lx
                                 else if(gencluster == 1) then 
@@ -12087,7 +12087,7 @@ subroutine current_ics_c2(gencluster, nHel, tilt, k1, k2, ndeg, t, dim, sites, L
                                 ! cd_site1 * c_site2 * cd_refs2 * c_refs1
                                 newst = ibclr( ibset( newst, site1 - 1 ), site2 - 1 ) !Create on site 1, annihilate on site 2
                                 if(gencluster == 0) then 
-                                    call representative2(newst, sites, nHel, tilt, Lx, Ly, xtransl, ytransl, rep, l1, l2, signt)
+                                    call representative_tilted(newst, sites, nHel, tilt, Lx, Ly, xtransl, ytransl, rep, l1, l2, signt)
                                     l11 = Ly
                                     l22 = Lx
                                 else if(gencluster == 1) then 
@@ -12111,7 +12111,7 @@ subroutine current_ics_c2(gencluster, nHel, tilt, k1, k2, ndeg, t, dim, sites, L
                                 ! cd_site2 * c_site1 * cd_refs1 * c_refs2
                                 newst = ibclr( ibset( newst, site2 - 1 ), site1 - 1 ) !Create on site 2, annihilate on site 1 
                                 if(gencluster == 0) then 
-                                    call representative2(newst, sites, nHel, tilt, Lx, Ly, xtransl, ytransl, rep, l1, l2, signt)
+                                    call representative_tilted(newst, sites, nHel, tilt, Lx, Ly, xtransl, ytransl, rep, l1, l2, signt)
                                     l11 = Ly
                                     l22 = Lx
                                 else if(gencluster == 1) then 
@@ -12132,7 +12132,7 @@ subroutine current_ics_c2(gencluster, nHel, tilt, k1, k2, ndeg, t, dim, sites, L
                                 ! cd_site1 * c_site2 * cd_refs1 * c_refs2
                                 newst = ibclr( ibset( newst, site1 - 1 ), site2 - 1 ) !Create on site 1, annihilate on site 2
                                 if(gencluster == 0) then 
-                                    call representative2(newst, sites, nHel, tilt, Lx, Ly, xtransl, ytransl, rep, l1, l2, signt)
+                                    call representative_tilted(newst, sites, nHel, tilt, Lx, Ly, xtransl, ytransl, rep, l1, l2, signt)
                                     l11 = Ly
                                     l22 = Lx
                                 else if(gencluster == 1) then 
@@ -12235,7 +12235,7 @@ subroutine current_cs_c2(gencluster, nHel, tilt, dir, unit, parameters, sl, ndeg
     double precision :: current
     double precision, allocatable :: bondcurrent(:)
     double complex, allocatable :: psiprime(:)
-    character :: filename*500 
+    character :: filename*512 
     !!$omp threadprivate(loc, newst, i, j, forward, backwards, signf, signb, current_temp, bondcurrent, psiprime, psiprimeij, psiprimeprime)
 
     vecs(1:2,1) = nnnVec(1:2,1)/norm2(nnnVec(1:2,1))    
@@ -12287,7 +12287,7 @@ subroutine current_cs_c2(gencluster, nHel, tilt, dir, unit, parameters, sl, ndeg
                                     ! cd_site2 * c_site1 * cd_refs2 * c_refs1
                                     newst = ibclr( ibset( newst, site2 - 1 ), site1 - 1 ) !Create on site 2, annihilate on site 1 
                                     if(gencluster == 0) then 
-                                        call representative2(newst, sites, nHel, tilt, Lx, Ly, xtransl, ytransl, rep, l1, l2, signt)
+                                        call representative_tilted(newst, sites, nHel, tilt, Lx, Ly, xtransl, ytransl, rep, l1, l2, signt)
                                         l11 = Ly
                                         l22 = Lx
                                     else if(gencluster == 1) then 
@@ -12307,7 +12307,7 @@ subroutine current_cs_c2(gencluster, nHel, tilt, dir, unit, parameters, sl, ndeg
                                     ! cd_site1 * c_site2 * cd_refs2 * c_refs1
                                     newst = ibclr( ibset( newst, site1 - 1 ), site2 - 1 ) !Create on site 1, annihilate on site 2
                                     if(gencluster == 0) then 
-                                            call representative2(newst, sites, nHel, tilt, Lx, Ly, xtransl, ytransl, rep, l1, l2, signt)
+                                            call representative_tilted(newst, sites, nHel, tilt, Lx, Ly, xtransl, ytransl, rep, l1, l2, signt)
                                             l11 = Ly
                                             l22 = Lx
                                         else if(gencluster == 1) then 
@@ -12330,7 +12330,7 @@ subroutine current_cs_c2(gencluster, nHel, tilt, dir, unit, parameters, sl, ndeg
                                     ! cd_site2 * c_site1 * cd_refs1 * c_refs2
                                     newst = ibclr( ibset( newst, site2 - 1 ), site1 - 1 ) !Create on site 2, annihilate on site 1 
                                     if(gencluster == 0) then 
-                                        call representative2(newst, sites, nHel, tilt, Lx, Ly, xtransl, ytransl, rep, l1, l2, signt)
+                                        call representative_tilted(newst, sites, nHel, tilt, Lx, Ly, xtransl, ytransl, rep, l1, l2, signt)
                                         l11 = Ly
                                         l22 = Lx
                                     else if(gencluster == 1) then 
@@ -12350,7 +12350,7 @@ subroutine current_cs_c2(gencluster, nHel, tilt, dir, unit, parameters, sl, ndeg
                                     ! cd_site1 * c_site2 * cd_refs1 * c_refs2
                                     newst = ibclr( ibset( newst, site1 - 1 ), site2 - 1 ) !Create on site 1, annihilate on site 2
                                     if(gencluster == 0) then 
-                                            call representative2(newst, sites, nHel, tilt, Lx, Ly, xtransl, ytransl, rep, l1, l2, signt)
+                                            call representative_tilted(newst, sites, nHel, tilt, Lx, Ly, xtransl, ytransl, rep, l1, l2, signt)
                                             l11 = Ly
                                             l22 = Lx
                                         else if(gencluster == 1) then 
@@ -12462,7 +12462,7 @@ subroutine currmat(dir, unit, filename, sl, ndeg, t, dim, sites, basis, bsites, 
     double precision, allocatable :: bondcurrents(:,:), bondcurrent(:)
     double precision, allocatable :: currentmat(:,:)
     double precision, allocatable :: bondcurrentmat(:,:,:)
-    character*500 :: name 
+    character*512 :: name 
 
     !!$omp threadprivate(loc, newst, i, j, forward, backwards, signf, signb, current_temp, bondcurrent, psiprime, psiprimeij, psiprimeprime)
 

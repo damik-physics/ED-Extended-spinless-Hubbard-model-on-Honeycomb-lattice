@@ -12,7 +12,7 @@ module functions
         character(len=*), intent(in) :: file_name
 
         integer       :: ls1, ls2, i
-        character*200 :: trimmed_name ! Declare a character variable to hold the trimmed name
+        character*512 :: trimmed_name ! Declare a character variable to hold the trimmed name
         
         trimmed_name = ''
         ls1 = len_trim(file_name) ! Get the length of the input file name

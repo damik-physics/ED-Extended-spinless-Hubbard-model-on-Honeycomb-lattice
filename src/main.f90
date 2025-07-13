@@ -4,6 +4,7 @@ program main
     use variables
     use input_variables
     use functions
+    use file_utils
     use io_routines
     use lattice 
     use basis
@@ -11,35 +12,42 @@ program main
     use printing_routines
     use symmetries
     use utilities
-    use diagonalization
+    ! use diagonalization
     ! use correlationfunctions
 
     implicit none
     
 
     ! Read input parameters from input.nml file
-    ! This file should contain the namelist /params/ with the variables you want to set
-    ! (You can include all variables, or just the ones you expect to change often.)
-    namelist /params/ ucx, ucy, tilted, cluster, bc, ti, k0, corr, curr, refbonds, nevext, dv2, v2min, v2max
-
+    ! This file should contain the namelist /params/ with all the variables that are subject to change.  
+    namelist /params/ ucx, ucy, tilted, cluster, bc, ti, k0, symmetrize, irrep, p1, p2, p3, corr, curr, refbonds, states, deg, feast, arpack, mkl, exact, dimthresh, rvec, nevext, n_st, ncv0, otf, degeneracy, nev0, nevmax, othrds, mthrds, nDis, dis, mass, filling, t, g_fact, dv1, v1min, v1max, dv2, v2min, v2max, debug
     open(unit=10, file='input.nml', status='old')
     read(10, nml=params)
     close(10)
+    
+    ! call get_environment_variable("pwd", cwd)
+
+    call setup_output_directory()
+    call create_output_subdirs(outdir)
+    
+
     ! Now variables are set: those in input.nml are overwritten, others keep defaults.
 
     call characters(symmetrize, irrep, mir, rot, id) ! Set characters according to chosen irrep 
-    dir = "output/" ! Default output directory
-    dir = trim_name(dir)
+    
 
-    call date_time(dir, 0)
-    call set_vars()  
+
+
+
+    call datetime(outdir, 0)
+    call setvars()  
     call check_parallel()
-    call n_steps(v1min, v1max, dv1, ndv)
-    call n_steps(v2min, v2max, dv2, ndv2)
-    call step_units(1, ndv, ndv2, units_2)
-    call thread_units(ndv, ndv2, units)
+    call nsteps(v1min, v1max, dv1, ndv)
+    call nsteps(v2min, v2max, dv2, ndv2)
+    call stepunits(1, ndv, ndv2, units_2)
+    call threadunits(ndv, ndv2, units)
 
-    call define_lattice(dir, tilted, ucx, ucy, nnBonds, nnnBonds, bc, pattern, cluster, bsites, hexsites, latticevecs, alattice, blattice, xyA, xyB, asitesbonds, bsitesbonds, cntrA, cntrB, nHel, tilt, phases, xy, xtransl, ytransl, reflections, nnnVec)
+    call define_lattice(outdir, tilted, ucx, ucy, nnBonds, nnnBonds, bc, pattern, cluster, bsites, hexsites, latticevecs, alattice, blattice, xyA, xyB, asitesbonds, bsitesbonds, cntrA, cntrB, nHel, tilt, phases, xy, xtransl, ytransl, reflections, nnnVec)
     
 
     if(ti == 0 .or. symmetrize == 1 .or. k0 == 1) then 
@@ -48,7 +56,7 @@ program main
     else if(ti == 1 .and. tilted == 0) then 
         k1_max = ucx - 1
         k2_max = ucy - 1
-        call save(dir, cluster, unit, tilted, sites, particles, bc, pattern, k1_max, k2_max)
+        call save(outdir, cluster, unit, tilted, sites, particles, bc, pattern, k1_max, k2_max)
     else if(ti == 1 .and. tilted == 1) then 
         if(nHel == 1) then 
             k1_max = 0
@@ -62,7 +70,7 @@ program main
             end if 
         end if 
         k2_max = sites/(2*nHel) - 1
-        call save(dir, cluster, unit, tilted, sites, particles, bc, pattern, k1_max, k2_max)
+        call save(outdir, cluster, unit, tilted, sites, particles, bc, pattern, k1_max, k2_max)
     end if
 
 
@@ -121,19 +129,19 @@ program main
     !         ! !$omp critical 
     !         do conf = 1, nDis !Disorder loop 
     !             call print(conf, ti, k1, k2, v1, v2)
-    !             ! call diagonalization(dir, conf, nev, ncv, full, v1, v2, othrds, param_list, type, basis, bsites, hexsites, occ, nOff, nDi, nDi_d, hamOff, hamDi, hamOff_dp, hamDi_d, hamOff_dc, hamDi_c, hamDi_off_c, ham, ham_dc, ham_d, ham_dc, norm, rcOff, rcDi, rc, parities, dplcts, nnz, ndeg, unit, nest, mode, energies, eigstate, eigstate_dc, gs, gs_c)
+    !             ! call diagonalization(outdir, conf, nev, ncv, full, v1, v2, othrds, param_list, type, basis, bsites, hexsites, occ, nOff, nDi, nDi_d, hamOff, hamDi, hamOff_dp, hamDi_d, hamOff_dc, hamDi_c, hamDi_off_c, ham, ham_dc, ham_d, ham_dc, norm, rcOff, rcDi, rc, parities, dplcts, nnz, ndeg, unit, nest, mode, energies, eigstate, eigstate_dc, gs, gs_c)
     !             call diagonalize()
     
     !             if(curr == 0) goto 15          
             
                 
     !             if(nv2 > 0) ndeg = 2
-    !             call currentcorrelations(dir, ti, tilted, nHel, tilt, num_thrds, conf, degeneracy, full, feast, mkl, arpack, symmetrize, sites, l2, l1, ucx, ucy, k1, k2, id, mir, rot, nDis, ndeg, refbonds, cntrA, cntrB, unit, dim, alattice, blattice, xyA, xyB, xtransl, ytransl, refl, c6, basis, v1, v2, dis, nnnVec, norm, eigstate, eigstate_dc)
+    !             call currentcorrelations(outdir, ti, tilted, nHel, tilt, num_thrds, conf, degeneracy, full, feast, mkl, arpack, symmetrize, sites, l2, l1, ucx, ucy, k1, k2, id, mir, rot, nDis, ndeg, refbonds, cntrA, cntrB, unit, dim, alattice, blattice, xyA, xyB, xtransl, ytransl, refl, c6, basis, v1, v2, dis, nnnVec, norm, eigstate, eigstate_dc)
     !             15 continue 
 
     !             if(corr == 0) goto 16
     !             do refsite = 1, sites
-    !                 call ddcf(dir, refsite, conf, unit, dim, sites, k1, k2, nDis, dis, v1, v2, basis, eigstate(1:dim, 1))
+    !                 call ddcf(outdir, refsite, conf, unit, dim, sites, k1, k2, nDis, dis, v1, v2, basis, eigstate(1:dim, 1))
     !             end do 
     !             16 continue
 
@@ -156,8 +164,9 @@ program main
     
     116 continue
 
-    call datetime(dir, 1)
-    call printparams(nev, ndeg, nHel, tilt, k1, k2)
+    call datetime(outdir, 1)
+    ! call printparams(nev, ndeg, nHel, tilt, k1, k2)
+    call printing()
     end do 
     end do !Momentum loops 
 

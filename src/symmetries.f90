@@ -2,79 +2,80 @@ module symmetries
     
     use parameters
     use functions
-
+    use types
     implicit none
 
     contains 
 
 
-    subroutine characters(symmetrize, irrep, mir, rot, id)
+    subroutine characters(symm, irrep, geopar)
+    ! subroutine characters(symm, irrep, mir, rot, id)
         !---------------------------------------!
         !            Character table            !
         !---------------------------------------!
         ! This subroutine provides the character table for the C6v point group.
-        ! It returns the characters for the irreducible representations (irreps) of the group. 
-        ! Currently only defined for the C6v point group.
-        ! symmetrize = 0: No symmetrization, only identity
-        ! symmetrize = 1: Symmetrization, use character table
+        ! symm = 0: No symmetrization, only identity
+        ! symm = 1: Symmetrization, use character table
         ! irrep = "A1", "A2", "B1", "B2", "E1", "E2"
-        ! mir = reflection (mirror) characters, rot = rotation characters, id = identity character
+        ! mir: reflection (mirror) characters, rot: rotation characters, id: identity character
         ! For C6v group, the characters are defined as
         ! mir(1) = sigma_v_1, mir(2) = sigma_v_2, mir(3) = sigma_v_3, mir(4) = sigma_d_1, mir(5) = sigma_d_2, mir(6) = sigma_d_3
         ! rot(1) = c6, rot(2) = (c6)^2 = c3, rot(3) = (c6)^3 = c2, rot(4) = (c6)^4 = -c3, rot(5) = (c6)^5 = -c6
 
         implicit none
-        integer, intent(in) :: symmetrize
+        integer, intent(in) :: symm
         character(len=2), intent(in) :: irrep
-        double precision, intent(out) :: mir(6), rot(5), id
+        type(geometry), intent(out) :: geopar
 
-        if(symmetrize == 0) then 
-            id  = 1
-            mir = 1
-            rot = 1    
-        else if(irrep == "A1") then 
-            id  = 1
-            mir = 1
-            rot = 1
-        else if(irrep == "A2") then 
-            id  = 1
-            mir = -1
-            rot = 1
-        else if(irrep == "B1") then     
-            id     = 1
-            mir    = 1
-            mir(4) = -1
-            mir(5) = -1
-            mir(6) = -1
-            rot    = -1
-            rot(2) = 1
-            rot(4) = 1
-        else if(irrep == "B2") then     
-            id     = 1
-            mir    = -1
-            mir(4) = 1
-            mir(5) = 1
-            mir(6) = 1
-            rot    = -1
-            rot(2) = 1
-            rot(4) = 1
-        else if(irrep == "E1") then 
-            id     = 2
-            mir    = 0 
-            rot(1) = +1 
-            rot(5) = +1
-            rot(2) = -1
-            rot(4) = -1
-            rot(3) = -2
-        else if(irrep == "E2") then 
-            id     = 2
-            mir    = 0 
-            rot(1) = -1 
-            rot(5) = -1
-            rot(2) = -1
-            rot(4) = -1
-            rot(3) = +2
-        end if 
+        if(symm == 0) then 
+            geopar%id  = 1
+            geopar%mir = 1
+            geopar%rot = 1   
+        else 
+            if(irrep == "A1") then 
+                geopar%id  = 1
+                geopar%mir = 1
+                geopar%rot = 1
+            else if(irrep == "A2") then 
+                geopar%id  = 1
+                geopar%mir = -1
+                geopar%rot = 1
+            else if(irrep == "B1") then     
+                geopar%id     = 1
+                geopar%mir    = 1
+                geopar%mir(4) = -1
+                geopar%mir(5) = -1
+                geopar%mir(6) = -1
+                geopar%rot    = -1
+                geopar%rot(2) = 1
+                geopar%rot(4) = 1
+            else if(irrep == "B2") then     
+                geopar%id     = 1
+                geopar%mir    = -1
+                geopar%mir(4) = 1
+                geopar%mir(5) = 1
+                geopar%mir(6) = 1
+                geopar%rot    = -1
+                geopar%rot(2) = 1
+                geopar%rot(4) = 1
+            else if(irrep == "E1") then 
+                geopar%id     = 2
+                geopar%mir    = 0 
+                geopar%rot(1) = +1 
+                geopar%rot(5) = +1
+                geopar%rot(2) = -1
+                geopar%rot(4) = -1
+                geopar%rot(3) = -2
+            else if(irrep == "E2") then 
+            geopar%id     = 2
+            geopar%mir    = 0 
+            geopar%rot(1) = -1 
+            geopar%rot(5) = -1
+            geopar%rot(2) = -1
+            geopar%rot(4) = -1
+            geopar%rot(3) = +2
+        end if
+    end if
 
     end subroutine characters
 
@@ -638,11 +639,11 @@ module symmetries
     !            Find representative              !
     !---------------------------------------------!
 
-    subroutine representative_irrep(s, n, nHel, tilt, Lx, Ly, symmetrize, id, par, rot, xtransl, ytransl, refl, c6, r, l1, l2, sign)
+    subroutine representative_irrep(s, n, nHel, tilt, Lx, Ly, symm, id, par, rot, xtransl, ytransl, refl, c6, r, l1, l2, sign)
         !Finds the representative 'r' for state 's'. 'n' is the number of sites and 'l' the number of shifts needed to translate 's' to 'r'.
         implicit none
         integer(kind=8), intent(in) :: s
-        integer, intent(in) :: n, nHel, tilt, symmetrize, Lx, Ly, xtransl(2, n), ytransl(2, n), refl(6, n), c6(n)
+        integer, intent(in) :: n, nHel, tilt, symm, Lx, Ly, xtransl(2, n), ytransl(2, n), refl(6, n), c6(n)
         double precision, intent(in) :: id, par(6), rot(5)
         integer(kind=8), intent(out) :: r
         integer, intent(out) :: l1, l2
@@ -690,7 +691,7 @@ module symmetries
             end if 
         end do !Leaving this loop, r <= s 
 
-        if(symmetrize == 0) go to 12
+        if(symm == 0) go to 12
         do i = 1, 6 !Check for representatives among reflected states
             call mirror_rep(r, s, n, nHel, tilt, par(i), Lx, Ly, refl(i, 1:n), xtransl, ytransl, sign, l1, l2)
         end do 
@@ -704,11 +705,11 @@ module symmetries
     end subroutine representative_irrep
 
 
-    subroutine representative_irrep_rect(s, n, Lx, Ly, symmetrize, id, par, rot, xtransl, ytransl, refl, c6, r, l1, l2, sign)
+    subroutine representative_irrep_rect(s, n, Lx, Ly, symm, id, par, rot, xtransl, ytransl, refl, c6, r, l1, l2, sign)
             !Finds the representative 'r' for state 's'. 'n' is the number of sites and 'l' the number of shifts needed to translate 's' to 'r'.
             implicit none
             integer(kind=8), intent(in) :: s
-            integer, intent(in) :: n, symmetrize, Lx, Ly, xtransl(2, n), ytransl(2, n), refl(6, n), c6(n)
+            integer, intent(in) :: n, symm, Lx, Ly, xtransl(2, n), ytransl(2, n), refl(6, n), c6(n)
             double precision, intent(in) :: id, par(6), rot(5)
             integer(kind=8), intent(out) :: r
             integer, intent(out) :: l1, l2 
@@ -756,7 +757,7 @@ module symmetries
 
             end do !Leaving this loop, r <= s 
 
-            if(symmetrize == 0) go to 12
+            if(symm == 0) go to 12
             do i = 1, 6 !Check for representatives among reflected states
                 call mirror_rep(r, s, n, Ly, -1, par(i), Lx, Ly, refl(i, 1:n), xtransl, ytransl, sign, l2, l1)
             end do 
@@ -769,7 +770,7 @@ module symmetries
 
     end subroutine representative_irrep_rect
 
-    subroutine testsymm(sym, dim, mat)
+    subroutine test_symm(sym, dim, mat)
 
         implicit none
 
@@ -805,7 +806,7 @@ module symmetries
         end if
         return
 
-    end subroutine testsymm
+    end subroutine test_symm
 
     subroutine xtranslate(s, nHel, n, Lx, xtransl, sign, sx)
         implicit none 

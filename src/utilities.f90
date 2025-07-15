@@ -5,12 +5,46 @@ module utilities
 
     contains
 
+subroutine preprocess()
+    ! Preprocessing routine to set up necessary parameters and variables
+    use variables
+    use parameters
+    use input_variables
+    use types
+    use file_utils
+    use io_routines
+    use lattice
+    use basis
+    use hamiltonian
+    use printing_routines
+    use symmetries
+    use utilities
+
+    implicit none
+
+    call read_input(par)
+    call setup_output_directory()
+    call create_output_subdirs(outdir)
+    call nsteps(v1min, v1max, dv1, ndv1)
+    call nsteps(v2min, v2max, dv2, ndv2)
+    call characters(symm, irrep, geo_par) ! Set characters according to chosen irrep 
+    call timing(outdir, 0)
+    call setvars()  
+    call check_parallel()
+    call nsteps(par%v1min, par%v1max, par%dv1, ndv1)
+    call nsteps(par%v2min, par%v2max, par%dv2, ndv2)
+    call stepunits(1, ndv1, ndv2, units_2)
+    call threadunits(ndv1, ndv2, units)
+    
+
+    end subroutine preprocess
+
     subroutine cleanup(inner)
         
         use variables
 
         implicit none
-        logical, intent(in) :: inner
+        logical, intent(in) :: inner ! If true, deallocate arrays used within parameter-loops, otherwise deallocate arrays outside of parameter-loops.
         ! This subroutine deallocates all dynamically allocated arrays used in the program.
 
         if(inner) then ! Deallocate all dynamically allocated arrays of inner loops
@@ -46,28 +80,27 @@ module utilities
             if(allocated(hexsites))    deallocate(hexsites)
             if(allocated(asitesbonds)) deallocate(asitesbonds)
             if(allocated(bsitesbonds)) deallocate(bsitesbonds)
-            if(allocated(latticevecs)) deallocate(latticevecs)
+            if(allocated(geopar%latticevecs)) deallocate(geopar%latticevecs)
         end if 
 
 
     end subroutine cleanup
 
-    subroutine datetime(dir, startend, params)
+    subroutine timing(dir, start_end)
         implicit none
 
-        integer, intent(in) :: startend
-        character(len=*), intent(in) :: dir
-        character(len=*), intent(in), optional :: params
+        integer, intent(in) :: start_end ! 0 = start, 1 = end
+        character(len=*), intent(in) :: dir ! Directory for output
         character(8), save  :: datei, datef
         character(10), save :: timei, timef
-        integer,dimension(8), save :: valuesi, valuesf
+        integer, save :: values_i(8), values_f(8)
         real, save :: start, finish
-        character :: file_name*400
+        character :: file*512
 
 
-        if(startend == 0) then
+        if(start_end == 0) then
             call cpu_time(start)
-            call date_and_time(date=datei,time=timei,values=valuesi)
+            call date_and_time(date=datei,time=timei,values=values_i)
             write(*,"('Calculation started at',x,a,' h',x,a,' min',x,a,' sec')") timei(1:2), timei(3:4), timei(5:6)
             print*, ''
             print*, 'Start date: ',datei(7:8), '.',datei(5:6), '.',datei(1:4)
@@ -86,7 +119,7 @@ module utilities
                 write(*,"(' Elapsed CPU time = ',f12.3,' hours.')") (finish-start)/3600
                 print*, ''
             end if
-            call date_and_time(date=datef,time=timef,values=valuesf)
+            call date_and_time(date=datef,time=timef,values=values_f)
             write(*,"(' Calculation started at',x,a,'h',x,a,'min',x,a,'sec')") timei(1:2), timei(3:4), timei(5:6)
             print*, ''
             write(*,"(' Calculation ended at',x,a,'h',x,a,'min',x,a,'sec')") timef(1:2), timef(3:4), timef(5:6)
@@ -95,9 +128,8 @@ module utilities
             print*, ''
             print*, 'End date: ',datef(7:8), '.',datef(5:6), '.',datef(1:4)
 
-            file_name=dir//"times_"//params
-            file_name=trim_name(file_name)
-            open(77,file = file_name)
+            file=trim(dir)//"timing.dat"
+            open(77,file = trim(file))
             write(77,"(' Elapsed CPU time = ',f20.10,' seconds.')") finish-start
             write(77,"(' Calculation started at',x,a,'h',x,a,'min',x,a,'sec')") timei(1:2), timei(3:4), timei(5:6)
             write(77,"(' Start date:',x,a,'.',x,a,'.',x,a)") ,datei(7:8), datei(5:6), datei(1:4)
@@ -105,7 +137,7 @@ module utilities
             write(77,"(' End date:',x,a,'.',x,a,'.',x,a)") ,datef(7:8), datef(5:6), datef(1:4)
             close(77)
         end if
-    end subroutine datetime
+    end subroutine timing
 
     !------------------------------------------!
     !            Set initial variables         !
@@ -153,7 +185,7 @@ module utilities
         particles = int(filling * sites)
         
 
-        if(symmetrize == 1) print('(1x, a,a)'), 'Irrep = ', irrep
+        if(symm == 1) print('(1x, a,a)'), 'Irrep = ', irrep
         if(tilted == 1) then
             print('(1x, a,a)'), 'Cluster = ', cluster
         else 
@@ -269,8 +301,9 @@ module utilities
     !---------------------------------------------------!
 
     subroutine nsteps(min, max, delta, steps)
-
+        use types
         implicit none
+        ! type(geometry) :: params
         double precision, intent(in) :: min, max, delta
         integer, intent(out) :: steps
 

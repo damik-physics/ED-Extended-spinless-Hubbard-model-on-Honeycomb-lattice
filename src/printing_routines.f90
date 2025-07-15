@@ -1,5 +1,6 @@
 module printing_routines 
     implicit none
+    
 
     interface printing
         module procedure print_configuration, &
@@ -28,24 +29,28 @@ module printing_routines
         use input_variables
         use variables
         use parameters 
+        use types
         implicit none
-        
+        type(sim_params) par
+        type(geometry) geo
+        type(thread_params) thr
+        type(out_params) out  
         
         print*, '----------------------------------'
         print*, 'Simulation Parameters:'
-        print*, 'Sites:', sites
-        print*, 'Particles:', particles
-        print*, 'Dimension:', dim
-        print*, 'V1-range:', v1min, '-', v1max, 'in steps of ', dv1
-        print*, 'V2-range:', v2min, '-', v2max, 'in steps of ', dv2
-        print*, 'Number of eigenvalues (nev):', nev
-        print*, 'Number of convergence vectors (ncv):', ncv
-        print*, 'Number of disorder configurations:', nDis
-        if(dis > 0.d0) print*, 'Disorder strength:', dis
-        if(mass > 0.d0) print*, 'Sublattice imbalance:', mass
-        print*, 'Filling fraction:', filling
-        if(t /= 1.d0) print*, 'Hopping strength (t):', t
-        if(g_fact /= 2) print*, 'Electron g-factor:', g_fact
+        print*, 'Sites:', geo%sites
+        print*, 'Particles:', geo%particles
+        print*, 'Dimension:', geo%dim
+        print*, 'V1-range:', par%v1min, '-', par%v1max, 'in steps of ', par%dv1
+        print*, 'V2-range:', par%v2min, '-', par%v2max, 'in steps of ', par%dv2
+        print*, 'Number of eigenvalues (nev):', par%nev
+        print*, 'Number of convergence vectors (ncv):', par%ncv0
+        print*, 'Number of disorder configurations:', par%nDis
+        if(dis > 0.d0) print*, 'Disorder strength:', par%dis
+        if(mass > 0.d0) print*, 'Sublattice imbalance:', par%mass
+        print*, 'Filling fraction:', par%filling
+        if(t /= 1.d0) print*, 'Hopping strength (t):', par%t
+        if(g_fact /= 2) print*, 'Electron g-factor:', par%g_fact
         print*, 'Diagonalization method:'
         if (feast == 1) then
             print*, '  FEAST'
@@ -58,28 +63,19 @@ module printing_routines
         else
             print*, '  No diagonalization method selected'
         end if
-        if(othrds > 1) print*, 'Number of OpenMP threads for Arpack:', othrds
-        if(mthrds > 1) print*, 'Number of OpenMP threads for MKL:', mthrds
-        if(dis_thrds > 1) print*, 'Disorder threads:', dis_thrds
-        if(v1_thrds > 1) print*, 'V1 threads:', v1_thrds
-        if(v2_thrds > 1) print*, 'V2 threads:', v2_thrds
-        if(num_thrds > 1) print*, 'Number of threads for current calculations:', num_thrds
-        if(debug == 1) print*, 'Debug mode enabled.'
+        if(othrds > 1) print*, 'Number of OpenMP threads for Arpack:', thr%othrds
+        if(mthrds > 1) print*, 'Number of OpenMP threads for MKL:', thr%mthrds
+        if(thr%dis_thrds > 1) print*, 'Disorder threads:', thr%dis_thrds
+        if(thr%v1_thrds > 1) print*, 'V1 threads:', thr%v1_thrds
+        if(thr%v2_thrds > 1) print*, 'V2 threads:', thr%v2_thrds
+        if(thr%num_thrds > 1) print*, 'Number of threads for current calculations:', thr%num_thrds
         if(corr == 1) print*, 'Correlation calculations enabled.'
-        if(curr == 1) print*, 'Current-current calculations enabled:', curr
-        if(curr == 1) print*, 'Reference bonds for current calculations:', refbonds
-        print*, 'Degeneracy threshold:', deg
+        if(curr == 1) print*, 'Current-current calculations enabled:', par%curr
+        if(curr == 1) print*, 'Reference bonds for current calculations:', par%refbonds
+        print*, 'degflag threshold:', out%deg
         if(states == 1) print*, 'Saving of eigenstates enabled.'
         print*, '----------------------------------'
     end subroutine print_parameters
 
-    ! subroutine print_results()
-    !     use variables
-    !     implicit none
-    !     ! Print the results of the simulation
-    !     print*, 'Simulation Results:'
-    !     print*, 'Energies:', energies
-    !     print*, 'Eigenstates:', eigstate
-    ! end subroutine print_results
-
+ 
 end module printing_routines

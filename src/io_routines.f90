@@ -261,11 +261,11 @@ module io_routines
 
     end subroutine loadham
 
-    subroutine save_currents(dir, sl, params, append, degeneracy, unit, nbonds, current, bondcurrent)
+    subroutine save_currents(dir, sl, params, append, degflag, unit, nbonds, current, bondcurrent)
         
         implicit none 
 
-        integer,          intent(in) :: degeneracy, unit, nbonds
+        integer,          intent(in) :: degflag, unit, nbonds
         double precision, intent(in) :: current, bondcurrent(nbonds)
         character(len=*), intent(in) :: dir, sl, params
         logical,          intent(in) :: append 
@@ -280,8 +280,8 @@ module io_routines
             appchar = 'SEQUENTIAL'
         end if 
 
-        if(degeneracy < 2) dirq = dir  
-        if(degeneracy == 2) dirq = trim_name(dir // "QD_")
+        if(degflag < 2) dirq = dir  
+        if(degflag == 2) dirq = trim_name(dir // "QD_")
         dirq = trim_name(dirq)
         
         if(sl == "A") then 
@@ -564,15 +564,15 @@ module io_routines
             if(((k1 .ne. 0) .or. (k2 .ne. 0))) type = 'C'
             if(ti == 0) write (params, "('L=',i0,'N=',i0,'BC=',a,'_pat=',a2'.dat')") sites, particles, bc, pattern
             if(ti == 1) write (params, "('L=',i0,'N=',i0,'k1=',i0,'k2=',i0,'BC=',a,'_pat=',a2'.dat')") sites, particles, k1, k2, bc, pattern
-            if(symmetrize == 1) write (params, "('L=',i0,'N=',i0,'k1=',i0,'k2=',i0,'_',a,'_BC=',a,'_pat=',a2'.dat')") sites, particles, k1, k2, irrep, bc, pattern
+            if(symm == 1) write (params, "('L=',i0,'N=',i0,'k1=',i0,'k2=',i0,'_',a,'_BC=',a,'_pat=',a2'.dat')") sites, particles, k1, k2, irrep, bc, pattern
         else if(refb == 0) then !Name for energy/states file
             if(ti == 0) write (params, "('L=',i0,'N=',i0,'V=',f7.4,'V2=',f7.4,'M=',f10.7,'W=',f7.4,'nDis=',i0,'BC=',a,'_pat=',a2'.dat')") sites, particles, v1, v2, mass, dis, nDis, bc, pattern
             if(ti == 1) write (params, "('L=',i0,'N=',i0,'k1=',i0,'k2=',i0,'V=',f7.4,'V2=',f7.4,'M=',f10.7,'W=',f7.4,'nDis=',i0,'BC=',a,'_pat=',a2'.dat')") sites, particles, k1, k2, v1, v2, mass, dis, nDis, bc, pattern
-            if(symmetrize == 1) write (params, "('L=',i0,'N=',i0,'k1=',i0,'k2=',i0,'_',a,'_V=',f7.4,'V2=',f7.4,'M=',f10.7,'W=',f7.4,'nDis=',i0,'BC=',a,'_pat=',a2'.dat')") sites, particles, k1, k2, irrep, v1, v2, mass, dis, nDis, bc, pattern
+            if(symm == 1) write (params, "('L=',i0,'N=',i0,'k1=',i0,'k2=',i0,'_',a,'_V=',f7.4,'V2=',f7.4,'M=',f10.7,'W=',f7.4,'nDis=',i0,'BC=',a,'_pat=',a2'.dat')") sites, particles, k1, k2, irrep, v1, v2, mass, dis, nDis, bc, pattern
         else if(refb > 0) then !Name for current files
             if(ti == 0) write (params, "('L=',i0,'N=',i0,'V=',f7.4,'V2=',f7.4,'M=',f10.7,'W=',f7.4,'nDis=',i0,'BC=',a,'_pat=',a2,'_refb=',i0,'.dat')") sites, particles, v1, v2, mass, dis, nDis, bc, pattern, refb            
             if(ti == 1) write (params, "('L=',i0,'N=',i0,'k1=',i0,'k2=',i0,'V=',f7.4,'V2=',f7.4,'M=',f10.7,'W=',f7.4,'nDis=',i0,'BC=',a,'_pat=',a2,'_refb=',i0,'.dat')") sites, particles, k1, k2, v1, v2, mass, dis, nDis, bc, pattern, refb 
-            if(symmetrize == 1) write (params, "('L=',i0,'N=',i0,'k1=',i0,'k2=',i0,'_',a,'_V=',f7.4,'V2=',f7.4,'M=',f10.7,'W=',f7.4,'nDis=',i0,'BC=',a,'_pat=',a2,'_refb=',i0,'.dat')") sites, particles, k1, k2, irrep, v1, v2, mass, dis, nDis, bc, pattern, refb
+            if(symm == 1) write (params, "('L=',i0,'N=',i0,'k1=',i0,'k2=',i0,'_',a,'_V=',f7.4,'V2=',f7.4,'M=',f10.7,'W=',f7.4,'nDis=',i0,'BC=',a,'_pat=',a2,'_refb=',i0,'.dat')") sites, particles, k1, k2, irrep, v1, v2, mass, dis, nDis, bc, pattern, refb
         end if 
         params = trim_name(params)
         if(tilted == 1) params = trim_name(string // params)
@@ -603,7 +603,7 @@ module io_routines
         if(refsite > 0) then !Name for current files
             if(ti == 0) write (params, "('L=',i0,'N=',i0,'V=',f7.4,'V2=',f7.4,'M=',f10.7,'W=',f7.4,'nDis=',i0,'BC=',a,'_pat=',a2,'_refsite=',i0,'.dat')") sites, particles, v1, v2, mass, dis, nDis, bc, pattern, refsite            
             if(ti == 1) write (params, "('L=',i0,'N=',i0,'k1=',i0,'k2=',i0,'V=',f7.4,'V2=',f7.4,'M=',f10.7,'W=',f7.4,'nDis=',i0,'BC=',a,'_pat=',a2,'_refsite=',i0,'.dat')") sites, particles, k1, k2, v1, v2, mass, dis, nDis, bc, pattern, refsite 
-            if(symmetrize == 1) write (params, "('L=',i0,'N=',i0,'k1=',i0,'k2=',i0,a,'V=',f7.4,'V2=',f7.4,'M=',f10.7,'W=',f7.4,'nDis=',i0,'BC=',a,'_pat=',a2,'_refsite=',i0,'.dat')") sites, particles, k1, k2, irrep, v1, v2, mass, dis, nDis, bc, pattern, refsite
+            if(symm == 1) write (params, "('L=',i0,'N=',i0,'k1=',i0,'k2=',i0,a,'V=',f7.4,'V2=',f7.4,'M=',f10.7,'W=',f7.4,'nDis=',i0,'BC=',a,'_pat=',a2,'_refsite=',i0,'.dat')") sites, particles, k1, k2, irrep, v1, v2, mass, dis, nDis, bc, pattern, refsite
         end if 
         params = trim_name(params)
         if(tilted == 1) then 

@@ -4,6 +4,139 @@ module file_utils
 
 contains
 
+    subroutine read_input(params)
+        use types
+        implicit none
+        type(sim_params), intent(out) :: params
+
+        ! local copies for reading from namelist
+        integer :: ucx, ucy, tilted, ti, k0, symm, p1, p2, p3, corr, curr, refbonds, states, deg, feast, arpack, mkl, exact, dimthresh, nev, nst, ncv0, otf, degflag, nev0, nevmax, othrds, mthrds, nDis, g_fact
+        double precision :: t, dis, mass, filling, dv1, v1min, v1max, dv2, v2min, v2max
+        logical :: rvec
+        character(len=1) :: bc
+        character(len=2) :: irrep
+        character(len=3) :: cluster
+
+        integer :: ios
+        ! Read input parameters from input.nml file
+        ! This file should contain the namelist /params/ with all the variables that are subject to change.  
+        namelist /params_nml/ ucx, ucy, tilted, cluster, bc, ti, k0, symm, irrep, p1, p2, p3, corr, curr, refbonds, states, deg, feast, arpack, mkl, exact, dimthresh, rvec, nev, nst, ncv0, otf, degflag, nev0, nevmax, othrds, mthrds, nDis, dis, mass, filling, t, g_fact, dv1, v1min, v1max, dv2, v2min, v2max
+        open(unit=10, file='input.nml', status='old', action='read')
+        read(10, nml=params_nml)
+        close(10)
+
+
+        ! set defaults first
+        call init_params(params)
+        ucx = params%ucx
+        ucy = params%ucy 
+        bc = params%bc 
+        irrep = params%irrep
+        p1 = params%p1 
+        p2 = params%p2 
+        p3 = params%p3 
+        cluster = params%cluster
+        
+        nDis = params%nDis 
+        t = params%t 
+        dis = params%dis 
+        mass = params%mass 
+        filling = params%filling 
+        dv1 = params%dv1 
+        v1min = params%v1min 
+        v1max = params%v1max 
+        dv2 = params%dv2 
+        v2min = params%v2min 
+        v2max = params%v2max 
+
+        othrds = params%othrds 
+        mthrds = params%mthrds 
+
+        tilted = params%tilted 
+        ti = params%ti 
+        k0 = params%k0 
+        symm = params%symm 
+        corr = params%corr 
+        curr = params%curr 
+        refbonds = params%refbonds 
+        states = params%states 
+        feast = params%feast 
+        arpack = params%arpack 
+        mkl = params%mkl 
+        exact = params%exact 
+        dimthresh = params%dimthresh 
+        otf = params%otf 
+        degflag = params%degflag 
+        g_fact = params%g_fact 
+
+        rvec = params%rvec
+        nev = params%nev 
+        nev0 = params%nev0 
+        nevmax = params%nevmax 
+        nst = params%nst 
+        ncv0 = params%ncv0 
+
+        ! attempt to read from file
+        open(unit=10, file='input.nml', status='old', action='read', iostat=ios)
+        if (ios == 0) then
+            read(10, nml=params_nml)
+            close(10)
+        else
+            print *, 'No input.nml found, using defaults.'
+        end if
+
+        ! transfer into derived type
+        params%ucx = ucx
+        params%ucy = ucy  
+        params%bc = bc 
+        params%irrep = irrep 
+        params%p1 = p1  
+        params%p2 = p2  
+        params%p3 = p3  
+        params%cluster = cluster 
+
+        params%nDis = nDis  
+        params%t = t  
+        params%dis = dis  
+        params%mass = mass  
+        params%filling = filling  
+        params%dv1 = dv1  
+        params%v1min = v1min  
+        params%v1max = v1max  
+        params%dv2 = dv2  
+        params%v2min = v2min  
+        params%v2max = v2max  
+
+        params%othrds = othrds  
+        params%mthrds = mthrds  
+
+        params%tilted = tilted  
+        params%ti = ti  
+        params%k0 = k0  
+        params%symm = symm  
+        params%corr = corr  
+        params%curr = curr  
+        params%refbonds = refbonds  
+        params%states = states  
+        params%feast = feast  
+        params%arpack = arpack  
+        params%mkl = mkl  
+        params%exact = exact  
+        params%dimthresh = dimthresh  
+        params%otf = otf  
+        params%degflag = degflag  
+        params%g_fact = g_fact  
+
+        params%rvec = rvec 
+        params%nev = nev  
+        params%nev0 = nev0  
+        params%nevmax = nevmax  
+        params%nst = nst  
+        params%ncv0 = ncv0  
+
+    end subroutine read_input
+
+
     subroutine setup_output_directory()
         implicit none
         character(len=64) :: timestamp
@@ -24,7 +157,7 @@ contains
         ! Also copy the input file for record-keeping
         cmd = 'cp input.nml ' // trim(outdir) // 'input.nml'
         call system(cmd)
-        
+
     end subroutine setup_output_directory
 
     subroutine create_output_subdirs(out_dir)

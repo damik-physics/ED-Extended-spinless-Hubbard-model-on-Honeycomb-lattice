@@ -12,11 +12,11 @@ implicit none
         ! cluster: Cluster name, e.g. '18A' for a 18-site cluster
         ! bc: Boundary conDitions, 'p' for periodic, 'o' for open
 
-    ! Symmetization parameters
-    integer          :: symmetrize = 0, p1 = 1, p2 = 1, p3 = 1, ti = 0, k0 = 0  
+    ! Symmetrization parameters
+    integer          :: symm = 0, p1 = 1, p2 = 1, p3 = 1, ti = 0, k0 = 0  
     character        :: irrep*2 = 'A1' 
         ! ti = 1: Include translation symmetry, k0 = 1: Only k=0 sector
-        ! symmetrize = 1: Symmetrization flag; compute basis in irreducible representation
+        ! symm = 1: Symmetrization flag; compute basis in irreducible representation
         ! irrep = 'B2': Compute basis in irreducible representation B2 (currently supported irreps = {A1, A2, B1, B2})
         ! p1, p2, p3: Reflection symmetry eigenvalues for sigma-1, sigma-2, and sigma-3 axes
         ! irrep: Irreducible representation for symmetrization 
@@ -34,7 +34,7 @@ implicit none
 
 
     ! Diagonalization parameters
-    integer :: feast = 0, arpack = 1, mkl = 0, exact = 0, nevext = 10, n_st = 10, ncv0 = 180, otf = 0, degeneracy = 1, nev0 = 200, nevmax = 230, dimthresh = 250 
+    integer :: feast = 0, arpack = 1, mkl = 0, exact = 0, nevext = 10, nst = 10, ncv0 = 180, otf = 0, degflag = 1, nev0 = 200, nevmax = 230, dimthresh = 250 
     logical :: rvec = .true. 
         ! Diagonalization methods:
         !    feast  = 1: Use FEAST algorithm for diagonalization
@@ -43,11 +43,11 @@ implicit none
         !    exact  = 1: Use full exact diagonalization for dense matrices
         ! rvec : Flag for calculating eigenvectors
         ! nevext : Number of eigenvalues to calculate
-        ! n_st : Number of eigenstates to calculate
+        ! nst : Number of eigenstates to calculate
         ! ncv0 : Number of Lanczos vectors to use (see Arpack manual). Typical on the order of 100-200
         ! otf = 1: Flag to generate Hamiltonian on-the-fly (does not store sparse Hamiltonian in arrays)
-        ! degeneracy = 1: Flag for including degenerate ground states:
-        !                0 = non-degenerate ground state, 1 = include degeneracies, 2 = quasidegeneracy
+        ! degflag = 1: Flag for including degenerate ground states:
+        !                0 = non-degenerate ground state, 1 = include degeneracies, 2 = quasideg
         ! nev0 : Initial FEAST subspace size
         ! nevmax : Sets maximum energy for FEAST from previous run
         ! dimthresh : Threshold for dimension of the Hamiltonian matrix to use sparse diagonalization methods
@@ -75,8 +75,5 @@ implicit none
     ! V = vmin + dv * i, where i = 0, 1, ..., (vmax - vmin) / dv
     ! V2 = v2min + dv2 * j, where j = 0, 1, ..., (v2max - v2min) / dv2
      
-
-    integer :: debug = 0 ! Flag for debug mode 
-
 
 end module input_variables

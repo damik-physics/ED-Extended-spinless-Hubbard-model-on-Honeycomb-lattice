@@ -4,7 +4,7 @@ module file_utils
 contains
 
 
-    subroutine preprocess()
+    subroutine preprocess(par, geo, thrd, out)
         ! Preprocessing routine to set up necessary parameters and variables
         use vars
         use params
@@ -12,12 +12,12 @@ contains
         use types
         
         implicit none
-        type(sim_params) :: par
-        type(geometry) :: geo
-        type(thread_params) :: thrd
-        type(out_params) :: out
+        type(sim_params), intent(inout) :: par
+        type(geometry), intent(inout) :: geo
+        type(thread_params), intent(inout) :: thrd
+        type(out_params), intent(inout) :: out
         call read_input(par)
-        call setup_output_directory()
+        call setup_output_directory(out%outdir)
         call create_output_subdirs(out%outdir)
         call nsteps(par%v1min, par%v1max, par%dv1, thrd%ndv1)
         call nsteps(par%v2min, par%v2max, par%dv2, thrd%ndv2)
@@ -35,22 +35,26 @@ contains
 
 
     subroutine set_thrds()
-        use types, only: thread_params
+        use types
         implicit none 
+        type(sim_params) :: par
         type(thread_params) :: th
-        th%v2_thrds
-        th%v1_thrds
-        th%dis_thrds
-        th%num_thrds
-        print*, 'Number of V2 threads = ', v2_thrds
-        print*, 'Number of V1 threads = ', v1_thrds
-        print*, 'Number of disorder threads = ', dis_thrds
-        print*, 'Number of threads left = ', num_thrds
-        if(num_thrds < 1) error stop "NO THREADS LEFT AVAILABLE!"
+        ! Assign thread counts from th to local variables (assuming these are module variables)
+        th%v2_thrds = max(min(th%ndv2, th%othrds), 1)
+        th%v1_thrds = max(min(th%ndv1, int((th%othrds - th%v2_thrds) / th%v2_thrds)), 1) 
+        th%dis_thrds = max(min(par%nDis, int((th%othrds - th%v2_thrds * th%v1_thrds) / (th%v2_thrds * th%v1_thrds))), 1)
+        th%num_thrds = max(int((th%othrds - th%v2_thrds * th%v1_thrds * th%dis_thrds) / (th%v2_thrds * th%v1_thrds * th%dis_thrds)), 1)
+
+        
+        print*, 'Number of V2 threads = ', th%v2_thrds
+        print*, 'Number of V1 threads = ', th%v1_thrds
+        print*, 'Number of disorder threads = ', th%dis_thrds
+        print*, 'Number of threads left = ', th%num_thrds
+        if(th%num_thrds < 1) error stop "NO THREADS LEFT AVAILABLE!"
         print*, ''
 
-    end subroutine set_thrds    
-
+    end subroutine set_thrds
+    
     subroutine read_input(params)
         use types
         implicit none
@@ -185,7 +189,9 @@ contains
     end subroutine read_input
 
 
-    subroutine setup_output_directory()
+    subroutine setup_output_directory(outdir)
+        use types 
+        character(len=*) :: outdir
         implicit none
         character(len=64) :: timestamp
         integer :: values(8)
@@ -232,13 +238,16 @@ contains
 
 
     subroutine write_parameters_json(ucx, ucy, tilted, cluster, bc, V, V2, filling, irrep)
+        use types
         implicit none
+    
         integer, intent(in) :: ucx, ucy, tilted
         character(*), intent(in) :: cluster, bc, irrep
         real(8), intent(in) :: V, V2, filling
         integer :: unit
-
-        open(newunit=unit, file=trim(outdir)//'parameters.json', status='replace')
+        type(out_params) :: out 
+        
+        open(newunit=unit, file=trim(out%outdir)//'parameters.json', status='replace')
         write(unit,'(A)') '{'
         write(unit,'(A,I0,A)') '"ucx": ', ucx, ','
         write(unit,'(A,I0,A)') '"ucy": ', ucy, ','

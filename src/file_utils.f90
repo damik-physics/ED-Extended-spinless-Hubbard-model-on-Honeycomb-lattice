@@ -1,8 +1,55 @@
 module file_utils
     implicit none
-    character(len=256) :: outdir
 
 contains
+
+
+    subroutine preprocess()
+        ! Preprocessing routine to set up necessary parameters and variables
+        use vars
+        use params
+        use input_vars
+        use types
+        
+        implicit none
+        type(sim_params) :: par
+        type(geometry) :: geo
+        type(thread_params) :: thrd
+        type(out_params) :: out
+        call read_input(par)
+        call setup_output_directory()
+        call create_output_subdirs(out%outdir)
+        call nsteps(par%v1min, par%v1max, par%dv1, thrd%ndv1)
+        call nsteps(par%v2min, par%v2max, par%dv2, thrd%ndv2)
+        call characters(par%symm, par%irrep, geo) ! Set characters according to chosen irrep 
+        call timing(out%outdir, 0)
+        call setvars()  
+        call check_parallel()
+        call nsteps(par%v1min, par%v1max, par%dv1, thrd%ndv1)
+        call nsteps(par%v2min, par%v2max, par%dv2, thrd%ndv2)
+        call stepunits(1, thrd%ndv1, thrd%ndv2, thrd%units_2)
+        call threadunits(thrd%ndv1, thrd%ndv2, thrd%units)
+        
+
+    end subroutine preprocess
+
+
+    subroutine set_thrds()
+        use types, only: thread_params
+        implicit none 
+        type(thread_params) :: th
+        th%v2_thrds
+        th%v1_thrds
+        th%dis_thrds
+        th%num_thrds
+        print*, 'Number of V2 threads = ', v2_thrds
+        print*, 'Number of V1 threads = ', v1_thrds
+        print*, 'Number of disorder threads = ', dis_thrds
+        print*, 'Number of threads left = ', num_thrds
+        if(num_thrds < 1) error stop "NO THREADS LEFT AVAILABLE!"
+        print*, ''
+
+    end subroutine set_thrds    
 
     subroutine read_input(params)
         use types
@@ -18,6 +65,7 @@ contains
         character(len=3) :: cluster
 
         integer :: ios
+
         ! Read input parameters from input.nml file
         ! This file should contain the namelist /params/ with all the variables that are subject to change.  
         namelist /params_nml/ ucx, ucy, tilted, cluster, bc, ti, k0, symm, irrep, p1, p2, p3, corr, curr, refbonds, states, deg, feast, arpack, mkl, exact, dimthresh, rvec, nev, nst, ncv0, otf, degflag, nev0, nevmax, othrds, mthrds, nDis, dis, mass, filling, t, g_fact, dv1, v1min, v1max, dv2, v2min, v2max

@@ -79,11 +79,6 @@ module types
         double complex, allocatable :: eigstate_dc(:,:), gs_dc(:)
     end type diag_params
 
-    type :: system_params
-        integer :: unit ! Unit number for output files
-
-    end type system_params
-
     type :: thread_params
         ! Parallelization parameters
         integer :: othrds ! Number of OpenMP threads for Arpack diagonalization
@@ -95,13 +90,15 @@ module types
         integer, allocatable :: units(:,:), units_2(:,:,:,:) ! Unit numbers for output files in parallel calculations
         integer :: thread_num ! Thread number for V2 calculations
         integer :: thread_num_2 ! Thread number for V1 calculations
+        integer :: ndv1 ! Number of V1 values
+        integer :: ndv2 ! Number of V2 values
     end type thread_params
 
     type out_params
         ! Output parameters    
         character(len=1000) :: dir ! Output directory
         integer :: unit ! Unit number for output files
-        
+        character(len=512) :: outdir
         integer :: corr ! Flag for calculating single-operator correlation functions
         integer :: curr ! Flag for calculating current-current correlation functions
         integer :: refbonds ! Number of reference bonds for which currents are calculated
@@ -109,7 +106,6 @@ module types
         double precision :: deg ! Threshold for considering eigenvalues degenerate, i.e. Abs(E_{i}-E_{i-1}) <= deg are degenerate
         ! Eigenvalues and eigenvectors
         integer :: nDeg ! Number of degenerate ground states
-    
         double precision, allocatable :: energies(:) ! Array of eigenvalues
         double precision, allocatable :: gs(:) ! Ground state energy
         double complex, allocatable :: eigstate(:,:) ! Eigenstates

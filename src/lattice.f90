@@ -1,18 +1,18 @@
 module lattice
     use types
     use functions 
-    use parameters
+    use params
     implicit none
     
 
     contains 
-    subroutine define_lattice(dir, par, geo)
-    ! subroutine define_lattice(dir, tilted, ucx, ucy, nnnBonds, geo%nnBonds, par%bc, pattern, cluster, bsites, geo%hexsites, geo%latticevecs, alattice, geo%blattice, xyA, xyB, geo%BsitesBonds, geo%BsitesBonds, geo%cntrA,geo%cntrB, geo%nHel, geo%tilt, phase, xy, geo%xtransl, geo%ytransl, reflections, nnnVec)
-    ! call define_lattice(outdir, tilted, ucx, ucy, nnnBonds, geo%nnBonds, bc, pattern, cluster, bsites, geo%hexsites, geo%latticevecs, alattice, geo%blattice, xyA, xyB, geo%BsitesBonds, BsitesBonds, geo%cntrA,geo%cntrB, geo%nHel, geo%tilt, phases, xy, geo%xtransl, geo%ytransl, reflections, nnnVec)
+    subroutine define_lattice(dir, par, geo, out)
+    ! subroutine define_lattice(dir, tilted, ucx, ucy, nnnBonds, geo%nnBonds, par%bc, pattern, par%cluster, bsites, geo%hexsites, geo%latticevecs, alattice, geo%blattice, xyA, xyB, geo%BsitesBonds, geo%BsitesBonds, geo%cntrA,geo%cntrB, geo%nHel, geo%tilt, phase, xy, geo%xtransl, geo%ytransl, reflections, nnnVec)
+    ! call define_lattice(out%outdir, tilted, ucx, ucy, nnnBonds, geo%nnBonds, bc, pattern, par%cluster, bsites, geo%hexsites, geo%latticevecs, alattice, geo%blattice, xyA, xyB, geo%BsitesBonds, BsitesBonds, geo%cntrA,geo%cntrB, geo%nHel, geo%tilt, phases, xy, geo%xtransl, geo%ytransl, reflections, nnnVec)
         implicit none
     
         ! integer, intent(in) :: ucx, ucy, tilted
-        ! character(len=*), intent(in) :: dir, bc, pattern, cluster
+        ! character(len=*), intent(in) :: dir, bc, pattern, par%cluster
         ! integer, intent(out) :: nnnBonds, geo%nnBonds, geo%cntrA,geo%cntrB, geo%nHel, geo%tilt 
         ! integer, allocatable, intent(out) :: bsites(:,:)
         ! integer, allocatable, intent(out) :: geo%hexsites(:,:), geo%phases(:), geo%xy(:,:), geo%latticevecs(:)
@@ -24,6 +24,7 @@ module lattice
         character(len=*), intent(inout) :: dir
         type(sim_params), intent(inout) :: par
         type(geometry), intent(inout) :: geo
+        type(out_params), intent(inout) :: out
         ! integer, allocatable :: geo%sitecoord(:,:)
         integer :: i!, geo%nUC
         character :: name*512
@@ -32,7 +33,7 @@ module lattice
 
             call honeycomb(dir, par, geo)
             call honeycomb_nnn(dir, par, geo)
-            call coordinates(dir, par, geo)
+            call coordinates(dir, par, geo, out)
             call reflection(par, geo)        
 
             ! call honeycomb(dir, ucx, ucy, bc, pattern, nnnBonds, bsites)
@@ -143,7 +144,7 @@ module lattice
             geo%nnnBonds = geo%cntrA + geo%cntrB 
             
                  
-            write(*,'(a,a,a)') ' Honeycomb lattice cluster ',par%cluster,' created' 
+            write(*,'(a,a,a)') ' Honeycomb lattice par%cluster ',par%cluster,' created' 
             if(allocated(geo%xyA)) deallocate(geo%xyA)
             if(allocated(geo%xyB)) deallocate(geo%xyB)
             allocate(geo%xyA(4, geo%cntrA))
@@ -180,6 +181,31 @@ module lattice
             end do 
             close(30)
         end if 
+
+
+        if(par%ti == 0 .or. par%symm == 1 .or. par%k0 == 1) then 
+            geo%k1_max = 0
+            geo%k2_max = 0 
+        else if(par%ti == 1 .and. par%tilted == 0) then 
+            geo%k1_max = par%ucx - 1
+            geo%k2_max = par%ucy - 1
+            call save(out%outdir, par%cluster, out%unit, par%tilted, geo%sites, geo%particles, par%bc, pattern, geo%k1_max, geo%k2_max)
+        else if(par%ti == 1 .and. par%tilted == 1) then 
+            if(geo%nHel == 1) then 
+                geo%k1_max = 0
+            else if(geo%nHel > 1) then
+                if(modulo(dble(geo%sites)/dble((geo%nHel*geo%tilt)), dble(geo%nHel)) == 0.d0) then 
+                    geo%k1_max = geo%sites/(geo%nHel * geo%tilt) - 1
+                else if(modulo(dble(geo%sites)/dble((geo%nHel*geo%tilt)), dble(geo%nHel)) >= 1.d0) then 
+                    geo%k1_max = geo%sites/geo%tilt - 1
+                else if(modulo(dble(geo%sites)/dble((geo%nHel*geo%tilt)), dble(geo%nHel)) < 1.d0) then 
+                    geo%k2_max = ceiling(geo%sites/(geo%nHel * geo%tilt * modulo(dble(geo%sites)/dble((geo%nHel*geo%tilt)), 1.d0))) - 1
+                end if 
+            end if 
+            geo%k2_max = geo%sites/(2*geo%nHel) - 1
+            call save(out%outdir, par%cluster, out%unit, par%tilted, geo%sites, geo%particles, par%bc, pattern, geo%k1_max, geo%k2_max)
+        end if
+
 
     end subroutine define_lattice
 
@@ -312,8 +338,8 @@ module lattice
                     geo%Blattice(5,geo%cntrB) = 3
 
                 end if 
-                if (geo%cntrA > nBondsA) print*,'Build cluster: Too many A bonds'
-                if (geo%cntrB > nBondsB) print*,'Build cluster: Too many B bonds'
+                if (geo%cntrA > nBondsA) print*,'Build par%cluster: Too many A bonds'
+                if (geo%cntrB > nBondsB) print*,'Build par%cluster: Too many B bonds'
             end do 
         end do 
         
@@ -324,10 +350,10 @@ module lattice
             geo%hexsites(1, 2 *i) = geo%Blattice(1, i)
             geo%hexsites(2, 2 *i) = geo%Blattice(2, i)
         
-            if(geo%Alattice(1, i) > sites) print*,'Build cluster: A site ',geo%Alattice(1, i), 'is larger than maximum number of sites.'
-            if(geo%Alattice(2, i) > sites) print*,'Build cluster: A site ',geo%Alattice(2, i), 'is larger than maximum number of sites.'
-            if(geo%Blattice(1, i) > sites) print*,'Build cluster: B site ',geo%Blattice(1, i), 'is larger than maximum number of sites.'
-            if(geo%Blattice(2, i) > sites) print*,'Build cluster: B site ',geo%Blattice(2, i), 'is larger than maximum number of sites.'
+            if(geo%Alattice(1, i) > sites) print*,'Build par%cluster: A site ',geo%Alattice(1, i), 'is larger than maximum number of sites.'
+            if(geo%Alattice(2, i) > sites) print*,'Build par%cluster: A site ',geo%Alattice(2, i), 'is larger than maximum number of sites.'
+            if(geo%Blattice(1, i) > sites) print*,'Build par%cluster: B site ',geo%Blattice(1, i), 'is larger than maximum number of sites.'
+            if(geo%Blattice(2, i) > sites) print*,'Build par%cluster: B site ',geo%Blattice(2, i), 'is larger than maximum number of sites.'
         end do 
 
         ! Store nearest neighbor bonds 
@@ -347,7 +373,7 @@ module lattice
             geo%bsites(2, cntr) = geo%Blattice(2, i + 2)
         end do 
         
-        if(cntr > geo%nnBonds) print*,'Build cluster: Too many NN bonds.'   
+        if(cntr > geo%nnBonds) print*,'Build par%cluster: Too many NN bonds.'   
 
     end subroutine build_cluster
 
@@ -400,7 +426,8 @@ module lattice
 
     end subroutine reflection
 
-    subroutine coordinates(dir, par, geo)!unit, ucx, ucy, geo%nnBonds, abonds, bbonds, xy, geo%alattice, geo%blattice, bc, pattern, xyA, xyB)
+    subroutine coordinates(dir, par, geo, out)!unit, ucx, ucy, geo%nnBonds, abonds, bbonds, xy, geo%alattice, geo%blattice, bc, pattern, xyA, xyB)
+        use params
         implicit none 
         ! integer, intent(in) :: unit, ucx, ucy, geo%nnBonds, abonds, bbonds
         ! integer, intent(in) :: geo%xy(4, geo%nnBonds), geo%alattice(5, abonds), geo%blattice(5, bbonds)
@@ -408,13 +435,13 @@ module lattice
         ! integer, allocatable, intent(out) :: xyA(:,:), xyB(:,:)
         type(sim_params), intent(inout) :: par
         type(geometry), intent(inout) :: geo
-        type(system_params) :: sys
+        type(out_params), intent(inout) :: out
 
         integer   :: j = 0 
         character :: filename*256
         character :: par_char*256
-
-        write(par_char,"('L=',i0,'ucx=',i0,'ucy=',i0,'BC=',a,'_pat=',a2'.dat')") 2 *par%ucx*par%ucy,par%ucx,par%ucy, par%bc,pattern
+        out%unit = 10
+        write(par_char,"('L=',i0,'ucx=',i0,'ucy=',i0,'BC=',a,'_pat=',a2'.dat')") 2 *par%ucx*par%ucy,par%ucx,par%ucy, par%bc, pattern
         par_char = trim(par_char)
         if(allocated(geo%xyA)) deallocate(geo%xyA)
         if(allocated(geo%xyB)) deallocate(geo%xyB)
@@ -422,27 +449,27 @@ module lattice
         allocate(geo%xyB(4, geo%cntrB))
         filename = dir//"A_coordinates_"//par_char
         filename = trim(filename)
-        open(sys%unit,file = filename)
+        open(out%unit,file = filename)
         do j = 1, geo%cntrA             
             geo%xyA(1,j) = geo%xy(1,geo%alattice(4,j))
             geo%xyA(2,j) = geo%xy(2,geo%alattice(4,j))
             geo%xyA(3,j) = geo%xy(3,geo%alattice(4,j))
             geo%xyA(4,j) = geo%xy(4,geo%alattice(4,j))
-            write(sys%unit,'(4(I0,x))') geo%xyA(1,j), geo%xyA(2,j), geo%xyA(3,j), geo%xyA(4,j) 
+            write(out%unit,'(4(I0,x))') geo%xyA(1,j), geo%xyA(2,j), geo%xyA(3,j), geo%xyA(4,j) 
         end do   
-        close(sys%unit)
+        close(out%unit)
 
         filename = dir//"B_coordinates_"//par_char
         filename = trim(filename)
-        open(sys%unit,file = filename)
+        open(out%unit,file = filename)
         do j = 1, geo%cntrB             
             geo%xyB(1,j) = geo%xy(1,geo%blattice(4,j))
             geo%xyB(2,j) = geo%xy(2,geo%blattice(4,j))
             geo%xyB(3,j) = geo%xy(3,geo%blattice(4,j))
             geo%xyB(4,j) = geo%xy(4,geo%blattice(4,j))
-            write(sys%unit,'(4(I0,x))') geo%xyB(1,j), geo%xyB(2,j), geo%xyB(3,j), geo%xyB(4,j) 
+            write(out%unit,'(4(I0,x))') geo%xyB(1,j), geo%xyB(2,j), geo%xyB(3,j), geo%xyB(4,j) 
         end do 
-        close(sys%unit)
+        close(out%unit)
 
         return 
     end subroutine coordinates
@@ -450,7 +477,7 @@ module lattice
     subroutine honeycomb(dir, par, geo)
     ! subroutine honeycomb(dir, ucx, ucy, bc, pattern, geo%nnBonds, geo%bsites)
         use types
-        use parameters, only: pattern
+        use params, only: pattern
         !Subroutine obtained from: http://physics.bu.edu/~sandvik/vietri/sse/ssebasic.f90
         implicit none
 
@@ -562,7 +589,7 @@ module lattice
     subroutine honeycomb_nnn(dir, par, geo)
     ! subroutine honeycomb_nnn(dir, ucx, ucy, bc, pattern, geo%nnBonds, geo%hexsites, geo%latticevecs, alattice, geo%blattice, geo%BsitesBonds, BsitesBonds, geo%cntrA,geo%cntrB, phase, xy, geo%xtransl, geo%ytransl, sitecoord, nnnVec)
         !Subroutine obtained from: http://physics.bu.edu/~sandvik/vietri/sse/ssebasic.f90
-        use parameters, only: pattern
+        use params, only: pattern
         implicit none
 
         ! integer, intent(in) :: ucx, ucy

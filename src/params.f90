@@ -9,7 +9,7 @@ module params
     character, parameter        :: mode*2    = 'SA' ! Mode for ARPACK diagonalization (SA = calculate nev smallest algebraic eigenvalues, LA = largest algebraic eigenvalues) 
     character, parameter        :: pattern*2 = 'AB' ! AB = First site of A sublattice, second site of B sublattice, BA = First site of B sublattice, second site of A sublattice 
     logical, parameter          :: dynamic = .False. 
-    logical, parameter          :: nested  = .True.
+    logical, parameter          :: nested  = .True.  ! OpenMP flag to enable nested parallel loops
   
 
 end module params

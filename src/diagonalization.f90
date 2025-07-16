@@ -14,8 +14,8 @@ module diagonalization
     ! Old subroutine interface     
     ! subroutine diagonalize(dir, nconf, nev, ncv, full, v1, v2, threads, parameters, type, basis, bsites, hexsites, occ, noff, ndi, ndi_off, hamoff, hamdi, hamoff_d, hamdi_d, hamoff_c, hamdi_c, hamdi_off_c, ham, ham_c, ham_d, ham_dc, norm, rcoff, rcdi, rc, prts, dplcts, nnz, ndeg, unit, nest, mode, energies, eigstate, eigstate_c, gs, gs_c)
 
-        use input_variables
-        use variables
+        use input_vars
+        use vars
 
         implicit none 
         

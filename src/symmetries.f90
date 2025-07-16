@@ -1,6 +1,6 @@
 module symmetries
     
-    use parameters
+    use params
     use functions
     use types
     implicit none

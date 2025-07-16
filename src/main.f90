@@ -1,16 +1,16 @@
 program main
 
     use types
-    use parameters
-    use variables
-    use input_variables
+    use params
+    use vars
+    use input_vars
     use functions
     use file_utils
-    use io_routines
+    use io_utils
     use lattice 
     use basis
     use hamiltonian
-    use printing_routines
+
     ! use symmetries
     ! use utilities
     ! use diagonalization
@@ -26,36 +26,8 @@ program main
     type(hamiltonian_params) :: ham_par
 
     
-    ! Read input parameters from input.nml file
-    ! This file should contain the namelist /params/ with all the variables that are subject to change.  
-    ! namelist /params/ ucx, ucy, tilted, cluster, bc, ti, k0, symm, irrep, p1, p2, p3, corr, curr, refbonds, states, deg, feast, arpack, mkl, exact, dimthresh, rvec, nevext, nst, ncv0, otf, degflag, nev0, nevmax, othrds, mthrds, nDis, dis, mass, filling, t, g_fact, dv1, v1min, v1max, dv2, v2min, v2max
-    ! open(unit=10, file='input.nml', status='old')
-    ! read(10, nml=params)
-    ! close(10)
-    
-    ! call get_environment_variable("pwd", cwd)
-    ! call read_input(par)
-    ! call setup_output_directory()
-    ! call create_output_subdirs(outdir)
-    
+    call preprocess()
 
-    ! Now variables are set: those in input.nml are overwritten, others keep defaults.
-
-    ! call characters(symm, irrep, geo) ! Set characters according to chosen irrep 
-    ! call characters(symm, irrep, mir, rot, geo%id) ! Set characters according to chosen irrep 
-    
-
-
-
-
-    ! call timing(outdir, 0)
-    ! call setvars()  
-    ! call check_parallel()
-    ! call nsteps(par%v1min, par%v1max, par%dv1, ndv1)
-    ! call nsteps(par%v2min, par%v2max, par%dv2, ndv2)
-    ! call stepunits(1, ndv1, ndv2, units_2)
-    ! call threadunits(ndv1, ndv2, units)
-    
     
     call define_lattice(outdir, par, geo)
     ! call define_lattice(outdir, tilted, ucx, ucy, nnBonds, nnnBonds, bc, pattern, cluster, bsites, hexsites, geopar%latticevecs, alattice, blattice, xyA, xyB, asitesbonds, bsitesbonds, cntrA, cntrB, nHel, tilt, phases, xy, xtransl, ytransl, reflections, nnnVec)
@@ -111,17 +83,8 @@ program main
         goto 116
     end if
 
-    v2_thrds = max(min(ndv2, othrds), 1)
-    v1_thrds = max(min(ndv, int((othrds - v2_thrds) / v2_thrds)), 1) 
-    dis_thrds = max(min(nDis, int((othrds - v2_thrds * v1_thrds) / (v2_thrds * v1_thrds))), 1)
-    num_thrds = max(int((othrds - v2_thrds * v1_thrds * dis_thrds) / (v2_thrds * v1_thrds * dis_thrds)), 1)
-
-    print*, 'Number of V2 threads = ', v2_thrds
-    print*, 'Number of V1 threads = ', v1_thrds
-    print*, 'Number of disorder threads = ', dis_thrds
-    print*, 'Number of threads left = ', num_thrds
-    if(num_thrds < 1) error stop "NO THREADS LEFT AVAILABLE!"
-    print*, ''
+   
+    call set_thrds()
   
     !$omp parallel do default(firstprivate) shared(sites, geo%particles, dim, nev, ncv, occ, parities, dplcts, hamOff, hamDi, basis, hamOff_dp, hamDi_d, rcOff, rcDi, hamOff_dc, num_thrds) num_threads(v2_thrds)
     do nv2 = 0, ndv2-1, 1 ! Loop over V2 values
@@ -130,12 +93,12 @@ program main
             
         !$omp parallel do default(firstprivate) shared(sites, geo%particles, dim, nev, ncv, occ, parities, dplcts, hamOff, hamDi, basis, hamOff_dp, hamDi_d, rcOff, rcDi, hamOff_dc, num_thrds) num_threads(v1_thrds)
         do nv = 0, ndv-1, 1 ! Loop over V1 values
-            v1 = v1min + nv*dv1
+            v1 = par%v1min + nv*par%dv1
 
             !$ thread_num_2 = omp_get_thread_num()
-            unit = 11 + units(thread_num + 1, thread_num_2 + 1)
+            thrd%unit = 11 + units(thread_num + 1, thread_num_2 + 1)
 
-            call ncv_from_nev(unit, param_list, dimthresh, exact, nevext, nst, ncv0, dim, full, nev, ncv, nest)
+            call ncv_from_nev(thrd%unit, param_list, dimthresh, exact, nevext, nst, ncv0, dim, full, nev, ncv, nest)
 
             ! !$omp critical 
             do conf = 1, nDis !Disorder loop 

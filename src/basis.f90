@@ -1,8 +1,9 @@
 module basis ! Module for defining the basis for the extended Hubbard model on the honeycomb lattice.
-    use parameters
+    use types
+    use params
     use functions
     use symmetries
-    use variables
+    use vars
     
     implicit none
     
@@ -39,14 +40,14 @@ module basis ! Module for defining the basis for the extended Hubbard model on t
     end subroutine findstate
 
     subroutine make_basis(par, geo)
-    ! subroutine make_basis(ti, par%tilted, pat, nnnVec, geo%sites, geo%particles, dim, symm, par%ucx, par%ucy, geo%l1, geo%l2, geo%basis_states, geo%abasis, geo%bbasis, tilt, nHel, k1, k2, xtransl, ytransl, id, par, rot, refl, c6, period, norm, orbsize, orbits2D, phases2D, norm2D)
-
+    ! subroutine make_basis(ti, par%tilted, pat, nnnVec, geo%sites, geo%particles, dim, symm, par%ucx, par%ucy, geo%l1, geo%l2, geo%basis_states, geo%abasis, geo%bbasis, tilt, geo%nHel, kx, k2, geo%xtransl, geo%ytransl, geo%id, par, rot, refl, c6, period, norm, orbsize, orbits2D, phases2D, norm2D)
+        
         implicit none
         type(sim_params), intent(inout) :: par
         type(geometry), intent(inout) :: geo
-            ! integer, intent(in) :: ti, par%tilted, geo%sites, geo%particles, tilt, nHel, par%ucx, par%ucy, k1, k2, symm
-            ! integer, allocatable, intent(in) :: xtransl(:,:), ytransl(:,:)
-            ! double precision, intent(in) :: nnnVec(2,3), id, par(6), rot(5)
+            ! integer, intent(in) :: ti, par%tilted, geo%sites, geo%particles, tilt, geo%nHel, par%ucx, par%ucy, k1, k2, symm
+            ! integer, allocatable, intent(in) :: geo%xtransl(:,:), geo%ytransl(:,:)
+            ! double precision, intent(in) :: nnnVec(2,3), geo%id, par(6), rot(5)
             ! character(len=*), intent(in) :: pat
 
             ! integer, intent(out) :: geo%l1, geo%l2, orbsize
@@ -164,7 +165,7 @@ module basis ! Module for defining the basis for the extended Hubbard model on t
             geo%l2 = geo%sites/(2*geo%nHel) 
         end if 
         call symm_basis(par, geo)
-        ! call symm_basis(par%tilted, geo%dim, geo%sites, nHel, geo%l2, geo%l1, k2, k1, symm, id, par, rot, nnnVec, geo%basis_states, xtransl, ytransl, refl, geo%c6, symdim, momBasis, period, norm, orbsize, orbits2D, phases2D, norm2D)
+        ! call symm_basis(par%tilted, geo%dim, geo%sites, geo%nHel, geo%l2, geo%l1, k2, k1, symm, geo%id, par, rot, nnnVec, geo%basis_states, geo%xtransl, geo%ytransl, refl, geo%c6, symdim, momBasis, period, norm, orbsize, orbits2D, phases2D, norm2D)
         
         geo%dim = symdim
         deallocate(geo%basis_states)
@@ -176,25 +177,25 @@ module basis ! Module for defining the basis for the extended Hubbard model on t
 
     !Rotations, reflections and translations
     subroutine symm_basis(par, geo)
-    ! subroutine symm_basis(tilted, dim, n, nHel, Lx, geo%l2
-! , k1, k2, irrep, id, par, rot, nnnVec, basis, xtransl, ytransl, refl, c6, symdim, momBasis, period, norm, orbsize, orbits2D, phases2D, norm2D)
+    ! subroutine symm_basis(tilted, dim, n, geo%nHel, Lx, geo%l2
+! , k1, k2, par%symm, geo%id, par, rot, nnnVec, basis, geo%xtransl, geo%ytransl, refl, c6, symdim, momBasis, period, norm, orbsize, orbits2D, phases2D, norm2D)
         
         implicit none
         type(sim_params), intent(inout) :: par
         type(geometry), intent(inout) :: geo
   
         ! integer(kind=8), intent(in) :: dim, basis(dim)
-        ! integer, intent(in) :: par%tilted, n, nHel, k1, k2, irrep, Lx, geo%l2
+        ! integer, intent(in) :: par%tilted, n, geo%nHel, k1, k2, par%symm, Lx, geo%l2
 
-        ! integer, intent(in) :: xtransl(2, n), ytransl(2, n), geo%refl(6, n), geo%c6(n)
-        ! double precision, intent(in) :: nnnVec(2,3), id, par(6), rot(5)
+        ! integer, intent(in) :: geo%xtransl(2, n), geo%ytransl(2, n), geo%refl(6, n), geo%c6(n)
+        ! double precision, intent(in) :: nnnVec(2,3), geo%id, par(6), rot(5)
         ! integer, intent(out) :: orbsize
         ! integer(kind=8), intent(out) :: symdim
         ! integer(kind=8), allocatable, intent(out) :: momBasis(:), orbits2D(:,:,:), period(:)
         ! double precision, allocatable, intent(out) :: norm(:), norm2D(:,:)
         ! double complex, allocatable, intent(out) :: phases2D(:,:,:)
 
-        integer :: r = 0, temp(geo%sites), kx, ky, maxorb
+        integer :: period = 0, temp(geo%sites), kx, ky, maxorb
         integer(kind=8) :: j = 0, cntr = 0, cntr2 = 0, symdim = 0 
         integer(kind=8), allocatable :: momBasis_temp(:), period_temp(:), orbits2D_temp(:,:,:), orbarr(:,:)
         double precision, allocatable :: norm_temp(:), norm2D_temp(:,:)
@@ -240,22 +241,22 @@ module basis ! Module for defining the basis for the extended Hubbard model on t
         cntr          = 0 
         cntr2         = 0 
         symdim        = 0 
-        r             = 0 
+        period        = 0 
         
 
         do j = 1, geo%dim
             if(geo%id == 1) then 
                 if(par%tilted == 0) then 
-                    ! call checkstate_rect(geo%basis_states(j), geo%sites, geo%l1, geo%l2, kx, ky, irrep, id, par, rot, refl, c6, xtransl, ytransl, nnnVec, r, normalization)
-                    call checkstate_rect(geo)
+                    ! call checkstate_rect(geo%basis_states(j), geo%sites, geo%l1, geo%l2, kx, ky, par%symm, geo%id, par, rot, refl, c6, geo%xtransl, geo%ytransl, nnnVec, r, normalization)
+                    call checkstate_rect(geo%basis_states(j), par, geo, period, normalization)
                 else if(par%tilted == 1) then 
-                    ! call checkstate(geo%basis_states(j), geo%sites, nHel, geo%l1, geo%l2, kx, ky, irrep, id, par, rot, refl, c6, xtransl, ytransl, nnnVec, r, normalization)
-                    call checkstate(geo, par)
+                    ! call checkstate(geo%basis_states(j), geo%sites, geo%nHel, geo%l1, geo%l2, kx, ky, par%symm, geo%id, par, rot, refl, c6, geo%xtransl, geo%ytransl, nnnVec, r, normalization)
+                    call checkstate(geo%basis_states(j), par, geo, period, normalization)
                 end if 
-                if(r >= 0) then !New representative state found 
+                if(period >= 0) then !New representative state found 
                     cntr                = cntr + 1
                     momBasis_temp(cntr) = geo%basis_states(j)
-                    period_temp(cntr)   = r       
+                    period_temp(cntr)   = period       
                     norm_temp(cntr)     = normalization   
                 end if
             else if(geo%id == 2) then 
@@ -269,18 +270,18 @@ module basis ! Module for defining the basis for the extended Hubbard model on t
                 ! allocate(orbits2D(r, 2), phases2D(r, 2))
                 cntr = cntr + 1 !Number of representatives (tentative)
                 call checkstate2D(geo, par)
-!                 call checkstate2D(geo%basis_states(j), geo%orbsize, geo%sites, par%tilted, nHel, geo%l1, geo%l2
-! , kx, ky, id, par, rot, refl, c6, xtransl, ytransl, nnnVec, orbits2D_temp(cntr, 1:geo%orbsize, 1:2), norm2D_temp(cntr, 1:2), phases2D_temp(cntr, 1:geo%orbsize, 1:2), r)
+                !                 call checkstate2D(geo%basis_states(j), geo%orbsize, geo%sites, par%tilted, geo%nHel, geo%l1, geo%l2
+                ! , kx, ky, geo%id, par, rot, refl, c6, geo%xtransl, geo%ytransl, nnnVec, orbits2D_temp(cntr, 1:geo%orbsize, 1:2), norm2D_temp(cntr, 1:2), phases2D_temp(cntr, 1:geo%orbsize, 1:2), r)
 
 
 
-                if(r >= 0) then !New representative state found 
+                if(period >= 0) then !New representative state found 
                     ! cntr                 = cntr + 1 
                     momBasis_temp(cntr)  = geo%basis_states(j) !Representative
-                    period_temp(cntr)    = r        !Orbit size 
-                    if(cntr == 1) maxorb = r        !
-                    if(r > maxorb) maxorb = r       !Size of largest orbit for array allocation (later)
-                else if(r < 0) then 
+                    period_temp(cntr)    = period       !Orbit size 
+                    if(cntr == 1) maxorb = period       !
+                    if(period > maxorb) maxorb = period      !Size of largest orbit for array allocation (later)
+                else if(period < 0) then 
                     cntr = cntr - 1 !Reset counter 
                 end if
                 
@@ -314,7 +315,6 @@ module basis ! Module for defining the basis for the extended Hubbard model on t
             geo%orbits2D = 0
             geo%norm2D(1:symdim, 1) = norm2D_temp(1:symdim, 1)
             geo%norm2D(1:symdim, 2) = norm2D_temp(1:symdim, 2)
-            ! do i = 1, geo%orbsize            
             geo%orbits2D(1:symdim, 1:maxorb, 1) = orbits2D_temp(1:symdim, 1:maxorb, 1)
             geo%orbits2D(1:symdim, 1:maxorb, 2) = orbits2D_temp(1:symdim, 1:maxorb, 2)
             geo%phases2D(1:symdim, 1:maxorb, 1) = phases2D_temp(1:symdim, 1:maxorb, 1)
@@ -337,57 +337,46 @@ module basis ! Module for defining the basis for the extended Hubbard model on t
 
     end subroutine symm_basis
 
-    !Checkstate for par%tilted lattices: For rotations, reflections and translations (single sum of phases for all orbits.)
-    subroutine checkstate(s, par, geo, r, norm)
-!     subroutine checkstate(s, sites, nHel, geo%l1, geo%l2
-! , kx, ky, irrep, id, par, rot, refl, c6, xtransl, ytransl, nnnVec, r, norm)
-
+    !Checkstate for tilted lattices: For rotations, reflections and translations (single sum of phases for all orbits.)
+    subroutine checkstate(state, par, geo, period, norm_sym)
+        !     subroutine checkstate(s, sites, geo%nHel, geo%l1, geo%l2
+        ! , kx, ky, par%symm, geo%id, par, rot, refl, c6, geo%xtransl, geo%ytransl, nnnVec, r, norm)
         implicit none
-    
-        ! Given momentum
-        integer(kind=8), intent(in) :: s
-        integer, intent(in) :: kx, ky
-        integer, intent(in) :: geo%sites, nHel, irrep
-        integer, intent(in) :: xtransl(2, geo%sites), ytransl(2, geo%sites), geo%refl(6, geo%sites), geo%c6(geo%sites)
 
-        ! Define lattice parameters
-        integer, intent(in) :: Lx   ! Number of unit cells in the a2-direction
-        integer, intent(in) :: geo%l2
-   ! Number of unit cells in the a1-direction
-        double precision, intent(in) :: nnnVec(2,3), id, par(6), rot(5)
-        integer, intent(out) :: r
-        double precision, intent(out) :: norm
+        type(sim_params), intent(inout) :: par
+        type(geometry),   intent(inout) :: geo
+        integer(kind=8),  intent(in)    :: state
+        integer, intent(out) :: period ! The of the state within the symmetry orbit  
+        double precision, intent(out) :: norm_sym ! Norm of the symmetrized state
 
-        
         integer(kind=8) :: sr = 0, s0 = 0, orbit = 1
-        integer :: ntot = 0, info = 0, geo%orbsize = 0
+        integer :: ntot = 0, info = 0, orbsize = 0
         integer :: i = 0, n = 0, flag = 0, rt = 0
         integer(kind=8), allocatable :: orbits(:)
-        double precision :: sign = 1.d0, k1(2), k2(2), k(2)
+        double precision :: sign = 1.d0, kx(2), ky(2), k(2)
         double precision :: a1(2), a2(2)
         double precision, parameter :: tolerance = 1.0e-8
         double complex :: phase = 0.d0
 
-        ntot = popcnt(s) !Number of geo%particles 
-        a1 = nnnVec(1:2, 1)
-        a2 = nnnVec(1:2, 2)
-        k1 = (/(-2.d0 * pi) / 3.d0, (-2.d0 * pi) / sqrt(3.d0) /)
-        k2 = (/(-4.d0 * pi) / 3.d0, 0.d0 /)
+        ntot = popcnt(state) !Number of geo%particles 
+        a1 = geo%nnnVec(1:2, 1)
+        a2 = geo%nnnVec(1:2, 2)
+        kx = (/(-2.d0 * pi) / 3.d0, (-2.d0 * pi) / sqrt(3.d0) /)
+        ky = (/(-4.d0 * pi) / 3.d0, 0.d0 /)
         if (geo%nHel == 1) then 
-            k  = (dble(kx)/dble(Lx)) * k2
+            k  = (dble(k1)/dble(geo%l1)) * ky
         else if (geo%nHel > 1) then 
-            k  = (dble(kx)/dble(Lx)) * k2 + (dble(ky)/dble(geo%l2
-)) * k1 
+            k  = (dble(k1)/dble(geo%l1)) * ky + (dble(k2)/dble(geo%l2)) * kx 
         end if
 
-        r  = -1 !r is the orbit size. If r = -1, the state is not compatible with the momentum k or point group symmetry.
+        period = -1 !r is the orbit size. If r = -1, the state is not compatible with the momentum k or point group symmetry.
         rt = 0 
-        s0 = s
+        s0 = state
         flag  = 0 
-        norm  = 0.d0 
+        norm_sym  = 0.d0 
         orbit = 0 
         phase = 0.d0 
-        geo%orbsize = size(par) * size(rot) * Lx * geo%l2
+        geo%orbsize = size(geo%mir) * size(geo%rot) * geo%l1 * geo%l2
  
 
         if(allocated(orbits)) deallocate(orbits)
@@ -396,29 +385,26 @@ module basis ! Module for defining the basis for the extended Hubbard model on t
         orbits = 0 
         ! orbits(1) = s
         sign = 1.d0
-        call translation(s0, s, geo%sites, ntot, orbit, orbits, 1, nHel, Lx, geo%l2
-, id, sign, a1, a2, xtransl, ytransl, k, phase, info)
+        call translation(s0, state, geo%sites, ntot, orbit, orbits, 1, geo%nHel, geo%l1, geo%l2, geo%id, sign, a1, a2, geo%xtransl, geo%ytransl, k, phase, info)
 
         if(info < 0) return 
 
-        if(irrep == 0) goto 11
+        if(par%symm == 0) goto 11
         !Reflections 
         do i = 1, 6
             sign = 1.d0   
-            call reflect(s0, s, geo%sites, geo%refl(i,1:geo%sites), sign, info, sr) 
+            call reflect(s0, state, geo%sites, geo%refl(i,1:geo%sites), sign, info, sr) 
             if(info < 0) return        
-            call translation(s0, sr, geo%sites, ntot, orbit, orbits, 1, nHel, Lx, geo%l2
-, par(i), sign, a1, a2, xtransl, ytransl, k, phase, info)
+            call translation(s0, sr, geo%sites, ntot, orbit, orbits, 1, geo%nHel, geo%l1, geo%l2, geo%mir(i), sign, a1, a2, geo%xtransl, geo%ytransl, k, phase, info)
             if(info < 0) return 
         end do 
 
         !Rotations
         do n = 1, 5  
             sign = 1
-            call c6n(s0, s, geo%sites, n, c6, sign, info, sr)
+            call c6n(s0, state, geo%sites, n, geo%c6, sign, info, sr)
             if(info < 0) return 
-            call translation(s0, sr, geo%sites, ntot, orbit, orbits, 1, nHel, Lx, geo%l2
-, rot(n), sign, a1, a2, xtransl, ytransl, k, phase, info)
+            call translation(s0, sr, geo%sites, ntot, orbit, orbits, 1, geo%nHel, geo%l1, geo%l2, geo%rot(n), sign, a1, a2, geo%xtransl, geo%ytransl, k, phase, info)
             if(info < 0) return 
         end do 
 
@@ -429,89 +415,85 @@ module basis ! Module for defining the basis for the extended Hubbard model on t
         do i = 1, size(orbits)
             if(orbits(i) > 0) rt = rt + 1 
         end do 
-        r    = rt 
-        norm = r * abs(phase)**2
+        period   = rt 
+        norm_sym = period * abs(phase)**2
         return
 
 
    
     end subroutine checkstate
 
-    subroutine checkstate_rect(s, geo%sites, Lx, geo%l2
-, kx, ky, irrep, id, par, rot, refl, c6, xtransl, ytransl, nnnVec, r, norm)
+    subroutine checkstate_rect(state, par, geo, period, norm_sym)
+        !     subroutine checkstate_rect(s, geo%sites, geo%l1, geo%l2
+        ! , kx, ky, par%symm, geo%id, par, rot, refl, c6, geo%xtransl, geo%ytransl, nnnVec, r, norm)
 
         implicit none
     
         ! Given momentum
-        integer(kind=8), intent(in) :: s
-        integer, intent(in) :: geo%sites, kx, ky, irrep
-        integer, intent(in) :: xtransl(2, geo%sites), ytransl(2, geo%sites), geo%refl(6, geo%sites), geo%c6(geo%sites)
-        ! Define lattice parameters
-        integer, intent(in) :: Lx   ! Number of unit cells in the x-direction
-        integer, intent(in) :: geo%l2
-   ! Number of unit cells in the y-direction
-        double precision, intent(in) :: nnnVec(2,3), id, par(6), rot(5)
-        integer, intent(out) :: r
-        double precision, intent(out) :: norm
+        type(sim_params), intent(inout) :: par
+        type(geometry), intent(inout) :: geo
+        integer(kind=8), intent(in) :: state
+        !         integer, intent(in) :: geo%sites, kx, ky, par%symm
+        !         integer, intent(in) :: geo%xtransl(2, geo%sites), geo%ytransl(2, geo%sites), geo%refl(6, geo%sites), geo%c6(geo%sites)
+        !         ! Define lattice parameters
+        !         integer, intent(in) :: Lx   ! Number of unit cells in the x-direction
+        !         integer, intent(in) :: geo%l2
+        !    ! Number of unit cells in the y-direction
+        !         double precision, intent(in) :: nnnVec(2,3), geo%id, par(6), rot(5)
+        integer, intent(out) :: period
+        double precision, intent(out) :: norm_sym
         
         integer(kind=8) :: sr = 0, s0 = 0, orbit = 1
         integer :: ntot = 0, orbsize = 0, info = 0
         integer :: i = 0, n = 0, flag = 0, rt = 0
         integer(kind=8), allocatable :: orbits(:)
-        double precision :: sign = 1.d0, k1(2), k2(2), k(2)
+        double precision :: sign = 1.d0, kx(2), ky(2), k(2)
         double precision :: a1(2), a2(2)
         double precision, parameter :: tolerance = 1.0e-8
         double complex :: phase = 0.d0
-        
-        ntot = popcnt(s)
+ 
+        ntot = popcnt(state)
         ! a1 = (/sqrt(3.d0), 0.d0/)
         ! a2 = 0.5*(/-1*sqrt(3.d0), 3.d0/)
-        a1 = nnnVec(1:2, 1)
-        a2 = nnnVec(1:2, 2)
-        k1 = (/(2.0d0 * pi)/sqrt(3.d0), (2.d0 * pi)/3.d0/)
-        k2 = (/0.d0, (4.d0 * pi)/3.d0/)
-        k  = (dble(kx)/dble(Lx)) * k1 + (dble(ky)/dble(geo%l2
-)) * k2 
+        a1 = geo%nnnVec(1:2, 1)
+        a2 = geo%nnnVec(1:2, 2)
+        kx = (/(2.0d0 * pi)/sqrt(3.d0), (2.d0 * pi)/3.d0/)
+        ky = (/0.d0, (4.d0 * pi)/3.d0/)
+        k  = (dble(k1)/dble(geo%l1)) * kx + (dble(k2)/dble(geo%l2)) * ky
         
         flag    = 0 
         orbit   = 0
-        norm    = 0.d0 
+        norm_sym = 0.d0 
         phase   = 0.d0 
-        r       = - 1 
+        period  = - 1 
         rt      = 0 
-        s0      = s
-        orbsize = size(par) * size(rot) * Lx * geo%l2
+        s0      = state
+        orbsize = size(geo%mir) * size(geo%rot) * geo%l1 * geo%l2
  
         if(allocated(orbits)) deallocate(orbits)
         allocate(orbits(orbsize))    
         orbits = 0 
         sign   = 1 
         !Identity x translations
-        call translation(s0, s, geo%sites, ntot, orbit, orbits, 0, geo%l2
-, Lx, geo%l2
-, id, sign, a2, a1, xtransl, ytransl, k, phase, info)
+        call translation(s0, state, geo%sites, ntot, orbit, orbits, 0, geo%l2, geo%l1, geo%l2, geo%id, sign, a2, a1, geo%xtransl, geo%ytransl, k, phase, info)
         if(info < 0) return 
         
-        if(irrep == 0) goto 11
+        if(par%symm == 0) goto 11
         !Reflections 
         do i = 1, 6
             sign = 1   
-            call reflect(s0, s, geo%sites, geo%refl(i,1:geo%sites), sign, info, sr) 
+            call reflect(s0, state, geo%sites, geo%refl(i,1:geo%sites), sign, info, sr) 
             if(info < 0) return        
-            call translation(s0, sr, geo%sites, ntot, orbit, orbits, 0, geo%l2
-, Lx, geo%l2
-, par(i), sign, a2, a1, xtransl, ytransl, k, phase, info)
+            call translation(s0, sr, geo%sites, ntot, orbit, orbits, 0, geo%nHel, geo%l1, geo%l2, geo%mir(i), sign, a2, a1, geo%xtransl, geo%ytransl, k, phase, info)
             if(info < 0) return 
         end do 
 
         !Rotations  
         do n = 1, 5  
             sign = 1
-            call c6n(s0, s, geo%sites, n, c6, sign, info, sr)
+            call c6n(s0, state, geo%sites, n, geo%c6, sign, info, sr)
             if(info < 0) return 
-            call translation(s0, sr, geo%sites, ntot, orbit, orbits, 0, geo%l2
-, Lx, geo%l2
-, rot(n), sign, a2, a1, xtransl, ytransl, k, phase, info)
+            call translation(s0, sr, geo%sites, ntot, orbit, orbits, 0, geo%nHel, geo%l1, geo%l2, geo%rot(n), sign, a2, a1, geo%xtransl, geo%ytransl, k, phase, info)
             if(info < 0) return 
         end do 
 
@@ -522,45 +504,45 @@ module basis ! Module for defining the basis for the extended Hubbard model on t
         do i = 1, size(orbits)
             if(orbits(i) > 0) rt = rt + 1 
         end do 
-        r = rt 
-        norm = r * abs(phase)**2
+        period = rt 
+        norm_sym = period * abs(phase)**2
 
         return
 
   
     end subroutine checkstate_rect
 
-    subroutine checkstate2D(s, orbsize, geo%sites, par%tilted, nHel, Lx, geo%l2
-, kx, ky, id, par, rot, refl, c6, xtransl, ytransl, nnnVec, orbits, norm, phases, r)
+    subroutine checkstate2D(state, par, geo, period, normalization)
+    ! subroutine checkstate2D(s, orbsize, geo%sites, par%tilted, geo%nHel, Lx, geo%l2, kx, ky, geo%id, par, rot, refl, c6, geo%xtransl, geo%ytransl, nnnVec, orbits, norm, phases, r)
 
         implicit none
     
         ! Given momentum
         integer(kind=8), intent(in) :: s
-        integer, intent(in) :: orbsize, kx, ky, geo%sites, par%tilted, nHel, xtransl(2, geo%sites), ytransl(2, geo%sites), geo%refl(6, geo%sites), geo%c6(geo%sites)
+        integer, intent(in) :: orbsize, kx, ky, geo%sites, par%tilted, geo%nHel, geo%xtransl(2, geo%sites), geo%ytransl(2, geo%sites), geo%refl(6, geo%sites), geo%c6(geo%sites)
         ! Define lattice parameters
         integer, intent(in) :: Lx   ! Number of unit cells in the a2-direction
         integer, intent(in) :: geo%l2
    ! Number of unit cells in the a1-direction
-        double precision, intent(in) :: nnnVec(2,3), id, par(6), rot(5)
-        
-        integer, intent(out) :: r
-        integer(kind=8), intent(out) :: orbits(orbsize,2)
-        double precision, intent(out) :: norm(2)
-        double complex, intent(out) :: phases(orbsize, 2)
+        ! double precision, intent(in) :: nnnVec(2,3), geo%id, par(6), rot(5)
+        integer(kind=8), intent(in) :: state
+        type(sim_params), intent(inout) :: par
+        type(geometry), intent(inout) :: geo
+        integer, intent(out) :: period
+        double precision, intent(out) :: normalization(2)
 
         integer(kind=8) :: sr = 0, s0 = 0
         integer :: rep, ntot, info, layers, flag
         integer :: orbit = 1, i, n, rt, c
         ! integer, allocatable :: orbits(:)
-        double precision :: sign = 1.d0, k1(2), k2(2), k(2)
+        double precision :: sign = 1.d0, kx(2), ky(2), k(2)
         double precision :: a1(2), a2(2), dcntr
         double precision, parameter :: tolerance = 1.0e-8
         
         double precision :: sigma(2,2), rho(2,2), reflection(2,2), rotation(2,2), identity(2,2) 
         double complex :: phase = 0.d0 
 
-        if(rot(1) == 1)  rep = 1 !IRREP E1
+        if(par%rot(1) == 1)  rep = 1 !IRREP E1
         if(rot(1) == -1) rep = 2 !IRREP E2
         rho(1,1)   =  cos(2*pi*rep/6) !Rotation matrix entry (1,1)
         rho(1,2)   = -sin(2*pi*rep/6) !Rotation matrix entry (1,2)
@@ -576,128 +558,122 @@ module basis ! Module for defining the basis for the extended Hubbard model on t
         if(par%tilted == 1) then 
             a1     = nnnVec(1:2, 1)
             a2     = nnnVec(1:2, 2)
-            layers = nHel 
-            k1 = (/(-2.d0 * pi) / 3.d0, (-2.d0 * pi) / sqrt(3.d0) /)
-            k2 = (/(-4.d0 * pi) / 3.d0, 0.d0 /)
+            layers = geo%nHel 
+            kx = (/(-2.d0 * pi) / 3.d0, (-2.d0 * pi) / sqrt(3.d0) /)
+            ky = (/(-4.d0 * pi) / 3.d0, 0.d0 /)
             if (geo%nHel == 1) then 
-                k  = (dble(kx)/dble(Lx)) * k2
+                k  = (dble(k1)/dble(geo%l1)) * ky
             else if (geo%nHel > 1) then 
-                k  = (dble(kx)/dble(Lx)) * k2 + (dble(ky)/dble(geo%l2
-)) * k1 
-            end if   
-        else 
-            layers = geo%l2
-
-            a1     = nnnVec(1:2, 2)
-            a2     = nnnVec(1:2, 1)
-            k1     = (/(2.0d0 * pi)/sqrt(3.d0), (2.d0 * pi)/3.d0/)
-            k2     = (/0.d0, (4.d0 * pi)/3.d0/)
-            k      = (dble(kx)/dble(Lx)) * k1 + (dble(ky)/dble(geo%l2
-)) * k2 
-        end if 
-        ntot    = popcnt(s) !Number of geo%particles      
-        r       = -1 
-        s0      = s
-        norm    = 0.d0 
-        flag    = 0
-        ! if(allocated(orbits)) deallocate(orbits)
-        ! allocate(orbits(orbsize,2))
-        orbits = 0 
-        phases = 0.d0
-        do c = 1, 2 !IRREP basis states
-            orbit  = 0            
-            sign   = 1 
-            rt     = 0 
-            phase  = 0.d0 
-             
-            call translation2D(s0, s, geo%sites, ntot, orbsize, orbit, orbits(1:orbsize, c), par%tilted, layers, Lx, geo%l2
-, 1.0d0, sign, a1, a2, xtransl, ytransl, k, phases(1:orbsize, c), phase, info)
-
-            if(info < 0) phases(1:orbsize, c) = 0.d0 !All prefactors = 0.  
-            if(info < 0) orbits(1:orbsize, c) = 0    !Remove orbit. 
-            if(info < 0) cycle
-            
-            !Reflections 
-            reflection = 0.d0 
-            do i = 1, 6
-                sign = 1
-                reflection = identity 
-                reflection(1,1) = cos(2*pi*(i-1)/3.0d0)
-                reflection(2,2) = -cos(2*pi*(i-1)/3.0d0)
- 
-                call reflect(s0, s, geo%sites, geo%refl(i,1:geo%sites), sign, info, sr) 
-                if(info < 0) then 
-                    r = -2        
-                    exit 
-                end if
-                call translation2D(s0, sr, geo%sites, ntot, orbsize, orbit, orbits(1:orbsize, c), par%tilted, layers, Lx, geo%l2
-, reflection(c,c), sign, a1, a2, xtransl, ytransl, k, phases(1:orbsize, c), phase, info)
-
-                if(info < 0) then 
-                    r = -2        
-                    exit 
-                end if
-
-            end do 
-            if(r == -2) then 
-                r = -1  
-                phases(1:orbsize, c) = 0.d0 !All prefactors = 0. 
-                orbits(1:orbsize, c) = 0    !Remove orbit. 
-                cycle 
+                k  = (dble(k1)/dble(geo%l1)) * ky + (dble(k2)/dble(geo%l2)) * kx 
+                end if   
+            else 
+                layers = geo%l2
+                a1     = nnnVec(1:2, 2)
+                a2     = nnnVec(1:2, 1)
+                kx     = (/(2.0d0 * pi)/sqrt(3.d0), (2.d0 * pi)/3.d0/)
+                ky     = (/0.d0, (4.d0 * pi)/3.d0/)
+                k      = (dble(k1)/dble(geo%l1)) * kx + (dble(k2)/dble(geo%l2)) * ky 
             end if 
+            ntot    = popcnt(s) !Number of geo%particles      
+            r       = -1 
+            s0      = s
+            norm    = 0.d0 
+            flag    = 0
+            ! if(allocated(orbits)) deallocate(orbits)
+            ! allocate(orbits(orbsize,2))
+            orbits = 0 
+            phases = 0.d0
+            do c = 1, 2 !IRREP basis states
+                orbit  = 0            
+                sign   = 1 
+                rt     = 0 
+                phase  = 0.d0 
+                
+                call translation2D(s0, s, geo%sites, ntot, orbsize, orbit, orbits(1:orbsize, c), par%tilted, layers, Lx, geo%l2, 1.0d0, sign, a1, a2, geo%xtransl, geo%ytransl, k, phases(1:orbsize, c), phase, info)
 
-            rotation = rho 
-            !Rotations
-            do n = 1, 5  
-                sign = 1
-                call c6n(s0, s, geo%sites, n, c6, sign, info, sr)
-                if(info < 0) then 
-                    r = -2        
-                    exit 
-                end if
-                call translation2D(s0, sr, geo%sites, ntot, orbsize, orbit, orbits(1:orbsize,c), par%tilted, layers, Lx, geo%l2
-, rotation(c,c), sign, a1, a2, xtransl, ytransl, k, phases(1:orbsize, c), phase, info)
+                if(info < 0) phases(1:orbsize, c) = 0.d0 !All prefactors = 0.  
+                if(info < 0) orbits(1:orbsize, c) = 0    !Remove orbit. 
+                if(info < 0) cycle
                 
-                if(info < 0) then 
-                    r = -2        
-                    exit 
-                end if
-                rotation = matmul(rotation, rho)
+                !Reflections 
+                reflection = 0.d0 
+                do i = 1, 6
+                    sign = 1
+                    reflection = identity 
+                    reflection(1,1) = cos(2*pi*(i-1)/3.0d0)
+                    reflection(2,2) = -cos(2*pi*(i-1)/3.0d0)
+    
+                    call reflect(s0, s, geo%sites, geo%refl(i,1:geo%sites), sign, info, sr) 
+                    if(info < 0) then 
+                        r = -2        
+                        exit 
+                    end if
+                    call translation2D(s0, sr, geo%sites, ntot, orbsize, orbit, orbits(1:orbsize, c), par%tilted, layers, Lx, geo%l2, reflection(c,c), sign, a1, a2, geo%xtransl, geo%ytransl, k, phases(1:orbsize, c), phase, info)
+
+                    if(info < 0) then 
+                        r = -2        
+                        exit 
+                    end if
+
+                end do 
+                if(r == -2) then 
+                    r = -1  
+                    phases(1:orbsize, c) = 0.d0 !All prefactors = 0. 
+                    orbits(1:orbsize, c) = 0    !Remove orbit. 
+                    cycle 
+                end if 
+
+                rotation = rho 
+                !Rotations
+                do n = 1, 5  
+                    sign = 1
+                    call c6n(s0, s, geo%sites, n, c6, sign, info, sr)
+                    if(info < 0) then 
+                        r = -2        
+                        exit 
+                    end if
+                    call translation2D(s0, sr, geo%sites, ntot, orbsize, orbit, orbits(1:orbsize,c), par%tilted, layers, Lx,geo%l2, rotation(c,c), sign, a1, a2, geo%xtransl, geo%ytransl, k, phases(1:orbsize, c), phase, info)
+                    
+                    if(info < 0) then 
+                        r = -2        
+                        exit 
+                    end if
+                    rotation = matmul(rotation, rho)
+                    
+                end do 
+
+                if(r == -2) then 
+                    r = -1 
+                    phases(1:orbsize, c) = 0.d0 !All prefactors = 0. 
+                    orbits(1:orbsize, c) = 0    !Remove orbit. 
+                    cycle 
+                end if 
+
+                if((abs(dble(phase)) < tolerance) .and. (abs(aimag(phase)) < tolerance)) then !Basis state c has norm = 0, i.e. does not contribute to the symmetry state. Set all prefactors = 0. 
+                    phases(1:orbsize, c) = 0.d0 !All prefactors = 0. 
+                    orbits(1:orbsize, c) = 0    !Remove orbit. 
+                    cycle 
+                end if 
                 
+                if(r == -2) cycle
+
+                    
+                do i = 1, orbsize
+                    if(orbits(i,c) > 0) rt = rt + 1 
+                end do 
+                r       = rt 
+                norm(c) = rt * abs(phase)**2 
+                dcntr = 0.d0 
+                do i = 1, orbsize
+                    dcntr = dcntr + abs(phases(i, c))**2
+                end do 
             end do 
 
-            if(r == -2) then 
-                r = -1 
-                phases(1:orbsize, c) = 0.d0 !All prefactors = 0. 
-                orbits(1:orbsize, c) = 0    !Remove orbit. 
-                cycle 
-            end if 
-
-            if((abs(dble(phase)) < tolerance) .and. (abs(aimag(phase)) < tolerance)) then !Basis state c has norm = 0, i.e. does not contribute to the symmetry state. Set all prefactors = 0. 
-                phases(1:orbsize, c) = 0.d0 !All prefactors = 0. 
-                orbits(1:orbsize, c) = 0    !Remove orbit. 
-                cycle 
-            end if 
-            
-            if(r == -2) cycle
-
-                
-            do i = 1, orbsize
-                if(orbits(i,c) > 0) rt = rt + 1 
-            end do 
-            r       = rt 
-            norm(c) = rt * abs(phase)**2 
-            dcntr = 0.d0 
-            do i = 1, orbsize
-                dcntr = dcntr + abs(phases(i, c))**2
-            end do 
-        end do 
 
 
-
-        if(r == -2) r = -1 
-       
-        return
+            if(r == -2) r = -1 
+        
+            return
 
 
    

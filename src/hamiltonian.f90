@@ -1,7 +1,7 @@
 module hamiltonian 
 
-    use printing_routines
-    use io_routines
+    
+    use io_utils
     use basis
 
     implicit none 
@@ -27,8 +27,8 @@ module hamiltonian
 
     subroutine generate_hamiltonian()
     ! subroutine generate_hamiltonian(thrds, ti, unit, prms, sites, nbb, trisites, dim, basis, hamOff, nOff, k1, k2, tilted, nHel, tilt, lx, ly, ucx, ucy, orbsize, norm, norm2D, orbits, phases, xtransl, ytransl, symm, id, par, rot, refl, c6, t, rcoff, rcdi, parities, dplcts, hamOff_dp, hamDi_dp, nDi_off, hamOff_dc, hamDi_dc, hamDi_c2, nnnbb, hexsites, hamDi, occ, nDi)
-        use variables
-        use input_variables
+        use vars
+        use input_vars
         implicit none 
 
         ! integer, intent(in)                          :: thrds, ti, ucx, ucy, tilted, nHel, tilt, lx, ly, k1, k2, symm, orbsize, refl(6, sites), c6(sites)
@@ -141,8 +141,8 @@ module hamiltonian
         !     !          Hopping procedure for real matrix entries          !
         !     !-------------------------------------------------------------!
         !     ! This subroutine generates the hopping Hamiltonian for a given basis and bond structure.
-        !     use variables
-        !     use input_variables
+        !     use vars
+        !     use input_vars
         !     implicit none
             
         !     integer, intent(in) :: flag ! Integer flag to indicate this routine 
@@ -334,7 +334,7 @@ module hamiltonian
         !----------------------------------------------------------------!
         ! This subroutine generates the hopping Hamiltonian for a given basis and bond structure in momentum sector (k1, k2).
        
-        use parameters
+        use params
 
         implicit none
 
@@ -834,7 +834,7 @@ module hamiltonian
         !     ! This subroutine generates the hopping Hamiltonian for irreducible representations in 2D.
         !     ! Work in progress.
 
-        !     use parameters
+        !     use params
         !     implicit none
         !     integer, intent(in) :: flag2 ! Integer precision flag to indicate 2D irrep
         !     double precision, intent(in) :: flag1 ! Double precision flag to indicate this routine
@@ -1038,7 +1038,7 @@ module hamiltonian
         ! This subroutine generates the hopping Hamiltonian for irreducible representations in 2D.
         ! Work in progress.
 
-        use parameters
+        use params
         implicit none
         integer, intent(in):: orbsize, threads, tilted, nHel, tilt, lx, ly, sites, nbonds, symm, bsites(2, nbonds), xtransl(2, sites), ytransl(2, sites), refl(6, sites), c6(sites)
         integer(kind=8), intent(in) :: dim, basis(dim)

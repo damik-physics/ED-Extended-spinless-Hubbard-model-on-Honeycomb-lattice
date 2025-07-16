@@ -7,20 +7,23 @@ module utilities
 
 subroutine preprocess()
     ! Preprocessing routine to set up necessary parameters and variables
-    use variables
-    use parameters
-    use input_variables
+    use vars
+    use params
+    use input_vars
     use types
     use file_utils
-    use io_routines
+    use io_utils
     use lattice
     use basis
     use hamiltonian
-    use printing_routines
     use symmetries
     use utilities
 
     implicit none
+    type(sim_params) :: par
+    type(geometry) :: geo
+    type(out_params) :: out
+    type(thread_params) :: thrd
 
     call read_input(par)
     call setup_output_directory()
@@ -31,17 +34,17 @@ subroutine preprocess()
     call timing(outdir, 0)
     call setvars()  
     call check_parallel()
-    call nsteps(par%v1min, par%v1max, par%dv1, ndv1)
-    call nsteps(par%v2min, par%v2max, par%dv2, ndv2)
-    call stepunits(1, ndv1, ndv2, units_2)
-    call threadunits(ndv1, ndv2, units)
+    call nsteps(par%v1min, par%v1max, par%dv1, out%ndv1)
+    call nsteps(par%v2min, par%v2max, par%dv2, out%ndv2)
+    call stepunits(1, out%ndv1, out%ndv2, thrd%units_2)
+    call threadunits(out%ndv1, out%ndv2, thrd%units)
     
 
-    end subroutine preprocess
+end subroutine preprocess
 
-    subroutine cleanup(inner)
+subroutine cleanup(inner)
         
-        use variables
+        use vars
 
         implicit none
         logical, intent(in) :: inner ! If true, deallocate arrays used within parameter-loops, otherwise deallocate arrays outside of parameter-loops.
@@ -145,8 +148,8 @@ subroutine preprocess()
 
     subroutine setvars()
 
-        use variables
-        use input_variables
+        use vars
+        use input_vars
         implicit none
 
         character*10:: clusterl

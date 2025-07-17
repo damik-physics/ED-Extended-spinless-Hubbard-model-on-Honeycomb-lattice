@@ -1,4 +1,4 @@
-&params
+&params_nml
     ! Lattice parameters
     ucx       = 3         ! Number of unit cells in horizontal direction 
     ucy       = 3         ! Number of unit cells in vertical direction
@@ -10,10 +10,10 @@
     ! Symmetization parameters
     ti         = 1        ! Flag to include translation symmetry
     k0         = 1        ! Flag to only calculate zero momentum sector 
-    symmetrize = 0        ! Symmetrize basis in irreducible representation 'irrep'. Currently, irrep symmetrization is only supported on cluster '18A'.   
+    symm = 0        ! symm basis in irreducible representation 'irrep'. Currently, irrep symmetrization is only supported on cluster '18A'.   
     irrep      = 'A1'     ! Compute basis in irrep. Currently supported irreps = {A1, A2, B1, B2} 
 
-    ! if symmetrize = 1: Reflection eigenvalues for given irrep. 
+    ! if symm = 1: Reflection eigenvalues for given irrep. 
     p1 = 1                ! Reflection symmetry eigenvalue of sigma-1 axis 
     p2 = 1                ! Reflection symmetry eigenvalue of sigma-2 axis
     p3 = 1                ! Reflection symmetry eigenvalue of sigma-3 axis
@@ -33,10 +33,10 @@
     dimthresh  = 250      ! Threshold for dimension of the Hamiltonian to use sparse diagonalization methods
     rvec       = .True.   ! Flag for calculating eigenvectors
     nevext     = 10       ! Number of eigenvalues to calculate
-    n_st       = 10       ! Number of eigenstates to calculate
+    nst       = 10       ! Number of eigenstates to calculate
     ncv0       = 180      ! Number of Lanczos vectors to use (see Arpack manual)
     otf        = 0        ! Flag to generate Hamiltonian on-the-fly (does not store sparse Hamiltonian in arrays)
-    degeneracy = 1        ! Flag for including degenerate ground states: 0 = non-degenerate GS, 1 = include degeneracies, 2 = quasidegeneracy
+    degflag = 1        ! Flag for including degenerate ground states: 0 = non-degenerate GS, 1 = include degeneracies, 2 = quasidegflag
 
     ! If feast = 1: 
     nev0       = 200      ! Initial FEAST subspace size
@@ -61,6 +61,4 @@
     v2min   = 0.0d0       ! Starting value for range of next-nearest-neighbor interaction strengths
     v2max   = 3.0d0       ! Final value for range of next-nearest-neighbor interaction strengths
     
-    debug   = 0           ! Flag for debug mode 
-
 /

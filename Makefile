@@ -23,18 +23,17 @@ BIN_DIR := bin
 
 # Source & object files
 # SRC := $(wildcard $(SRC_DIR)/*.f90)
-SRC := src/input_variables.f90 src/variables.f90 src/parameters.f90 src/functions.f90 src/io_routines.f90 src/printing_routines.f90 src/basis.f90 src/lattice.f90 src/symmetries.f90 src/utilities.f90 src/hamiltonian.f90 src/file_utils.f90 src/main.f90
+SRC := src/input_vars.f90 src/vars.f90 src/params.f90 src/functions.f90 src/io_utils.f90 src/basis.f90 src/lattice.f90 src/symmetries.f90 src/utilities.f90 src/hamiltonian.f90 src/file_utils.f90 src/main.f90
 OBJ := $(patsubst $(SRC_DIR)/%.f90,$(BUILD_DIR)/%.o,$(SRC))
 
 # Manual module dependencies
-$(BUILD_DIR)/io_routines.o: $(BUILD_DIR)/functions.o $(BUILD_DIR)/file_utils.o
-$(BUILD_DIR)/symmetries.o: $(BUILD_DIR)/parameters.o $(BUILD_DIR)/functions.o
-$(BUILD_DIR)/basis.o: $(BUILD_DIR)/parameters.o $(BUILD_DIR)/functions.o $(BUILD_DIR)/symmetries.o 
-$(BUILD_DIR)/hamiltonian.o: $(BUILD_DIR)/input_variables.o $(BUILD_DIR)/variables.o $(BUILD_DIR)/parameters.o $(BUILD_DIR)/printing_routines.o $(BUILD_DIR)/io_routines.o $(BUILD_DIR)/basis.o 
+$(BUILD_DIR)/io_utils.o: $(BUILD_DIR)/functions.o $(BUILD_DIR)/file_utils.o
+$(BUILD_DIR)/symmetries.o: $(BUILD_DIR)/params.o $(BUILD_DIR)/functions.o
+$(BUILD_DIR)/basis.o: $(BUILD_DIR)/params.o $(BUILD_DIR)/functions.o $(BUILD_DIR)/symmetries.o $(BUILD_DIR)/types.o 
+$(BUILD_DIR)/hamiltonian.o: $(BUILD_DIR)/input_vars.o $(BUILD_DIR)/vars.o $(BUILD_DIR)/params.o $(BUILD_DIR)/io_utils.o $(BUILD_DIR)/basis.o 
 $(BUILD_DIR)/lattice.o: $(BUILD_DIR)/functions.o
-$(BUILD_DIR)/printing_routines.o: $(BUILD_DIR)/input_variables.o $(BUILD_DIR)/variables.o $(BUILD_DIR)/parameters.o
-$(BUILD_DIR)/io_routines.o: $(BUILD_DIR)/input_variables.o $(BUILD_DIR)/functions.o 
-$(BUILD_DIR)/utilities.o: $(BUILD_DIR)/variables.o $(BUILD_DIR)/functions.o
+$(BUILD_DIR)/io_utils.o: $(BUILD_DIR)/input_vars.o $(BUILD_DIR)/functions.o 
+$(BUILD_DIR)/utilities.o: $(BUILD_DIR)/vars.o $(BUILD_DIR)/functions.o
 
 
 # Automatically detect modules for ordering

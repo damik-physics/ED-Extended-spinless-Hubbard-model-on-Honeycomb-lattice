@@ -55,12 +55,9 @@ This project computes the **exact many-body spectrum and eigenstates** of the **
 │       ├── states/
 
 │
-├── doc/                   # Project documentation
-│   └── README.md
-│
-└── archive/               # Legacy and experimental code
-    ├── old/
-    └── dev/
+└── README.md               # Project documentation
+   
+
 ```
 ### **Modules and Functions**  
 

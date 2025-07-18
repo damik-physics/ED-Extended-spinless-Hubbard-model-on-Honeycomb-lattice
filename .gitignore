@@ -9,3 +9,6 @@ fort.20
 work_in_progress.f90
 /.venv/*
 *old*
+/build/*
+/old/
+/dev/*

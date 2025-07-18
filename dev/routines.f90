@@ -16,7 +16,7 @@ module routines
     end interface  
 
     interface check
-        module procedure check_d, check_c
+        module procedure check_spectrum_dp, check_spectrum_dc
     end interface  
 
     interface gsdeg
@@ -624,11 +624,11 @@ subroutine loadham(spartan, type, parameters, unit, ti, sites, nnz, nDi, hamDi, 
 
 end subroutine loadham
 
-subroutine savecurr(dir, sl, parameters, append, degeneracy, unit, full, feast, mkl, arpack, nbonds, current, bondcurrent)
+subroutine savecurr(dir, sl, parameters, append, degflag, unit, full, feast, mkl, arpack, nbonds, current, bondcurrent)
     
     implicit none 
     character(len=*), intent(in) :: dir, sl, parameters
-    integer, intent(in) :: degeneracy, unit, nbonds
+    integer, intent(in) :: degflag, unit, nbonds
     integer, intent(in) :: full, feast, mkl, arpack  
     double precision, intent(in) :: current, bondcurrent(nbonds)
     logical, intent(in) :: append 
@@ -643,8 +643,8 @@ subroutine savecurr(dir, sl, parameters, append, degeneracy, unit, full, feast, 
         appchar = 'SEQUENTIAL'
     end if 
 
-    if(degeneracy < 2 ) dirq = dir  
-    if(degeneracy == 2 ) dirq = trim_name(dir//"QD_")
+    if(degflag < 2 ) dirq = dir  
+    if(degflag == 2 ) dirq = trim_name(dir//"QD_")
     dirq = trim_name(dirq)
     
     if(sl == "A") then 
@@ -976,15 +976,15 @@ subroutine par2(unit, k1, k2, refb, v1, v22, params, type)
         if(((k1 .ne. 0) .or. (k2 .ne. 0))) type = 'C'
         if(ti == 0) write (params,"('L=',i0,'N=',i0,'BC=',a,'_pat=',a2'.dat')") sites,particles,bc,pattern
         if(ti == 1) write (params,"('L=',i0,'N=',i0,'k1=',i0,'k2=',i0,'BC=',a,'_pat=',a2'.dat')") sites,particles,k1,k2,bc,pattern
-        if(symmetrize == 1) write (params,"('L=',i0,'N=',i0,'k1=',i0,'k2=',i0,'_',a,'_BC=',a,'_pat=',a2'.dat')") sites,particles,k1,k2,irrep,bc,pattern
+        if(symm == 1) write (params,"('L=',i0,'N=',i0,'k1=',i0,'k2=',i0,'_',a,'_BC=',a,'_pat=',a2'.dat')") sites,particles,k1,k2,irrep,bc,pattern
     else if(refb == 0) then !Name for energy/states file
         if(ti == 0 ) write (params,"('L=',i0,'N=',i0,'V=',f7.4,'V2=',f7.4,'M=',f10.7,'W=',f7.4,'nDis=',i0,'BC=',a,'_pat=',a2'.dat')") sites,particles,v1,v22,mass,dis,nDis,bc,pattern
         if(ti == 1) write (params,"('L=',i0,'N=',i0,'k1=',i0,'k2=',i0,'V=',f7.4,'V2=',f7.4,'M=',f10.7,'W=',f7.4,'nDis=',i0,'BC=',a,'_pat=',a2'.dat')") sites,particles,k1,k2,v1,v22,mass,dis,nDis,bc,pattern
-        if(symmetrize == 1) write (params,"('L=',i0,'N=',i0,'k1=',i0,'k2=',i0,'_',a,'_V=',f7.4,'V2=',f7.4,'M=',f10.7,'W=',f7.4,'nDis=',i0,'BC=',a,'_pat=',a2'.dat')") sites,particles,k1,k2,irrep,v1,v22,mass,dis,nDis,bc,pattern
+        if(symm == 1) write (params,"('L=',i0,'N=',i0,'k1=',i0,'k2=',i0,'_',a,'_V=',f7.4,'V2=',f7.4,'M=',f10.7,'W=',f7.4,'nDis=',i0,'BC=',a,'_pat=',a2'.dat')") sites,particles,k1,k2,irrep,v1,v22,mass,dis,nDis,bc,pattern
     else if(refb > 0) then !Name for current files
         if(ti == 0 ) write (params,"('L=',i0,'N=',i0,'V=',f7.4,'V2=',f7.4,'M=',f10.7,'W=',f7.4,'nDis=',i0,'BC=',a,'_pat=',a2,'_refb=',i0,'.dat')") sites,particles,v1,v22,mass,dis,nDis,bc,pattern,refb            
         if(ti == 1) write (params,"('L=',i0,'N=',i0,'k1=',i0,'k2=',i0,'V=',f7.4,'V2=',f7.4,'M=',f10.7,'W=',f7.4,'nDis=',i0,'BC=',a,'_pat=',a2,'_refb=',i0,'.dat')") sites,particles,k1,k2,v1,v22,mass,dis,nDis,bc,pattern,refb 
-        if(symmetrize == 1) write (params,"('L=',i0,'N=',i0,'k1=',i0,'k2=',i0,'_',a,'_V=',f7.4,'V2=',f7.4,'M=',f10.7,'W=',f7.4,'nDis=',i0,'BC=',a,'_pat=',a2,'_refb=',i0,'.dat')") sites,particles,k1,k2,irrep,v1,v22,mass,dis,nDis,bc,pattern,refb
+        if(symm == 1) write (params,"('L=',i0,'N=',i0,'k1=',i0,'k2=',i0,'_',a,'_V=',f7.4,'V2=',f7.4,'M=',f10.7,'W=',f7.4,'nDis=',i0,'BC=',a,'_pat=',a2,'_refb=',i0,'.dat')") sites,particles,k1,k2,irrep,v1,v22,mass,dis,nDis,bc,pattern,refb
     end if 
     params=trim_name(params)
     if(tilted == 1) params=trim_name(string//params)
@@ -1011,7 +1011,7 @@ subroutine parddcf(unit, k1, k2, refsite, v1, v22, params)
     if(refsite > 0) then !Name for current files
         if(ti == 0 ) write (params,"('L=',i0,'N=',i0,'V=',f7.4,'V2=',f7.4,'M=',f10.7,'W=',f7.4,'nDis=',i0,'BC=',a,'_pat=',a2,'_refsite=',i0,'.dat')") sites,particles,v1,v22,mass,dis,nDis,bc,pattern,refsite            
         if(ti == 1) write (params,"('L=',i0,'N=',i0,'k1=',i0,'k2=',i0,'V=',f7.4,'V2=',f7.4,'M=',f10.7,'W=',f7.4,'nDis=',i0,'BC=',a,'_pat=',a2,'_refsite=',i0,'.dat')") sites,particles,k1,k2,v1,v22,mass,dis,nDis,bc,pattern,refsite 
-        if(symmetrize == 1) write (params,"('L=',i0,'N=',i0,'k1=',i0,'k2=',i0,a,'V=',f7.4,'V2=',f7.4,'M=',f10.7,'W=',f7.4,'nDis=',i0,'BC=',a,'_pat=',a2,'_refsite=',i0,'.dat')") sites,particles,k1,k2,irrep,v1,v22,mass,dis,nDis,bc,pattern,refsite
+        if(symm == 1) write (params,"('L=',i0,'N=',i0,'k1=',i0,'k2=',i0,a,'V=',f7.4,'V2=',f7.4,'M=',f10.7,'W=',f7.4,'nDis=',i0,'BC=',a,'_pat=',a2,'_refsite=',i0,'.dat')") sites,particles,k1,k2,irrep,v1,v22,mass,dis,nDis,bc,pattern,refsite
     end if 
     params=trim_name(params)
     if(tilted == 1) then 
@@ -1021,7 +1021,7 @@ subroutine parddcf(unit, k1, k2, refsite, v1, v22, params)
 
 end subroutine parddcf
 
-subroutine check_d(dim, nnz, nev, nest, energies, eigstate, ndeg, rc, mat)
+subroutine check_spectrum_dp(dim, nnz, nev, nest, energies, eigstate, ndeg, rc, mat)
     implicit none
     integer(kind=8), intent(in) :: dim, nnz  
     integer, intent(in) :: nev, nest
@@ -1044,9 +1044,9 @@ subroutine check_d(dim, nnz, nev, nest, energies, eigstate, ndeg, rc, mat)
     ! end if 
     return 
     
-end subroutine check_d
+end subroutine check_spectrum_dp
 
-subroutine check_c(dim, feast, nev, nest, energies, eigstate)
+subroutine check_spectrum_dc(dim, feast, nev, nest, energies, eigstate)
     implicit none
     integer(kind=8), intent(in) :: dim  
     integer, intent(in) :: nev, nest
@@ -1062,7 +1062,7 @@ subroutine check_c(dim, feast, nev, nest, energies, eigstate)
 
     return 
 
-end subroutine check_c
+end subroutine check_spectrum_dc
 
 subroutine expectval_d(dim, nnz, eval, evec, rc, mat)
     implicit none 
@@ -1397,7 +1397,7 @@ end subroutine permute
 !            Generate lattice            !
 !----------------------------------------!
 
-subroutine lattice(dir, tilted, ucx, ucy, nnbonds, nnnbonds, bc, pattern, cluster, bsites, hexsites, latticevecs, alattice, blattice, xyA, xyB, asitesbonds, bsitesbonds, cntrA, cntrB, nHel, tilt, phase, xy, xtransl, ytransl, reflections, nnnVec)
+subroutine lattice(dir, tilted, ucx, ucy, nnbonds, nnnbonds, bc, pattern, cluster, bsites, hexsites, geopar%latticevecs, alattice, blattice, xyA, xyB, asitesbonds, bsitesbonds, cntrA, cntrB, nHel, tilt, phase, xy, xtransl, ytransl, reflections, nnnVec)
 
     ! use clusters 
 
@@ -1407,7 +1407,7 @@ subroutine lattice(dir, tilted, ucx, ucy, nnbonds, nnnbonds, bc, pattern, cluste
     character(len=*), intent(in) :: dir, bc, pattern, cluster
     integer, intent(out) :: nnbonds, nnnbonds, cntrA, cntrB, nHel, tilt 
     integer, allocatable, intent(out) :: bsites(:,:)
-    integer, allocatable, intent(out) :: hexsites(:,:), phase(:), xy(:,:), latticevecs(:)
+    integer, allocatable, intent(out) :: hexsites(:,:), phase(:), xy(:,:), geopar%latticevecs(:)
     integer, allocatable, intent(out) :: alattice(:,:), blattice(:,:), xyA(:,:), xyB(:,:)
     integer, allocatable, intent(out) :: asitesbonds(:,:), bsitesbonds(:,:)
     integer, allocatable, intent(out) :: xtransl(:,:), ytransl(:,:)
@@ -1419,7 +1419,7 @@ subroutine lattice(dir, tilted, ucx, ucy, nnbonds, nnnbonds, bc, pattern, cluste
 
     if(tilted == 0) then     
         call honeycomb(dir, ucx, ucy, bc, pattern, nnbonds, bsites)
-        call honeycomb_nnn(dir, ucx, ucy, bc, pattern, nnnbonds, hexsites, latticevecs, alattice, blattice, asitesbonds, bsitesbonds, cntrA, cntrB, phase, xy, xtransl, ytransl, sitecoord, nnnVec)
+        call honeycomb_nnn(dir, ucx, ucy, bc, pattern, nnnbonds, hexsites, geopar%latticevecs, alattice, blattice, asitesbonds, bsitesbonds, cntrA, cntrB, phase, xy, xtransl, ytransl, sitecoord, nnnVec)
         call coordinates(dir, 20, ucx, ucy, nnnbonds, cntrA, cntrB, xy, alattice, blattice, bc, pattern, xyA, xyB)
         call reflection(ucx, ucy, sitecoord, reflections)        
         print*, 'Honeycomb lattice created'
@@ -1796,7 +1796,7 @@ subroutine honeycomb(dir, ucx, ucy, bc, pattern, nbonds, bsites)
 
 end subroutine honeycomb
 
-subroutine honeycomb_nnn(dir, ucx, ucy, bc, pattern, nbonds, hexsites, latticevecs, alattice, blattice, asitesbonds, bsitesbonds, cntrA, cntrB, phase, xy, xtransl, ytransl, sitecoord, nnnVec)
+subroutine honeycomb_nnn(dir, ucx, ucy, bc, pattern, nbonds, hexsites, geopar%latticevecs, alattice, blattice, asitesbonds, bsitesbonds, cntrA, cntrB, phase, xy, xtransl, ytransl, sitecoord, nnnVec)
     !Subroutine obtained from: http://physics.bu.edu/~sandvik/vietri/sse/ssebasic.f90
     implicit none
 
@@ -1806,7 +1806,7 @@ subroutine honeycomb_nnn(dir, ucx, ucy, bc, pattern, nbonds, hexsites, latticeve
     integer, intent(out) :: cntrA
     integer, intent(out) :: cntrB
     integer, allocatable, intent(out) :: hexsites(:,:)
-    integer, allocatable, intent(out) :: latticevecs(:)
+    integer, allocatable, intent(out) :: geopar%latticevecs(:)
     integer, allocatable, intent(out) :: alattice(:,:)
     integer, allocatable, intent(out) :: blattice(:,:)
     integer, allocatable, intent(out) :: asitesbonds(:,:)
@@ -1869,7 +1869,7 @@ subroutine honeycomb_nnn(dir, ucx, ucy, bc, pattern, nbonds, hexsites, latticeve
     
 
     if (allocated(hexsites)) deallocate(hexsites)
-    if (allocated(latticevecs)) deallocate(latticevecs)
+    if (allocated(geopar%latticevecs)) deallocate(geopar%latticevecs)
     if (allocated(phase)) deallocate(phase)
     if (allocated(xy)) deallocate(xy)
     if (allocated(asitesbonds)) deallocate(asitesbonds)
@@ -1883,7 +1883,7 @@ subroutine honeycomb_nnn(dir, ucx, ucy, bc, pattern, nbonds, hexsites, latticeve
     allocate(xtransl(2, nn))
     allocate(ytransl(2, nn))
     allocate(hexsites(2,nbonds))
-    allocate(latticevecs(nbonds))
+    allocate(geopar%latticevecs(nbonds))
     allocate(alatt(5,nbonds))
     allocate(blatt(5,nbonds))
     allocate(phase(nbonds))
@@ -1896,7 +1896,7 @@ subroutine honeycomb_nnn(dir, ucx, ucy, bc, pattern, nbonds, hexsites, latticeve
 
 
     hexsites  = 0
-    latticevecs = 0 
+    geopar%latticevecs = 0 
     phase       = 0
     cntrAsites  = 0
     cntrBsites  = 0
@@ -1917,7 +1917,7 @@ subroutine honeycomb_nnn(dir, ucx, ucy, bc, pattern, nbonds, hexsites, latticeve
                 ycounter = ycounter + 1 !Current y-bond = nbx + ycounter
                 hexsites(1,nbx + ycounter) = 1 + x1 + y1 * nx
                 hexsites(2,nbx + ycounter) = 1 + x2 + y2 * nx     
-                latticevecs(nbx + ycounter)  = 3
+                geopar%latticevecs(nbx + ycounter)  = 3
                 ! print*, 'v3sites', hexsites(1,nbx + ycounter), hexsites(2,nbx + ycounter)
                 if( pattern == 'AB' .and. modulo(x1, 2) == 0 ) then 
                     cntrA = cntrA + 1
@@ -1984,7 +1984,7 @@ subroutine honeycomb_nnn(dir, ucx, ucy, bc, pattern, nbonds, hexsites, latticeve
                 ycounter = ycounter + 1
                 hexsites(1,nbx + ycounter) = 1 + x1 + y1 * nx
                 hexsites(2,nbx + ycounter) = 1 + x2 + y2 * nx
-                latticevecs(nbx + ycounter)  = 2
+                geopar%latticevecs(nbx + ycounter)  = 2
                 ytcounter = ytcounter + 1 
                 ytransl(1, ytcounter) = hexsites(1,nbx + ycounter)
                 ytransl(2, ytcounter) = hexsites(2,nbx + ycounter)
@@ -2054,7 +2054,7 @@ subroutine honeycomb_nnn(dir, ucx, ucy, bc, pattern, nbonds, hexsites, latticeve
             y2 = y1
             hexsites(1,xcounter) = 1 + x1 + y1 * 2*ucx
             hexsites(2,xcounter) = 1 + x2 + y2 * 2*ucx
-            latticevecs(xcounter)  = 1
+            geopar%latticevecs(xcounter)  = 1
             xtransl(1, xcounter) = hexsites(1,xcounter)
             xtransl(2, xcounter) = hexsites(2,xcounter)
             ! print*, 'v1sites', hexsites(1,xcounter), hexsites(2,xcounter)
@@ -2183,7 +2183,7 @@ subroutine honeycomb_nnn(dir, ucx, ucy, bc, pattern, nbonds, hexsites, latticeve
 
 end subroutine honeycomb_nnn
 
-subroutine honeycomb_nnn2(dir, ucx, ucy, bc, pattern, nbonds, hexsites, latticevecs, alattice, blattice, asitesbonds, bsitesbonds, cntrA, cntrB, phase, xy, xtransl, ytransl, sitecoord)
+subroutine honeycomb_nnn2(dir, ucx, ucy, bc, pattern, nbonds, hexsites, geopar%latticevecs, alattice, blattice, asitesbonds, bsitesbonds, cntrA, cntrB, phase, xy, xtransl, ytransl, sitecoord)
     !Subroutine obtained from: http://physics.bu.edu/~sandvik/vietri/sse/ssebasic.f90
     implicit none
 
@@ -2193,7 +2193,7 @@ subroutine honeycomb_nnn2(dir, ucx, ucy, bc, pattern, nbonds, hexsites, latticev
     integer, intent(out) :: cntrA
     integer, intent(out) :: cntrB
     integer, allocatable, intent(out) :: hexsites(:,:)
-    integer, allocatable, intent(out) :: latticevecs(:)
+    integer, allocatable, intent(out) :: geopar%latticevecs(:)
     integer, allocatable, intent(out) :: alattice(:,:)
     integer, allocatable, intent(out) :: blattice(:,:)
     integer, allocatable, intent(out) :: asitesbonds(:,:)
@@ -2256,7 +2256,7 @@ subroutine honeycomb_nnn2(dir, ucx, ucy, bc, pattern, nbonds, hexsites, latticev
     print*, 'Number of NNN bonds', nbonds 
 
     if (allocated(hexsites)) deallocate(hexsites)
-    if (allocated(latticevecs)) deallocate(latticevecs)
+    if (allocated(geopar%latticevecs)) deallocate(geopar%latticevecs)
     if (allocated(phase)) deallocate(phase)
     if (allocated(xy)) deallocate(xy)
     if (allocated(asitesbonds)) deallocate(asitesbonds)
@@ -2271,7 +2271,7 @@ subroutine honeycomb_nnn2(dir, ucx, ucy, bc, pattern, nbonds, hexsites, latticev
     allocate(xtransl(2, nbx))
     allocate(ytransl(2, nn))
     allocate(hexsites(2,nbonds))
-    allocate(latticevecs(nbonds))
+    allocate(geopar%latticevecs(nbonds))
     allocate(alatt(5,nbonds))
     allocate(blatt(5,nbonds))
     allocate(phase(nbonds))
@@ -2284,7 +2284,7 @@ subroutine honeycomb_nnn2(dir, ucx, ucy, bc, pattern, nbonds, hexsites, latticev
 
 
     hexsites  = 0
-    latticevecs = 0 
+    geopar%latticevecs = 0 
     phase       = 0
     cntrAsites  = 0
     cntrBsites  = 0
@@ -2305,7 +2305,7 @@ subroutine honeycomb_nnn2(dir, ucx, ucy, bc, pattern, nbonds, hexsites, latticev
                 ycounter = ycounter + 1 !Current y-bond = nbx + ycounter
                 hexsites(1,nbx + ycounter) = 1 + x1 + y1 * nx
                 hexsites(2,nbx + ycounter) = 1 + x2 + y2 * nx     
-                latticevecs(nbx + ycounter)  = 3
+                geopar%latticevecs(nbx + ycounter)  = 3
                 ! print*, 'v3sites', hexsites(1,nbx + ycounter), hexsites(2,nbx + ycounter)
                 if( pattern == 'AB' .and. modulo(x1, 2) == 0 ) then 
                     cntrA = cntrA + 1
@@ -2372,7 +2372,7 @@ subroutine honeycomb_nnn2(dir, ucx, ucy, bc, pattern, nbonds, hexsites, latticev
                 ycounter = ycounter + 1
                 hexsites(1,nbx + ycounter) = 1 + x1 + y1 * nx
                 hexsites(2,nbx + ycounter) = 1 + x2 + y2 * nx
-                latticevecs(nbx + ycounter)  = 2
+                geopar%latticevecs(nbx + ycounter)  = 2
                 ytcounter = ytcounter + 1 
                 ytransl(1, ytcounter) = hexsites(1,nbx + ycounter)
                 ytransl(2, ytcounter) = hexsites(2,nbx + ycounter)
@@ -2442,7 +2442,7 @@ subroutine honeycomb_nnn2(dir, ucx, ucy, bc, pattern, nbonds, hexsites, latticev
             y2 = y1
             hexsites(1,xcounter) = 1 + x1 + y1 * 2*ucx
             hexsites(2,xcounter) = 1 + x2 + y2 * 2*ucx
-            latticevecs(xcounter)  = 1
+            geopar%latticevecs(xcounter)  = 1
             xtransl(1, xcounter) = hexsites(1,xcounter)
             xtransl(2, xcounter) = hexsites(2,xcounter)
             ! print*, 'v1sites', hexsites(1,xcounter), hexsites(2,xcounter)
@@ -2578,9 +2578,9 @@ end subroutine honeycomb_nnn2
 !            BASIS         !
 !--------------------------!
 
-subroutine characters(symmetrize, irrep, mir, rot, id)
+subroutine characters(symm, irrep, mir, rot, id)
     implicit none
-    integer, intent(in) :: symmetrize
+    integer, intent(in) :: symm
     character(len=2), intent(in) :: irrep
     double precision, intent(out) :: mir(6), rot(5), id
 
@@ -2589,7 +2589,7 @@ subroutine characters(symmetrize, irrep, mir, rot, id)
     !rot(3) = (c6)^3 = c2
     !rot(4) = (c6)^4 = -c3 
     !rot(5) = (c6)^5 = -c6
-    if(symmetrize == 0) then 
+    if(symm == 0) then 
         id = 1
         mir = 1
         rot = 1    
@@ -2639,11 +2639,11 @@ subroutine characters(symmetrize, irrep, mir, rot, id)
 
 end subroutine characters
 
-subroutine make_basis(ti, tilted, pat, nnnVec, sites, particles, dim, symmetrize, ucx, ucy, l1, l2, basis, abasis, bbasis, tilt, nHel, k1, k2, xtransl, ytransl, id, par, rot, refl, c6, period, norm, orbsize, orbits2D, phases2D, norm2D)
+subroutine make_basis(ti, tilted, pat, nnnVec, sites, particles, dim, symm, ucx, ucy, l1, l2, basis, abasis, bbasis, tilt, nHel, k1, k2, xtransl, ytransl, id, par, rot, refl, c6, period, norm, orbsize, orbits2D, phases2D, norm2D)
 
     implicit none
 
-    integer, intent(in) :: ti, tilted, sites, particles, tilt, nHel, ucx, ucy, k1, k2, symmetrize
+    integer, intent(in) :: ti, tilted, sites, particles, tilt, nHel, ucx, ucy, k1, k2, symm
     integer, allocatable, intent(in) :: xtransl(:,:), ytransl(:,:)
     double precision, intent(in) :: nnnVec(2,3), id, par(6), rot(5)
     character(len=*), intent(in) :: pat
@@ -2762,13 +2762,13 @@ subroutine make_basis(ti, tilted, pat, nnnVec, sites, particles, dim, symmetrize
         end if 
         l2 = sites/(2*nHel) 
     end if 
-    call symm_basis(tilted, dim, sites, nHel, l2, l1, k2, k1, symmetrize, id, par, rot, nnnVec, basis, xtransl, ytransl, refl, c6, symdim, symbasis, period, norm, orbsize, orbits2D, phases2D, norm2D)
+    call symm_basis(tilted, dim, sites, nHel, l2, l1, k2, k1, symm, id, par, rot, nnnVec, basis, xtransl, ytransl, refl, c6, symdim, symbasis, period, norm, orbsize, orbits2D, phases2D, norm2D)
     
     dim = symdim
     deallocate(basis)
     allocate(basis(dim))
     basis = symbasis 
-    print*, 'Basis symmetrized.'
+    print*, 'Basis symmd.'
 
 end subroutine make_basis
 
@@ -2841,7 +2841,7 @@ subroutine symm_basis(tilted, dim, n, nHel, Lx, Ly, k1, k2, irrep, id, par, rot,
     end if 
     temp    = 1
     
-    !Define temporary arrays due to unknown final Hilbert space dimension of symmetrized block
+    !Define temporary arrays due to unknown final Hilbert space dimension of symmd block
     if(allocated(period_temp)) deallocate(period_temp)
     
  
@@ -3230,7 +3230,7 @@ subroutine checkstate2D(s, orbsize, sites, tilted, nHel, Lx, Ly, kx, ky, id, par
 
             !     pause 
             ! end if
-            call translation2D(s0, s, sites, ntot, orbsize, orbit, orbits(1:orbsize, c), tilted, layers, Lx, Ly, 1.0d0, sign, a1, a2, xtransl, ytransl, k, phases(1:orbsize, c), phase, info)
+                call translation2D(s0, s, sites, ntot, orbsize, orbit, orbits(1:orbsize, c), tilted, layers, Lx, Ly, 1.0d0, sign, a1, a2, xtransl, ytransl, k, phases(1:orbsize, c), phase, info)
 
             ! if(s0 == 39326 .and. c == 2) then 
                     
@@ -4077,11 +4077,11 @@ end subroutine c6n
 !            Find representative              !
 !---------------------------------------------!
 
-subroutine representative_irrep(s, n, nHel, tilt, Lx, Ly, symmetrize, id, par, rot, xtransl, ytransl, refl, c6, r, l1, l2, sign)
+subroutine representative_irrep(s, n, nHel, tilt, Lx, Ly, symm, id, par, rot, xtransl, ytransl, refl, c6, r, l1, l2, sign)
     !Finds the representative 'r' for state 's'. 'n' is the number of sites and 'l' the number of shifts needed to translate 's' to 'r'.
     implicit none
     integer(kind=8), intent(in) :: s
-    integer, intent(in) :: n, nHel, tilt, symmetrize, Lx, Ly, xtransl(2, n), ytransl(2, n), refl(6, n), c6(n)
+    integer, intent(in) :: n, nHel, tilt, symm, Lx, Ly, xtransl(2, n), ytransl(2, n), refl(6, n), c6(n)
     double precision, intent(in) :: id, par(6), rot(5)
     integer(kind=8), intent(out) :: r
     integer, intent(out) :: l1, l2, sign 
@@ -4127,7 +4127,7 @@ subroutine representative_irrep(s, n, nHel, tilt, Lx, Ly, symmetrize, id, par, r
         end if 
     end do !Leaving this loop, r <= s 
 
-    if(symmetrize == 0) go to 12
+    if(symm == 0) go to 12
     do i = 1, 6 !Check for representatives among reflected states
         call mirror_rep(r, s, n, nHel, tilt, par(i), Lx, Ly, refl(i, 1:n), xtransl, ytransl, sign, l1, l2)
     end do 
@@ -4140,11 +4140,11 @@ subroutine representative_irrep(s, n, nHel, tilt, Lx, Ly, symmetrize, id, par, r
 
 end subroutine representative_irrep
 
-subroutine representative_irrep_rect(s, n, Lx, Ly, symmetrize, id, par, rot, xtransl, ytransl, refl, c6, r, l1, l2, sign)
+subroutine representative_irrep_rect(s, n, Lx, Ly, symm, id, par, rot, xtransl, ytransl, refl, c6, r, l1, l2, sign)
     !Finds the representative 'r' for state 's'. 'n' is the number of sites and 'l' the number of shifts needed to translate 's' to 'r'.
     implicit none
     integer(kind=8), intent(in) :: s
-    integer, intent(in) :: n, symmetrize, Lx, Ly, xtransl(2, n), ytransl(2, n), refl(6, n), c6(n)
+    integer, intent(in) :: n, symm, Lx, Ly, xtransl(2, n), ytransl(2, n), refl(6, n), c6(n)
     double precision, intent(in) :: id, par(6), rot(5)
     integer(kind=8), intent(out) :: r
     integer, intent(out) :: l1, l2, sign 
@@ -4190,7 +4190,7 @@ subroutine representative_irrep_rect(s, n, Lx, Ly, symmetrize, id, par, rot, xtr
 
     end do !Leaving this loop, r <= s 
 
-    if(symmetrize == 0) go to 12
+    if(symm == 0) go to 12
     do i = 1, 6 !Check for representatives among reflected states
         call mirror_rep(r, s, n, Ly, -1, par(i), Lx, Ly, refl(i, 1:n), xtransl, ytransl, sign, l2, l1)
     end do 
@@ -4204,11 +4204,11 @@ subroutine representative_irrep_rect(s, n, Lx, Ly, symmetrize, id, par, rot, xtr
 end subroutine representative_irrep_rect
 
 !Uses ytranslate2 for checkstate5 
-subroutine representative_irrep2(s, n, nHel, tilt, Lx, Ly, symmetrize, id, par, rot, xtransl, ytransl, refl, c6, r, l1, l2, sign)
+subroutine representative_irrep2(s, n, nHel, tilt, Lx, Ly, symm, id, par, rot, xtransl, ytransl, refl, c6, r, l1, l2, sign)
     !Finds the representative 'r' for state 's'. 'n' is the number of sites and 'l' the number of shifts needed to translate 's' to 'r'.
     implicit none
     integer(kind=8), intent(in) :: s
-    integer, intent(in) :: n, nHel, tilt, symmetrize, Lx, Ly, xtransl(2, n), ytransl(2, n), refl(6, n), c6(n)
+    integer, intent(in) :: n, nHel, tilt, symm, Lx, Ly, xtransl(2, n), ytransl(2, n), refl(6, n), c6(n)
     double precision, intent(in) :: id, par(6), rot(5)
     integer(kind=8), intent(out) :: r
     integer, intent(out) :: l1, l2, sign 
@@ -4261,7 +4261,7 @@ subroutine representative_irrep2(s, n, nHel, tilt, Lx, Ly, symmetrize, id, par, 
         end if 
     end do !Leaving this loop, r <= s 
 
-    if(symmetrize == 0) go to 12
+    if(symm == 0) go to 12
     do i = 1, 6 !Check for representatives among reflected states
         call mirror_rep2(r, s, n, nHel, tilt, par(i), Lx, Ly, refl(i, 1:n), xtransl, ytransl, sign, l1, l2)
     end do 
@@ -4691,7 +4691,7 @@ end subroutine reflect_rep
 !            Calculate number of eigenvalues and Lanczos vectors          !
 !-------------------------------------------------------------------------!
 
-subroutine nevncv(unit, parameters, thresh, exact, nevext, nestext, ncv0, dim, full, nev, ncv, nest)
+subroutine ncv_from_nev(unit, parameters, thresh, exact, nevext, nestext, ncv0, dim, full, nev, ncv, nest)
 
     implicit none
     integer, intent(in) :: unit, thresh, exact, nevext, nestext, ncv0
@@ -4736,7 +4736,7 @@ subroutine nevncv(unit, parameters, thresh, exact, nevext, nestext, ncv0, dim, f
     ! write(unit,*) dim 
     ! close(unit)
 
-end subroutine nevncv
+end subroutine ncv_from_nev
 
 !------------------------------------------!
 !            Set initial variables         !
@@ -4783,7 +4783,7 @@ subroutine setvars()
     particles = int(filling * sites)
     
 
-    if(symmetrize == 1) print('(1x, a,a)'), 'Irrep = ', irrep
+    if(symm == 1) print('(1x, a,a)'), 'Irrep = ', irrep
     if(tilted == 1) then
         print('(1x, a,a)'), 'Cluster = ', cluster
     else 
@@ -4803,11 +4803,11 @@ end subroutine setvars
 !               Hamiltonian                !
 !------------------------------------------!
 
-subroutine hamiltonian(spartan, thrds, ti, unit, prms, sites, nbb, trisites, dim, basis, hamOff, nOff, k1, k2, tilted, nHel, tilt, lx, ly, ucx, ucy, orbsize, norm, norm2D, orbits, phases, xtransl, ytransl, symmetrize, id, par, rot, refl, c6, t, rcoff, rcdi, prts, dplcts, hamOff_dp, hamDi_d, nDi_off, hamOff_dc, hamDi_c, hamDi_c2, nnnbb, hexsites, hamDi, occ, nDi)
+subroutine hamiltonian(spartan, thrds, ti, unit, prms, sites, nbb, trisites, dim, basis, hamOff, nOff, k1, k2, tilted, nHel, tilt, lx, ly, ucx, ucy, orbsize, norm, norm2D, orbits, phases, xtransl, ytransl, symm, id, par, rot, refl, c6, t, rcoff, rcdi, prts, dplcts, hamOff_dp, hamDi_d, nDi_off, hamOff_dc, hamDi_c, hamDi_c2, nnnbb, hexsites, hamDi, occ, nDi)
 
     implicit none 
 
-    integer, intent(in) :: spartan, thrds, ti, ucx, ucy, tilted, nHel, tilt, lx, ly, k1, k2, symmetrize, orbsize
+    integer, intent(in) :: spartan, thrds, ti, ucx, ucy, tilted, nHel, tilt, lx, ly, k1, k2, symm, orbsize
     double precision, intent(in) :: t, id, par(6), rot(5) 
     integer, intent(inout) :: unit, sites, nbb, nnnbb, nOff, nDi_off, nDi
     integer(kind=8), intent(inout) :: dim 
@@ -4833,10 +4833,10 @@ subroutine hamiltonian(spartan, thrds, ti, unit, prms, sites, nbb, trisites, dim
         if(ti == 0) then 
             call hopping_p2(thrds, unit, prms, sites, nbb, trisites, dim, basis, hamOff, nOff)
         else if(ti == 1 .and. k1 == 0 .and. k2 == 0) then 
-            ! call hopping_symm(thrds, tilted, nHel, tilt, lx, ly, ucx, ucy, sites, nbb, dim, basis, trisites, norm, xtransl, ytransl, symmetrize, id, par, rot, refl, c6, t, rcoff, rcdi, ptrs, dplcts, hamOff_dp, hamDi_d, nOff, nDi_off)
-            if(id == 1) call hopping_irrep(thrds, tilted, nHel, tilt, lx, ly, ucx, ucy, sites, nbb, dim, basis, trisites, norm, xtransl, ytransl, symmetrize, id, par, rot, refl, c6, t, rcoff, rcdi, prts, dplcts, hamOff_dp, hamDi_d, nOff, nDi_off)
+            ! call hopping_symm(thrds, tilted, nHel, tilt, lx, ly, ucx, ucy, sites, nbb, dim, basis, trisites, norm, xtransl, ytransl, symm, id, par, rot, refl, c6, t, rcoff, rcdi, ptrs, dplcts, hamOff_dp, hamDi_d, nOff, nDi_off)
+            if(id == 1) call hopping_irrep(thrds, tilted, nHel, tilt, lx, ly, ucx, ucy, sites, nbb, dim, basis, trisites, norm, xtransl, ytransl, symm, id, par, rot, refl, c6, t, rcoff, rcdi, prts, dplcts, hamOff_dp, hamDi_d, nOff, nDi_off)
             if(id == 2) then 
-                call hopping_irrep2D(thrds, tilted, nHel, tilt, lx, ly, sites, nbb, dim, basis, orbsize, orbits, phases, norm2D, trisites, xtransl, ytransl, symmetrize, id, par, rot, refl, c6, t, rcoff, rcdi, prts, dplcts, hamOff_dc, hamDi_c, nOff, nDi_off)
+                call hopping_irrep2D(thrds, tilted, nHel, tilt, lx, ly, sites, nbb, dim, basis, orbsize, orbits, phases, norm2D, trisites, xtransl, ytransl, symm, id, par, rot, refl, c6, t, rcoff, rcdi, prts, dplcts, hamOff_dc, hamDi_c, nOff, nDi_off)
                 call diagonal_irrep2D(sites, dim, trisites, hexsites, orbsize, orbits, phases, norm2D, hamDi_c2, occ)
             end if 
         else if(ti == 1 .and. ((k1 .ne. 0) .or. (k2 .ne. 0))) then 
@@ -5079,11 +5079,11 @@ subroutine khopping_c(unit, parameters, gencluster, nHel, tilt, lx, ly, ucx, ucy
 
 end subroutine khopping_c
 
-subroutine hopping_symm(threads, tilted, nHel, tilt, lx, ly, ucx, ucy, sites, nbonds, dim, basis, bsites, norm, xtransl, ytransl, symmetrize, id, par, rot, refl, c6, t, rc, rcdi, prts, dplcts, ham, hamDi, nnz, nDi)
+subroutine hopping_symm(threads, tilted, nHel, tilt, lx, ly, ucx, ucy, sites, nbonds, dim, basis, bsites, norm, xtransl, ytransl, symm, id, par, rot, refl, c6, t, rc, rcdi, prts, dplcts, ham, hamDi, nnz, nDi)
 
     implicit none
 
-    integer, intent(in) :: threads, tilted, nHel, tilt, lx, ly, ucx, ucy, sites, nbonds, symmetrize
+    integer, intent(in) :: threads, tilted, nHel, tilt, lx, ly, ucx, ucy, sites, nbonds, symm
     integer(kind=8), intent(in) :: dim, basis(dim)
     integer, intent(in) :: bsites(2, nbonds), xtransl(2, sites), ytransl(2, sites), refl(6, sites), c6(sites)
     double precision, intent(in) :: t, id, par(6), rot(5), norm(dim)
@@ -5142,10 +5142,10 @@ subroutine hopping_symm(threads, tilted, nHel, tilt, lx, ly, ucx, ucy, sites, nb
             end if 
             if(tilted == 0) then 
                 ! call representative(newst, sites, ucx, ucy, xtransl, ytransl, rep, l1, l2, sign) !Finds the representative of scattered state in momentum orbit and determines the number of translations 'ntrans' needed to map to representative.            
-                call representative_irrep_rect(newst, sites, Lx, Ly, symmetrize, id, par, rot, xtransl, ytransl, refl, c6, rep, l1, l2, sign)
+                call representative_irrep_rect(newst, sites, Lx, Ly, symm, id, par, rot, xtransl, ytransl, refl, c6, rep, l1, l2, sign)
             else if(tilted == 1) then 
-                call representative_irrep(newst, sites, nHel, tilt, Lx, Ly, symmetrize, id, par, rot, xtransl, ytransl, refl, c6, rep, l1, l2, sign)
-                ! call representative_irrep2(newst, sites, nHel, tilt, Lx, Ly, symmetrize, id, par, rot, xtransl, ytransl, refl, c6, rep, l1, l2, sign)
+                call representative_irrep(newst, sites, nHel, tilt, Lx, Ly, symm, id, par, rot, xtransl, ytransl, refl, c6, rep, l1, l2, sign)
+                ! call representative_irrep2(newst, sites, nHel, tilt, Lx, Ly, symm, id, par, rot, xtransl, ytransl, refl, c6, rep, l1, l2, sign)
                 ! call representative_tilted(newst, sites, nHel, tilt, Lx, Ly, xtransl, ytransl, rep, l1, l2, sign)
             end if 
             
@@ -5270,12 +5270,12 @@ subroutine hopping_symm(threads, tilted, nHel, tilt, lx, ly, ucx, ucy, sites, nb
 
 end subroutine hopping_symm
 
-subroutine hopping_irrep(threads, tilted, nHel, tilt, lx, ly, ucx, ucy, sites, nbonds, dim, basis, bsites, norm, xtransl, ytransl, symmetrize, id, par, rot, refl, c6, t, rc, rcdi, prts, dplcts, ham, hamDi, nnz, nDi)
+subroutine hopping_irrep(threads, tilted, nHel, tilt, lx, ly, ucx, ucy, sites, nbonds, dim, basis, bsites, norm, xtransl, ytransl, symm, id, par, rot, refl, c6, t, rc, rcdi, prts, dplcts, ham, hamDi, nnz, nDi)
 
     implicit none
 
     integer(kind=8), intent(in) :: dim, basis(dim)
-    integer, intent(in) :: threads, tilted, nHel, tilt, lx, ly, ucx, ucy, sites, nbonds, symmetrize
+    integer, intent(in) :: threads, tilted, nHel, tilt, lx, ly, ucx, ucy, sites, nbonds, symm
     integer, intent(in) :: bsites(2, nbonds), xtransl(2, sites), ytransl(2, sites), refl(6, sites), c6(sites)
     double precision, intent(in) :: t, id, par(6), rot(5), norm(dim)
     integer, intent(out) :: nnz, nDi 
@@ -5291,7 +5291,7 @@ subroutine hopping_irrep(threads, tilted, nHel, tilt, lx, ly, ucx, ucy, sites, n
     double precision :: h_add = 0.d0 
     double precision, allocatable :: ham_temp(:), hamDi_temp(:)
     
-    if(symmetrize == 1) then 
+    if(symm == 1) then 
         order = 12
     else 
         order = 1
@@ -5356,9 +5356,9 @@ subroutine hopping_irrep(threads, tilted, nHel, tilt, lx, ly, ucx, ucy, sites, n
                     cycle 
                 end if 
                 if(tilted == 0) then 
-                    call representative_irrep_rect(newst, sites, Lx, Ly, symmetrize, id, par, rot, xtransl, ytransl, refl, c6, rep, l1, l2, signrep)
+                    call representative_irrep_rect(newst, sites, Lx, Ly, symm, id, par, rot, xtransl, ytransl, refl, c6, rep, l1, l2, signrep)
                 else if(tilted == 1) then 
-                    call representative_irrep(newst, sites, nHel, tilt, Lx, Ly, symmetrize, id, par, rot, xtransl, ytransl, refl, c6, rep, l1, l2, signrep)
+                    call representative_irrep(newst, sites, nHel, tilt, Lx, Ly, symm, id, par, rot, xtransl, ytransl, refl, c6, rep, l1, l2, signrep)
                 end if 
                 
                 call findstate(dim, rep, basis, loc) !Finds the location of representative in basis
@@ -5476,10 +5476,10 @@ subroutine hopping_irrep(threads, tilted, nHel, tilt, lx, ly, ucx, ucy, sites, n
 
 end subroutine hopping_irrep
 
-subroutine hopping_irrep2D(threads, tilted, nHel, tilt, lx, ly, sites, nbonds, dim, basis, orbsize, orbits, phases, norm, bsites, xtransl, ytransl, symmetrize, id, par, rot, refl, c6, t, rc, rcdi, prts, dplcts, ham, hamDi, nnz, nDi)
+subroutine hopping_irrep2D(threads, tilted, nHel, tilt, lx, ly, sites, nbonds, dim, basis, orbsize, orbits, phases, norm, bsites, xtransl, ytransl, symm, id, par, rot, refl, c6, t, rc, rcdi, prts, dplcts, ham, hamDi, nnz, nDi)
     
     implicit none
-    integer, intent(in):: orbsize, threads, tilted, nHel, tilt, lx, ly, sites, nbonds, symmetrize
+    integer, intent(in):: orbsize, threads, tilted, nHel, tilt, lx, ly, sites, nbonds, symm
     integer(kind=8), intent(in) :: dim, basis(dim)
     integer, intent(in) :: bsites(2, nbonds), xtransl(2, sites), ytransl(2, sites), refl(6, sites), c6(sites)
     integer(kind=8), intent(in) :: orbits(:,:,:)
@@ -5499,7 +5499,7 @@ subroutine hopping_irrep2D(threads, tilted, nHel, tilt, lx, ly, sites, nbonds, d
     double complex, allocatable :: ham_temp(:), hamDi_temp(:)
     double complex :: h_add, coeff, newcf 
     
-    if(symmetrize == 1) then 
+    if(symm == 1) then 
         order = 12
     else 
         order = 1
@@ -5562,9 +5562,9 @@ subroutine hopping_irrep2D(threads, tilted, nHel, tilt, lx, ly, sites, nbonds, d
                     cycle 
                 end if 
                 if(tilted == 0) then 
-                    call representative_irrep_rect(newst, sites, Lx, Ly, symmetrize, id, par, rot, xtransl, ytransl, refl, c6, rep, l1, l2, signrep)
+                    call representative_irrep_rect(newst, sites, Lx, Ly, symm, id, par, rot, xtransl, ytransl, refl, c6, rep, l1, l2, signrep)
                 else if(tilted == 1) then 
-                    call representative_irrep(newst, sites, nHel, tilt, Lx, Ly, symmetrize, id, par, rot, xtransl, ytransl, refl, c6, rep, l1, l2, signrep)
+                    call representative_irrep(newst, sites, nHel, tilt, Lx, Ly, symm, id, par, rot, xtransl, ytransl, refl, c6, rep, l1, l2, signrep)
                 end if 
                 call findstate(dim, rep, basis, loc) !Finds the location of representative in basis
                 if(loc <= 0) cycle !New state is compatible with momentum and symmetry 
@@ -6156,7 +6156,7 @@ subroutine findstate2(dim, target, array, loc)
 
 end subroutine findstate2
 
-subroutine testsymm_sparse2(symmetric, nz, rc, ham)
+subroutine test_symm_sparse2(symmetric, nz, rc, ham)
 
     implicit none
 
@@ -6193,9 +6193,9 @@ subroutine testsymm_sparse2(symmetric, nz, rc, ham)
 
 
 
-end subroutine testsymm_sparse2
+end subroutine test_symm_sparse2
 
-subroutine testsymm_sparse(symmetric, dim, nz, rc, ham, norm, prts, dplcts)
+subroutine test_symm_sparse(symmetric, dim, nz, rc, ham, norm, prts, dplcts)
 
     implicit none
 
@@ -6260,15 +6260,15 @@ subroutine testsymm_sparse(symmetric, dim, nz, rc, ham, norm, prts, dplcts)
 
 
 
-end subroutine testsymm_sparse
+end subroutine test_symm_sparse
 
-subroutine testhermitian_sparse(hermit, irrep, symmetrize, dim, nz, rc, ham, norm, prts, dplcts)!, norm2D, orbits, phases
+subroutine test_hermitian_sparse(hermit, irrep, symm, dim, nz, rc, ham, norm, prts, dplcts)!, norm2D, orbits, phases
 
     implicit none
 
     integer(kind=8), intent(in) :: dim
     !integer(kind=8), allocatable, intent(in) :: orbits(:,:,:)
-    integer, intent(in) :: nz, symmetrize
+    integer, intent(in) :: nz, symm
     integer, intent(in) :: rc(nz,2)
     integer, intent(in) :: prts(nz)
     integer, intent(in) :: dplcts(nz)
@@ -6364,9 +6364,9 @@ subroutine testhermitian_sparse(hermit, irrep, symmetrize, dim, nz, rc, ham, nor
     end if
     return
 
-end subroutine testhermitian_sparse
+end subroutine test_hermitian_sparse
 
-subroutine testsymm(sym, dim, mat)
+subroutine test_symm(sym, dim, mat)
 
     implicit none
 
@@ -6402,7 +6402,7 @@ subroutine testsymm(sym, dim, mat)
     end if
     return
 
-end subroutine testsymm
+end subroutine test_symm
 
 !----------------------------------------------!
 !               Diagonalization                !
@@ -6455,45 +6455,45 @@ subroutine diagonalization(dir, conf, nev, ncv, full, v1, v2, threads, parameter
                         print*,''
                         call lanczos_d_otf(dir, parameters, unit, threads, dim, sites, sites/2*3, sites*3, nev, ncv, nest, t, v1, v2, mode, rvec, basis, bsites, hexsites, energies, eigstate)
                     end if 
-                    if(rvec) call check_d(dim, nnz, nev, nest, energies, eigstate)                  
+                    if(rvec) call check_spectrum_dp(dim, nnz, nev, nest, energies, eigstate)                  
                     call save(dir, "R", parameters, append, conf, unit, 3, dim, states, nev, nest, nDis, rvec, energies, eigstate)
                 end if 
                 if(mkl == 1) then 
                     print*,''
                     write(*,100) '---------------- START MKL DIAGONALIZATION: V1 =', v1, ' V2 =', v2, ' -------------------'
                     call lanczos_mkl(dim, nev, ncv, nest, nnz, ham, rc, energies, eigstate) 
-                    if(rvec) call check_d(dim, nnz, nev, nest, energies, eigstate)                  
+                    if(rvec) call check_spectrum_dp(dim, nnz, nev, nest, energies, eigstate)                  
                     call save(dir, "R", parameters, append, conf, unit, 2, dim, states, nev, nest, nDis, rvec, energies, eigstate)
                 end if 
                 if(degeneracy == 1) call gsdeg(dir, rvec, unit, parameters, dim, nev, nest, deg, energies, eigstate, ndeg, gs)     
-                if(degeneracy == 2 .and. rvec) call qgsdeg_d(dir, unit, parameters, dim, nev, nest, energies, eigstate, ndeg, gs)
+                if(degflag == 2 .and. rvec) call qgsdeg_d(dir, unit, parameters, dim, nev, nest, energies, eigstate, ndeg, gs)
             else if(ti == 1) then 
                 call unify_dp(v1, v2, dis, mass, pattern, sites, occ, nOff, nDi, nDi_off, hamOff_dp, rcoff, rcdi, hamDi_d, hamDi, ham, rc, nnz)
-                call testsymm_sparse(symmetric, dim, nnz, rc, ham, norm, prts, dplcts)
-                ! call testsymm_sparse2(symmetric, nnz, rc, ham)
+                call test_symm_sparse(symmetric, dim, nnz, rc, ham, norm, prts, dplcts)
+                ! call test_symm_sparse2(symmetric, nnz, rc, ham)
                 if(arpack == 1) then 
                     print*,''
                     write(*,100) '---------------- START ARPACK DIAGONALIZATION: V1 =', v1, ' V2 =', v2, ' -------------------'
                     print*,''
                     call lanczos_d(threads, dim, nnz, nev, ncv, nest, mode, rvec, ham, rc, energies, eigstate)
-                    if(degeneracy == 1) call gsdeg(dir, rvec, unit, parameters, dim, nev, nest, deg, energies, eigstate, ndeg, gs)
-                    if(degeneracy == 2 .and. rvec) call qgsdeg_d(dir, unit, parameters, dim, nev, nest, energies, eigstate, ndeg, gs)
-                    if(rvec) call check_d(dim, nnz, nev, nest, energies, eigstate, ndeg = ndeg, rc = rc, mat = ham) 
+                    if(degflag == 1) call gsdeg(dir, rvec, unit, parameters, dim, nev, nest, deg, energies, eigstate, ndeg, gs)
+                    if(degflag == 2 .and. rvec) call qgsdeg_d(dir, unit, parameters, dim, nev, nest, energies, eigstate, ndeg, gs)
+                    if(rvec) call check_spectrum_dp(dim, nnz, nev, nest, energies, eigstate, ndeg = ndeg, rc = rc, mat = ham) 
                     call save(dir, "R", parameters, append, conf, unit, 3, dim, states, nev, nest, nDis, rvec, energies, eigstate)    
-                    if(degeneracy == 1) call gsdeg(dir, rvec, unit, parameters, dim, nev, nest, deg, energies, eigstate, ndeg, gs)
-                    if(degeneracy == 2 .and. rvec) call qgsdeg_d(dir, unit, parameters, dim, nev, nest, energies, eigstate, ndeg, gs)
+                    if(degflag == 1) call gsdeg(dir, rvec, unit, parameters, dim, nev, nest, deg, energies, eigstate, ndeg, gs)
+                    if(degflag == 2 .and. rvec) call qgsdeg_d(dir, unit, parameters, dim, nev, nest, energies, eigstate, ndeg, gs)
                 end if 
                 if(mkl == 1) then 
                     print*,''
                     write(*,100) '---------------- START MKL DIAGONALIZATION: V1 =', v1, ' V2 =', v2, ' -------------------'
                     print*,''
                     call lanczos_mkl(dim, nev, ncv, nest, nnz, ham, rc, energies, eigstate)                
-                    if(degeneracy == 1) call gsdeg(dir, rvec, unit, parameters, dim, nev, nest, deg, energies, eigstate, ndeg, gs)
-                    if(degeneracy == 2 .and. rvec) call qgsdeg_d(dir, unit, parameters, dim, nev, nest, energies, eigstate, ndeg, gs)
-                    if(rvec) call check_d(dim, nnz, nev, nest, energies, eigstate, ndeg = ndeg, rc = rc, mat = ham) 
+                    if(degflag == 1) call gsdeg(dir, rvec, unit, parameters, dim, nev, nest, deg, energies, eigstate, ndeg, gs)
+                    if(degflag == 2 .and. rvec) call qgsdeg_d(dir, unit, parameters, dim, nev, nest, energies, eigstate, ndeg, gs)
+                    if(rvec) call check_spectrum_dp(dim, nnz, nev, nest, energies, eigstate, ndeg = ndeg, rc = rc, mat = ham) 
                     call save(dir, "R", parameters, append, conf, unit, 2, dim, states, nev, nest, nDis, rvec, energies, eigstate)
-                    if(degeneracy == 1) call gsdeg(dir, rvec, unit, parameters, dim, nev, nest, deg, energies, eigstate, ndeg, gs)     
-                    if(degeneracy == 2 .and. rvec) call qgsdeg_d(dir, unit, parameters, dim, nev, nest, energies, eigstate, ndeg, gs)    
+                    if(degflag == 1) call gsdeg(dir, rvec, unit, parameters, dim, nev, nest, deg, energies, eigstate, ndeg, gs)     
+                    if(degflag == 2 .and. rvec) call qgsdeg_d(dir, unit, parameters, dim, nev, nest, energies, eigstate, ndeg, gs)    
                 end if 
             end if
             if(feast == 1) then 
@@ -6508,12 +6508,12 @@ subroutine diagonalization(dir, conf, nev, ncv, full, v1, v2, threads, parameter
                 print*,''
                 call dfeast(dim, nnz, nev0, nest, rc, ham, Emin, Emax, nev, energies, eigstate)
 
-                if(degeneracy == 1) call gsdeg(dir, rvec, unit, parameters, dim, nev, nest, deg, energies, eigstate, ndeg, gs)
-                if(degeneracy == 2 .and. rvec) call qgsdeg_d(dir, unit, parameters, dim, nev, nest, energies, eigstate, ndeg, gs)
-                if(rvec) call check_d(dim, nnz, nev, nest, energies, eigstate, ndeg = ndeg, rc = rc, mat = ham)
+                if(degflag == 1) call gsdeg(dir, rvec, unit, parameters, dim, nev, nest, deg, energies, eigstate, ndeg, gs)
+                if(degflag == 2 .and. rvec) call qgsdeg_d(dir, unit, parameters, dim, nev, nest, energies, eigstate, ndeg, gs)
+                if(rvec) call check_spectrum_dp(dim, nnz, nev, nest, energies, eigstate, ndeg = ndeg, rc = rc, mat = ham)
                 call save(dir, "R", parameters, append, conf, unit, 1, dim, states, nev, nest, nDis, rvec, energies, eigstate)
-                if(degeneracy == 1) call gsdeg(dir, rvec, unit, parameters, dim, nev, nest, deg, energies, eigstate, ndeg, gs)
-                if(degeneracy == 2 .and. rvec) call qgsdeg_d(dir, unit, parameters, dim, nev, nest, energies, eigstate, ndeg, gs)
+                if(degflag == 1) call gsdeg(dir, rvec, unit, parameters, dim, nev, nest, deg, energies, eigstate, ndeg, gs)
+                if(degflag == 2 .and. rvec) call qgsdeg_d(dir, unit, parameters, dim, nev, nest, energies, eigstate, ndeg, gs)
             end if                          
         else if(ti == 1 .and. type == "C") then 
             if(irrep(1:1) == "E") then 
@@ -6522,16 +6522,16 @@ subroutine diagonalization(dir, conf, nev, ncv, full, v1, v2, threads, parameter
                 call unify_comp(v1, v2, dis, mass, pattern, sites, occ, nOff, nDi, hamOff_dc, rcoff, hamDi, ham_dc, rc, nnz)   
             end if 
     
-            call testhermitian_sparse(symmetric, irrep, symmetrize, dim, nnz, rc, ham_dc, norm, prts, dplcts)
+            call test_hermitian_sparse(symmetric, irrep, symm, dim, nnz, rc, ham_dc, norm, prts, dplcts)
             print*,''
             write(*,100) '---------------- START COMPLEX ARPACK DIAGONALIZATION: V1 =', v1, ' V2 =', v2, ' -------------------'
             print*,''
 
             call lanczos_c(threads, dim, nev, ncv, nest, mode, rvec, nnz, ham_dc, rc, energies, eigstate_dc)
-            if(rvec) call check_c(dim, .False., nev, nest, energies, eigstate_dc)
+            if(rvec) call check_spectrum_dc(dim, .False., nev, nest, energies, eigstate_dc)
             call save(dir, "C", parameters, append, conf, unit, 3, dim, states, nev, nest, nDis, rvec, energies, st_c=eigstate_dc)          
-            if(degeneracy == 1) call gsdeg(dir, rvec, unit, parameters, dim, nev, nest, deg, energies, eigstate_dc, ndeg, gs_c)      
-            if(degeneracy == 2 .and. rvec) call qgsdeg_c(dir, unit, parameters, dim, nev, nest, energies, eigstate_dc, ndeg, gs_c)
+            if(degflag == 1) call gsdeg(dir, rvec, unit, parameters, dim, nev, nest, deg, energies, eigstate_dc, ndeg, gs_c)      
+            if(degflag == 2 .and. rvec) call qgsdeg_c(dir, unit, parameters, dim, nev, nest, energies, eigstate_dc, ndeg, gs_c)
             if(feast == 1) then 
                 Emin = dble(energies(1))-0.01      
                 Emax = dble(energies(min(nev, nevmax)))+0.01
@@ -6541,10 +6541,10 @@ subroutine diagonalization(dir, conf, nev, ncv, full, v1, v2, threads, parameter
                 print*,''
                 print*,'---------------- START COMPLEX FEAST DIAGONALIZATION: V1 =', v1, ' V2 =', v2, ' -------------------'
                 call cfeast(dim, nnz, nev0, nest, rc, ham_dc, Emin, Emax, nev, energies, eigstate_dc)
-                if(rvec) call check_c(dim, .True., nev, nest, energies, eigstate_dc)
+                if(rvec) call check_spectrum_dc(dim, .True., nev, nest, energies, eigstate_dc)
                 call save(dir, "C", parameters, append, conf, unit, 1, dim, states, nev, nest, nDis, rvec, energies, st_c=eigstate_dc)           
-                if(degeneracy == 1) call gsdeg(dir, rvec, unit, parameters, dim, nev, nest, deg, energies, eigstate_dc, ndeg, gs_c)            
-                if(degeneracy == 2 .and. rvec) call qgsdeg_c(dir, unit, parameters, dim, nev, nest, energies, eigstate_dc, ndeg, gs_c)                      
+                if(degflag == 1) call gsdeg(dir, rvec, unit, parameters, dim, nev, nest, deg, energies, eigstate_dc, ndeg, gs_c)            
+                if(degflag == 2 .and. rvec) call qgsdeg_c(dir, unit, parameters, dim, nev, nest, energies, eigstate_dc, ndeg, gs_c)                      
             end if 
         end if
     else if (full == 1) then
@@ -6553,11 +6553,11 @@ subroutine diagonalization(dir, conf, nev, ncv, full, v1, v2, threads, parameter
         print*,''
         if(ti == 0 .and. type == "R") then 
             call unify_dense(dim, t, v1, v2, dis, sites, occ, nOff, nDi, hamOff, hamDi, ham_dp)
-            call testsymm(symmetric, dim, ham_dp)
+            call test_symm(symmetric, dim, ham_dp)
             call exactdiag(rvec, dim, ham_d, energies)    
         else if(ti == 1 .and. type == "R") then 
             call unify_dense_d(dim, v1, v2, dis, sites, occ, nOff, nDi, nDi_off, hamOff_dp, rcoff, rcdi, hamDi_d, hamDi, ham_dp)
-            call testsymm(symmetric, dim, ham_dp)
+            call test_symm(symmetric, dim, ham_dp)
             call exactdiag(rvec, dim, ham_d, energies)
         else if(ti == 1 .and. type == "C") then 
             call unify_dense_c(dim, v1, v2, dis, sites, occ, nOff, nDi, hamOff_dc, rcoff, hamDi, ham_dc)
@@ -6571,9 +6571,9 @@ subroutine diagonalization(dir, conf, nev, ncv, full, v1, v2, threads, parameter
                 do i = 1, nest
                     eigstate(1:dim,i) = ham_dp(1:dim,i)
                 end do
-                if(degeneracy == 1) call gsdeg(dir, rvec, unit, parameters, dim, nev, nest, deg, energies, eigstate, ndeg, gs)
-                if(degeneracy == 2 .and. rvec) call qgsdeg_d(dir, unit, parameters, dim, nev, nest, energies, eigstate, ndeg, gs)
-                if(rvec) call check_d(dim, nnz, nev, nest, energies, eigstate, ndeg = ndeg)
+                if(degflag == 1) call gsdeg(dir, rvec, unit, parameters, dim, nev, nest, deg, energies, eigstate, ndeg, gs)
+                if(degflag == 2 .and. rvec) call qgsdeg_d(dir, unit, parameters, dim, nev, nest, energies, eigstate, ndeg, gs)
+                if(rvec) call check_spectrum_dp(dim, nnz, nev, nest, energies, eigstate, ndeg = ndeg)
             end if
             call save(dir, "R", parameters, append, conf, unit, 0, dim, states, nev, nest, nDis, rvec, energies, eigstate)
         else if(type == "C") then 
@@ -6585,7 +6585,7 @@ subroutine diagonalization(dir, conf, nev, ncv, full, v1, v2, threads, parameter
                     eigstate_dc(1:dim,i) = ham_dc(1:dim,i)
                 end do
                 call gsdeg(dir, rvec, unit, parameters, dim, nev, nest, deg, energies, eigstate_dc, ndeg, gs_c)
-                if(rvec) call check_c(dim, .True., nev, nest, energies, eigstate_dc)
+                if(rvec) call check_spectrum_dc(dim, .True., nev, nest, energies, eigstate_dc)
             end if
             call save(dir, "C", parameters, append, conf, unit, 0, dim, states, nev, nest, nDis, rvec, energies, st_c = eigstate_dc)
         end if 
@@ -6900,7 +6900,7 @@ subroutine unify_dense(dim, t, v1, v2, w, sites, occ, nOff, nDi, hamOff, hamDi, 
     do j = 1, nDi !Fill diagonal Hamiltonian
         ham(j,j) = v1 * hamDi(j,1) + v2 * hamDi(j,2) + w * sum( rand * occ(1:sites,j) )
     end do
-    call testsymm(symm, dim, ham)
+    call test_symm(symm, dim, ham)
     
     return
 
@@ -6934,7 +6934,7 @@ subroutine unify_dense_d(dim, v1, v2, w, sites, occ, nOff, nDi, nDi2, hamOff, rc
     do j = 1, nDi !Fill diagonal Hamiltonian
         ham(j,j) = v1 * hamDi(j,1) + v2 * hamDi(j,2) + w * sum( rand * occ(1:sites,j) )
     end do
-    call testsymm(symm, dim, ham)
+    call test_symm(symm, dim, ham)
     
     do j = 1, nDi2 
         ham(rcdi(j), rcdi(j)) = ham(rcdi(j), rcdi(j)) + hamDi2(j)
@@ -6972,7 +6972,7 @@ subroutine unify_dense_c(dim, v1, v2, w, sites, occ, nOff, nDi, hamOff, rcoff, h
     do j = 1, nDi !Fill diagonal Hamiltonian
         ham(j,j) = v1 * hamDi(j,1) + v2 * hamDi(j,2) + w * sum( rand * occ(1:sites,j) )
     end do
-    ! call testsymm(symm, dim, ham)
+    ! call test_symm(symm, dim, ham)
     
     ! do j = 1, nDi2 
     !     ham(rcdi(j), rcdi(j)) = ham(rcdi(j), rcdi(j)) + hamDi2(j)
@@ -9299,11 +9299,11 @@ subroutine gsdeg_d(dir, rvec, unit, parameters, dim, nev, nest, thresh, energies
             exit 
         end if 
     end do 
-    if ( nest .le. nev .and. abs(energies(nest + 1) - energies(1)) <= thresh ) print*,'Potentially not full degeneracy has been captured. Increase "nest".'
-    if ( nest .le. ndeg ) print*,'Potentially not full degeneracy has been captured. Increase "nest".'
+    if ( nest .le. nev .and. abs(energies(nest + 1) - energies(1)) <= thresh ) print*,'Potentially not full degflag has been captured. Increase "nest".'
+    if ( nest .le. ndeg ) print*,'Potentially not full degflag has been captured. Increase "nest".'
     ndeg = min(ndeg, nest)
     if(rvec) gs = gs/sqrt(dble(ndeg))
-    print*,'Ground state degeneracy = ',ndeg 
+    print*,'Ground state degflag = ',ndeg 
    
     file = dir//"gs_deg_"//parameters
     file = trim_name(file)
@@ -9350,11 +9350,11 @@ subroutine gsdeg_c(dir, rvec, unit, parameters, dim, nev, nest, thresh, energies
             exit 
         end if 
     end do 
-    if ( nest .le. nev .and. abs(energies(nest + 1) - energies(1)) <= thresh ) print*,'Potentially not full degeneracy has been captured. Increase "nest".'
-    if ( nest .le. ndeg ) print*,'Potentially not full degeneracy has been captured. Increase "nest".'
+    if ( nest .le. nev .and. abs(energies(nest + 1) - energies(1)) <= thresh ) print*,'Potentially not full degflag has been captured. Increase "nest".'
+    if ( nest .le. ndeg ) print*,'Potentially not full degflag has been captured. Increase "nest".'
     ndeg = min(ndeg, nest)
     if(rvec) gs = gs/sqrt(dble(ndeg))
-    print*,'Ground state degeneracy = ',ndeg 
+    print*,'Ground state degflag = ',ndeg 
    
     file = dir//"gs_deg_"//parameters
     file = trim_name(file)
@@ -9403,7 +9403,7 @@ subroutine qgsdeg_d(dir, unit, parameters, dim, nev, nest, energies, states, nde
         end do 
     end if 
     gs = gs/sqrt(dble(ndeg))
-    print*,'Ground state quasi-degeneracy = ',ndeg 
+    print*,'Ground state quasi-degflag = ',ndeg 
    
     file =dir//"quasi_gs_deg_"//parameters
     file = trim_name(file)
@@ -9452,7 +9452,7 @@ subroutine qgsdeg_c(dir, unit, parameters, dim, nev, nest, energies, states, nde
         end do 
     end if 
     gs = gs/sqrt(dble(ndeg))
-    print*,'Ground state quasi-degeneracy = ',ndeg 
+    print*,'Ground state quasi-degflag = ',ndeg 
    
     file =dir//"quasi_gs_deg_"//parameters
     file = trim_name(file)
@@ -9499,11 +9499,11 @@ end subroutine corrmat
 !            Sublattice current                !
 !----------------------------------------------!
 
-subroutine currentcorrelations(dir, ti, tilted, nHel, tilt, threads, conf, degeneracy, full, feast, mkl, arpack, symmetrize, sites, l2, l1, ucx, ucy, k1, k2, id, par, rot, nDis, ndeg, refbonds, cntrA, cntrB, unit, dim, alattice, blattice, xyA, xyB, xtransl, ytransl, refl, c6, basis, v1, v2, dis, nnnVec, norm, eigstate, eigstate_dc)
+subroutine currentcorrelations(dir, ti, tilted, nHel, tilt, threads, conf, degflag, full, feast, mkl, arpack, symm, sites, l2, l1, ucx, ucy, k1, k2, id, par, rot, nDis, ndeg, refbonds, cntrA, cntrB, unit, dim, alattice, blattice, xyA, xyB, xtransl, ytransl, refl, c6, basis, v1, v2, dis, nnnVec, norm, eigstate, eigstate_dc)
 
     implicit none 
     
-    integer, intent(in) :: ti, tilted, nHel, tilt, threads, conf, degeneracy, full, feast, mkl, arpack, symmetrize, sites, l2, l1, ucx, ucy, k1, k2, nDis, ndeg, refbonds, cntrA, cntrB, unit
+    integer, intent(in) :: ti, tilted, nHel, tilt, threads, conf, degflag, full, feast, mkl, arpack, symm, sites, l2, l1, ucx, ucy, k1, k2, nDis, ndeg, refbonds, cntrA, cntrB, unit
     integer(kind=8), intent(in) :: dim
     integer, allocatable, intent(in) :: alattice(:,:), blattice(:,:), xyA(:,:), xyB(:,:), xtransl(:,:), ytransl(:,:), refl(:,:), c6(:) 
     integer(kind=8), allocatable, intent(in) :: basis(:)
@@ -9537,8 +9537,8 @@ subroutine currentcorrelations(dir, ti, tilted, nHel, tilt, threads, conf, degen
         append = .false.
     end if 
 
-    if(degeneracy < 2 ) dirq = dir  
-    if(degeneracy == 2 ) dirq = trim_name(dir//"QD_")
+    if(degflag < 2 ) dirq = dir  
+    if(degflag == 2 ) dirq = trim_name(dir//"QD_")
     dirq = trim_name(dirq)
 
     print*,'Calculate current current correlations...'
@@ -9562,22 +9562,22 @@ subroutine currentcorrelations(dir, ti, tilted, nHel, tilt, threads, conf, degen
         if( ndeg == 1 ) then  
             if(ti == 0) then 
                 call slcurrent(1.0d0, dim, sites, basis, Alattice, xyA, cntrA, j, eigstate(1:dim,1), nnnVec, bondcurrent, current)
-                if(tilted == 1) call current_irrep(nHel, tilt, 1.0d0, dim, sites, 1, 1, ti, symmetrize, id, par, rot, basis, Alattice, xtransl, ytransl, refl, c6, cntrA, j, eigstate(1:dim,1), nnnVec, norm, bondcurrent, current)
+                if(tilted == 1) call current_irrep(nHel, tilt, 1.0d0, dim, sites, 1, 1, ti, symm, id, par, rot, basis, Alattice, xtransl, ytransl, refl, c6, cntrA, j, eigstate(1:dim,1), nnnVec, norm, bondcurrent, current)
             else if(ti == 1 .and. k1 == 0 .and. k2 == 0) then 
-                if(tilted == 1) call current_irrep(nHel, tilt, 1.0d0, dim, sites, l2, l1, ti, symmetrize, id, par, rot, basis, Alattice, xtransl, ytransl, refl, c6, cntrA, j, eigstate(1:dim,1), nnnVec, norm, bondcurrent, current)
+                if(tilted == 1) call current_irrep(nHel, tilt, 1.0d0, dim, sites, l2, l1, ti, symm, id, par, rot, basis, Alattice, xtransl, ytransl, refl, c6, cntrA, j, eigstate(1:dim,1), nnnVec, norm, bondcurrent, current)
             else if(ti == 1 .and. ((k1 .ne. 0) .or. (k2 .ne. 0))) then 
                 call current_c(tilted, nHel, tilt, k1, k2, 1.0d0, dim, sites, l11, l22, basis, Alattice, xyA, xtransl, ytransl, cntrA, j, eigstate_dc(1:dim,1), nnnVec, norm, bondcurrent, current)
             end if 
         else if(ndeg > 1) then 
             if(ti == 0) then 
-                if(tilted == 1) call current_irrep_deg(ndeg, nHel, tilt, 1.d0, dim, sites, 1, 1, ti, symmetrize, id, par, rot, basis, Alattice, xtransl, ytransl, refl, c6, cntrA, refbond, eigstate, nnnVec, norm, bondcurrent, current)
-                if(tilted == 0) call current_irrep_deg_rect(ndeg, 1.0d0, dim, sites, 1, 1, ti, symmetrize, id, par, rot, basis, Alattice, xtransl, ytransl, refl, c6, cntrA, refbond, eigstate, nnnVec, norm, bondcurrent, current)
+                if(tilted == 1) call current_irrep_deg(ndeg, nHel, tilt, 1.d0, dim, sites, 1, 1, ti, symm, id, par, rot, basis, Alattice, xtransl, ytransl, refl, c6, cntrA, refbond, eigstate, nnnVec, norm, bondcurrent, current)
+                if(tilted == 0) call current_irrep_deg_rect(ndeg, 1.0d0, dim, sites, 1, 1, ti, symm, id, par, rot, basis, Alattice, xtransl, ytransl, refl, c6, cntrA, refbond, eigstate, nnnVec, norm, bondcurrent, current)
             else if(ti == 1 .and. k1 == 0 .and. k2 == 0) then 
                 if(tilted == 1) then 
-                    ! call current_irrep_deg(ndeg, nHel, tilt, 1.d0, dim, sites, l2, l1, ti, symmetrize, id, par, rot, basis, Alattice, xtransl, ytransl, refl, c6, cntrA, refbond, eigstate, nnnVec, norm, bondcurrent, current)
-                    call jij_irrep_deg(ndeg, 1.0d0, dim, sites, l2, l1, nHel, symmetrize, id, par, rot, basis, Alattice, xtransl, ytransl, refl, c6, cntrA, eigstate, nnnVec, norm) !, bcurrent, current
+                    ! call current_irrep_deg(ndeg, nHel, tilt, 1.d0, dim, sites, l2, l1, ti, symm, id, par, rot, basis, Alattice, xtransl, ytransl, refl, c6, cntrA, refbond, eigstate, nnnVec, norm, bondcurrent, current)
+                    call jij_irrep_deg(ndeg, 1.0d0, dim, sites, l2, l1, nHel, symm, id, par, rot, basis, Alattice, xtransl, ytransl, refl, c6, cntrA, eigstate, nnnVec, norm) !, bcurrent, current
                 else if(tilted == 0) then 
-                    call current_irrep_deg_rect(ndeg, 1.0d0, dim, sites, l2, l1, ti, symmetrize, id, par, rot, basis, Alattice, xtransl, ytransl, refl, c6, cntrA, refbond, eigstate, nnnVec, norm, bondcurrent, current)
+                    call current_irrep_deg_rect(ndeg, 1.0d0, dim, sites, l2, l1, ti, symm, id, par, rot, basis, Alattice, xtransl, ytransl, refl, c6, cntrA, refbond, eigstate, nnnVec, norm, bondcurrent, current)
                     call jij_irrep_deg_rect(ndeg, l2, l1, id, par, rot, basis, Alattice, xtransl, ytransl, refl, c6, cntrA, eigstate, nnnVec, norm)
                     
                 end if 
@@ -9590,7 +9590,7 @@ subroutine currentcorrelations(dir, ti, tilted, nHel, tilt, threads, conf, degen
         end if 
         
         write (* ,"(' A lattice, refbond ',i2,': Current=',f20.17)") refbond, current       
-        call save(dir, sl, current_parameters, append, degeneracy, j + 11, full, feast, mkl, arpack, cntrA, current, bondcurrent)   
+        call save(dir, sl, current_parameters, append, degflag, j + 11, full, feast, mkl, arpack, cntrA, current, bondcurrent)   
         
     end do !Loop over bonds 
     !!$omp end parallel do 
@@ -9615,7 +9615,7 @@ subroutine currentcorrelations(dir, ti, tilted, nHel, tilt, threads, conf, degen
     !         if(ti == 0) then 
     !             call slcurrent(1.0d0, dim, sites, basis, Blattice, xyB, cntrB, j, eigstate(1:dim,1), nnnVec, bondcurrent, current)
     !         else if(ti == 1 .and. k1 == 0 .and. k2 == 0) then 
-    !             if(tilted == 1) call current_irrep(nHel, tilt, 1.0d0, dim, sites, l2, l1, ti, symmetrize, id, par, rot, basis, Blattice, xtransl, ytransl, refl, c6, cntrB, j, eigstate(1:dim,1), nnnVec, norm, bondcurrent, current)
+    !             if(tilted == 1) call current_irrep(nHel, tilt, 1.0d0, dim, sites, l2, l1, ti, symm, id, par, rot, basis, Blattice, xtransl, ytransl, refl, c6, cntrB, j, eigstate(1:dim,1), nnnVec, norm, bondcurrent, current)
     !         else if(ti == 1 .and. ((k1 .ne. 0) .or. (k2 .ne. 0))) then 
     !             call current_c(tilted, nHel, tilt, k1, k2, 1.0d0, dim, sites, l11, l22, basis, Blattice, xyB, xtransl, ytransl, cntrB, j, eigstate_dc(1:dim,1), nnnVec, norm, bondcurrent, current)
     !         end if 
@@ -9625,12 +9625,12 @@ subroutine currentcorrelations(dir, ti, tilted, nHel, tilt, threads, conf, degen
     !             call currmat(dirq, j + 11, current_parameters, sl, ndeg, 1.0d0, dim, sites, basis, Blattice, xyB, cntrB, j, eigstate(1:dim,1:ndeg), nnnVec)
     !             call current_cs(dirq, j + 11, current_parameters, sl, ndeg, 1.0d0, dim, sites, basis, Blattice, cntrB, j, eigstate(1:dim,1:ndeg), nnnVec)
     !         else if(ti == 1 .and. k1 == 0 .and. k2 == 0) then 
-    !             if(tilted == 1) call current_irrep_deg(ndeg, nHel, tilt, 1.d0, dim, sites, l2, l1, ti, symmetrize, id, par, rot, basis, Blattice, xtransl, ytransl, refl, c6, cntrB, refbond, eigstate, nnnVec, norm, bondcurrent, current)
-    !             ! if(tilted == 0) call jij_irrep_deg_rect(ndeg, 1.0d0, dim, sites, l2, l1, symmetrize, id, par, rot, basis, Blattice, xtransl, ytransl, refl, c6, cntrB, eigstate, nnnVec, norm)
-    !             if(tilted == 0) call current_irrep_deg_rect(ndeg, 1.0d0, dim, sites, l2, l1, ti, symmetrize, id, par, rot, basis, Blattice, xtransl, ytransl, refl, c6, cntrB, refbond, eigstate, nnnVec, norm, bondcurrent, current)
-    !             if(tilted == 1) call current_irrep_deg(ndeg, nHel, tilt, 1.d0, dim, sites, l2, l1, ti, symmetrize, id, par, rot, basis, Blattice, xtransl, ytransl, refl, c6, cntrB, refbond, eigstate, nnnVec, norm, bondcurrent, current)
-    !             ! if(tilted == 0) call jij_irrep_deg_rect(ndeg, 1.0d0, dim, sites, l2, l1, symmetrize, id, par, rot, basis, Blattice, xtransl, ytransl, refl, c6, cntrB, eigstate, nnnVec, norm)
-    !             if(tilted == 0) call current_irrep_deg_rect(ndeg, 1.0d0, dim, sites, l2, l1, ti, symmetrize, id, par, rot, basis, Blattice, xtransl, ytransl, refl, c6, cntrB, refbond, eigstate, nnnVec, norm, bondcurrent, current)
+    !             if(tilted == 1) call current_irrep_deg(ndeg, nHel, tilt, 1.d0, dim, sites, l2, l1, ti, symm, id, par, rot, basis, Blattice, xtransl, ytransl, refl, c6, cntrB, refbond, eigstate, nnnVec, norm, bondcurrent, current)
+    !             ! if(tilted == 0) call jij_irrep_deg_rect(ndeg, 1.0d0, dim, sites, l2, l1, symm, id, par, rot, basis, Blattice, xtransl, ytransl, refl, c6, cntrB, eigstate, nnnVec, norm)
+    !             if(tilted == 0) call current_irrep_deg_rect(ndeg, 1.0d0, dim, sites, l2, l1, ti, symm, id, par, rot, basis, Blattice, xtransl, ytransl, refl, c6, cntrB, refbond, eigstate, nnnVec, norm, bondcurrent, current)
+    !             if(tilted == 1) call current_irrep_deg(ndeg, nHel, tilt, 1.d0, dim, sites, l2, l1, ti, symm, id, par, rot, basis, Blattice, xtransl, ytransl, refl, c6, cntrB, refbond, eigstate, nnnVec, norm, bondcurrent, current)
+    !             ! if(tilted == 0) call jij_irrep_deg_rect(ndeg, 1.0d0, dim, sites, l2, l1, symm, id, par, rot, basis, Blattice, xtransl, ytransl, refl, c6, cntrB, eigstate, nnnVec, norm)
+    !             if(tilted == 0) call current_irrep_deg_rect(ndeg, 1.0d0, dim, sites, l2, l1, ti, symm, id, par, rot, basis, Blattice, xtransl, ytransl, refl, c6, cntrB, refbond, eigstate, nnnVec, norm, bondcurrent, current)
     !         else if(ti == 1 .and. ((k1 .ne. 0) .or. (k2 .ne. 0))) then 
     !             call current_ics_c2(tilted, nHel, tilt, k1, k2, ndeg, 1.d0, dim, sites, l2, l1, basis, Blattice, xyB, xtransl, ytransl, cntrB, j, eigstate_dc(1:dim,1:ndeg), nnnVec, norm, bondcurrent, current)    
     !             call current_cs_c2(tilted, nHel, tilt, dirq, j + 11, current_parameters, sl, ndeg, k1, k2, 1.0d0, dim, sites, l2, l1, basis, Blattice, xyB, xtransl, ytransl, cntrB, j, eigstate_dc(1:dim,1:ndeg), nnnVec, norm)
@@ -9639,7 +9639,7 @@ subroutine currentcorrelations(dir, ti, tilted, nHel, tilt, threads, conf, degen
     !     end if 
 
     !     write (* ,"(' B lattice, refbond ',i2,': Current=',f20.17)") refbond, current                
-    !     call save(dir, sl, current_parameters, append, degeneracy, unit, full, feast, mkl, arpack, cntrB, current, bondcurrent)
+    !     call save(dir, sl, current_parameters, append, degflag, unit, full, feast, mkl, arpack, cntrB, current, bondcurrent)
 
     ! end do !Loop over bonds 
     ! !!$omp end parallel do 
@@ -9767,10 +9767,10 @@ subroutine slcurrent(t, dim, sites, basis, bsites, xy, nbonds, refbond, psi, nnn
 end subroutine slcurrent
 
 !LOC and J reversed (ti = 1, k1 = 0, k2 = 0, ndeg = 1) (for all clusters)
-subroutine current_irrep(nHel, tilt, t, dim, sites, Lx, Ly, ti, symmetrize, id, mir, rot, basis, bsites, xtransl, ytransl, refl, c6, nbonds, refbond, psi, nnnVec, norm, bcurrent, current)
+subroutine current_irrep(nHel, tilt, t, dim, sites, Lx, Ly, ti, symm, id, mir, rot, basis, bsites, xtransl, ytransl, refl, c6, nbonds, refbond, psi, nnnVec, norm, bcurrent, current)
 
     implicit none
-    integer, intent(in) :: nHel, tilt, nbonds, refbond, sites, Lx, Ly, ti, symmetrize, bsites(5,nbonds), xtransl(2, sites), ytransl(2, sites), refl(6, sites), c6(sites)
+    integer, intent(in) :: nHel, tilt, nbonds, refbond, sites, Lx, Ly, ti, symm, bsites(5,nbonds), xtransl(2, sites), ytransl(2, sites), refl(6, sites), c6(sites)
     integer(kind=8), intent(in) :: dim, basis(dim)
     double precision, intent(in) :: id, mir(6), rot(5), t, psi(dim), nnnVec(2, 3), norm(dim) 
     double precision, intent(out) :: current
@@ -9802,7 +9802,7 @@ subroutine current_irrep(nHel, tilt, t, dim, sites, Lx, Ly, ti, symmetrize, id, 
     current  = 0.d0
     bcurrent = 0.d0 
    
-    if(symmetrize == 1 .and. ti == 1) then 
+    if(symm == 1 .and. ti == 1) then 
         order = 12
     else 
         order = 1
@@ -9863,7 +9863,7 @@ subroutine current_irrep(nHel, tilt, t, dim, sites, Lx, Ly, ti, symmetrize, id, 
                             cycle 
                         end if 
 
-                        if(ti == 1) call representative_irrep(newst, sites, nHel, tilt, Lx, Ly, symmetrize, id, mir, rot, xtransl, ytransl, refl, c6, rep, l1, l2, signrep)
+                        if(ti == 1) call representative_irrep(newst, sites, nHel, tilt, Lx, Ly, symm, id, mir, rot, xtransl, ytransl, refl, c6, rep, l1, l2, signrep)
                         if(ti == 0) rep = newst
                         call findstate(dim, rep, basis, loc) 
                         
@@ -9891,10 +9891,10 @@ subroutine current_irrep(nHel, tilt, t, dim, sites, Lx, Ly, ti, symmetrize, id, 
 
 end subroutine current_irrep
 
-subroutine current_rect(t, dim, sites, Lx, Ly, ti, symmetrize, id, mir, rot, basis, bsites, xtransl, ytransl, refl, c6, nbonds, refbond, psi, nnnVec, norm, bcurrent, current)
+subroutine current_rect(t, dim, sites, Lx, Ly, ti, symm, id, mir, rot, basis, bsites, xtransl, ytransl, refl, c6, nbonds, refbond, psi, nnnVec, norm, bcurrent, current)
 
     implicit none
-    integer, intent(in) :: nbonds, refbond, sites, Lx, Ly, ti, symmetrize
+    integer, intent(in) :: nbonds, refbond, sites, Lx, Ly, ti, symm
     integer, intent(in) :: bsites(5,nbonds), xtransl(2, sites), ytransl(2, sites), refl(6, sites), c6(sites)
     integer(kind=8), intent(in) :: dim, basis(dim)
     double precision, intent(in) :: id, mir(6), rot(5), t, psi(dim), nnnVec(2, 3), norm(dim) 
@@ -9927,7 +9927,7 @@ subroutine current_rect(t, dim, sites, Lx, Ly, ti, symmetrize, id, mir, rot, bas
     current  = 0.d0
     bcurrent = 0.d0 
    
-    if(symmetrize == 1 .and. ti == 1) then 
+    if(symm == 1 .and. ti == 1) then 
         order = 12
     else 
         order = 1
@@ -9987,7 +9987,7 @@ subroutine current_rect(t, dim, sites, Lx, Ly, ti, symmetrize, id, mir, rot, bas
                         else 
                             cycle 
                         end if 
-                        if(ti == 1) call representative_irrep(newst, sites, Ly, 0, Lx, Ly, symmetrize, id, mir, rot, xtransl, ytransl, refl, c6, rep, l1, l2, signrep)
+                        if(ti == 1) call representative_irrep(newst, sites, Ly, 0, Lx, Ly, symm, id, mir, rot, xtransl, ytransl, refl, c6, rep, l1, l2, signrep)
                         if(ti == 0) rep = newst
                         call findstate(dim, rep, basis, loc) 
                         
@@ -10012,10 +10012,10 @@ subroutine current_rect(t, dim, sites, Lx, Ly, ti, symmetrize, id, mir, rot, bas
 
 end subroutine current_rect
 
-subroutine current_irrep_deg(ndeg, nHel, tilt, t, dim, sites, Lx, Ly, ti, symmetrize, id, mir, rot, basis, bsites, xtransl, ytransl, refl, c6, nbonds, refbond, psi, nnnVec, norm, bcurrent, current)
+subroutine current_irrep_deg(ndeg, nHel, tilt, t, dim, sites, Lx, Ly, ti, symm, id, mir, rot, basis, bsites, xtransl, ytransl, refl, c6, nbonds, refbond, psi, nnnVec, norm, bcurrent, current)
 
     implicit none
-    integer, intent(in) :: ndeg, nHel, tilt, nbonds, refbond, sites, Lx, Ly, ti, symmetrize, bsites(5,nbonds), xtransl(2, sites), ytransl(2, sites), refl(6, sites), c6(sites)
+    integer, intent(in) :: ndeg, nHel, tilt, nbonds, refbond, sites, Lx, Ly, ti, symm, bsites(5,nbonds), xtransl(2, sites), ytransl(2, sites), refl(6, sites), c6(sites)
     integer(kind=8), intent(in) :: dim, basis(dim)
     double precision, intent(in) :: id, mir(6), rot(5), t, psi(dim, ndeg), nnnVec(2, 3), norm(dim) 
     double precision, intent(out) :: current
@@ -10055,7 +10055,7 @@ subroutine current_irrep_deg(ndeg, nHel, tilt, t, dim, sites, Lx, Ly, ti, symmet
     bcurrmat = 0.d0 
     current = 0.d0
 
-    if(symmetrize == 1) then 
+    if(symm == 1) then 
         order = 12
     else 
         order = 1
@@ -10117,7 +10117,7 @@ subroutine current_irrep_deg(ndeg, nHel, tilt, t, dim, sites, Lx, Ly, ti, symmet
                                     cycle 
                                 end if 
 
-                                if(ti == 1) call representative_irrep(newst, sites, nHel, tilt, Lx, Ly, symmetrize, id, mir, rot, xtransl, ytransl, refl, c6, rep, l1, l2, signrep)
+                                if(ti == 1) call representative_irrep(newst, sites, nHel, tilt, Lx, Ly, symm, id, mir, rot, xtransl, ytransl, refl, c6, rep, l1, l2, signrep)
                                 if(ti == 0) rep = newst
                                 call findstate(dim, rep, basis, loc) 
                                 
@@ -10157,10 +10157,10 @@ subroutine current_irrep_deg(ndeg, nHel, tilt, t, dim, sites, Lx, Ly, ti, symmet
 
 end subroutine current_irrep_deg
 
-subroutine current_irrep_deg_rect(ndeg, t, dim, sites, Lx, Ly, ti, symmetrize, id, mir, rot, basis, bsites, xtransl, ytransl, refl, c6, nbonds, refbond, psi, nnnVec, norm, bcurrent, current)
+subroutine current_irrep_deg_rect(ndeg, t, dim, sites, Lx, Ly, ti, symm, id, mir, rot, basis, bsites, xtransl, ytransl, refl, c6, nbonds, refbond, psi, nnnVec, norm, bcurrent, current)
 
     implicit none
-    integer, intent(in) :: ndeg, nbonds, refbond, sites, Lx, Ly, ti, symmetrize
+    integer, intent(in) :: ndeg, nbonds, refbond, sites, Lx, Ly, ti, symm
     integer, intent(in) :: bsites(5,nbonds), xtransl(2, sites), ytransl(2, sites), refl(6, sites), c6(sites)
     integer(kind=8), intent(in) :: dim, basis(dim)
     double precision, intent(in) :: id, mir(6), rot(5), t, psi(dim, ndeg), nnnVec(2, 3), norm(dim) 
@@ -10201,7 +10201,7 @@ subroutine current_irrep_deg_rect(ndeg, t, dim, sites, Lx, Ly, ti, symmetrize, i
     bcurrmat = 0.d0 
     current = 0.d0
 
-    if(symmetrize == 1) then 
+    if(symm == 1) then 
         order = 12
     else 
         order = 1
@@ -10263,7 +10263,7 @@ subroutine current_irrep_deg_rect(ndeg, t, dim, sites, Lx, Ly, ti, symmetrize, i
                                     cycle 
                                 end if 
 
-                                if(ti == 1) call representative_irrep(newst, sites, Ly, 0, Lx, Ly, symmetrize, id, mir, rot, xtransl, ytransl, refl, c6, rep, l1, l2, signrep)
+                                if(ti == 1) call representative_irrep(newst, sites, Ly, 0, Lx, Ly, symm, id, mir, rot, xtransl, ytransl, refl, c6, rep, l1, l2, signrep)
                                 if(ti == 0) rep = newst
                                 call findstate(dim, rep, basis, loc) 
                                 
@@ -10317,7 +10317,7 @@ subroutine current_irrep_deg_rect(ndeg, t, dim, sites, Lx, Ly, ti, symmetrize, i
         !     end do 
         !     ! gs = gs/ norm2(gs)
         !     print* ,norm2(gs), 'norm2(gs)'
-        !     call current_rect(t, dim, sites, Lx, Ly, ti, symmetrize, id, mir, rot, basis, bsites, xtransl, ytransl, refl, c6, nbonds, refbond, gs, nnnVec, norm, bcurrent, current)
+        !     call current_rect(t, dim, sites, Lx, Ly, ti, symm, id, mir, rot, basis, bsites, xtransl, ytransl, refl, c6, nbonds, refbond, gs, nnnVec, norm, bcurrent, current)
         !     print* ,current, 'current'
         !     gs = 0.d0 
         !     pause     
@@ -10366,7 +10366,7 @@ subroutine jij_irrep_deg_rect(ndeg, Lx, Ly, id, mir, rot, basis, bsites, xtransl
     bcurrmat = (0.d0,0.d0) 
     bcurrent = 0.d0 
 
-    if(symmetrize == 1) then 
+    if(symm == 1) then 
         order = 12
     else 
         order = 1
@@ -10412,7 +10412,7 @@ subroutine jij_irrep_deg_rect(ndeg, Lx, Ly, id, mir, rot, basis, bsites, xtransl
                                     cycle 
                                 end if 
 
-                                call representative_irrep(newst, sites, Ly, 0, Lx, Ly, symmetrize, id, mir, rot, xtransl, ytransl, refl, c6, rep, l1, l2, signrep)
+                                call representative_irrep(newst, sites, Ly, 0, Lx, Ly, symm, id, mir, rot, xtransl, ytransl, refl, c6, rep, l1, l2, signrep)
                                 call findstate(dim, rep, basis, loc) 
                                 
                                 if(loc <= 0) cycle   
@@ -10468,10 +10468,10 @@ subroutine jij_irrep_deg_rect(ndeg, Lx, Ly, id, mir, rot, basis, bsites, xtransl
 
 end subroutine jij_irrep_deg_rect
 
-subroutine jij_irrep_deg(ndeg, t, dim, sites, Lx, Ly, nHel, symmetrize, id, mir, rot, basis, bsites, xtransl, ytransl, refl, c6, nbonds, psi, nnnVec, norm) !, bcurrent, current
+subroutine jij_irrep_deg(ndeg, t, dim, sites, Lx, Ly, nHel, symm, id, mir, rot, basis, bsites, xtransl, ytransl, refl, c6, nbonds, psi, nnnVec, norm) !, bcurrent, current
 
     implicit none
-    integer, intent(in) :: ndeg, nbonds, sites, Lx, Ly, nHel, symmetrize
+    integer, intent(in) :: ndeg, nbonds, sites, Lx, Ly, nHel, symm
     integer, intent(in) :: bsites(5,nbonds), xtransl(2, sites), ytransl(2, sites), refl(6, sites), c6(sites)
     integer(kind=8), intent(in) :: dim, basis(dim)
     double precision, intent(in) :: id, mir(6), rot(5), t, psi(dim, ndeg), nnnVec(2, 3), norm(dim) 
@@ -10503,7 +10503,7 @@ subroutine jij_irrep_deg(ndeg, t, dim, sites, Lx, Ly, nHel, symmetrize, id, mir,
     bcurrmat = (0.d0,0.d0) 
     bcurrent = 0.d0 
 
-    if(symmetrize == 1) then 
+    if(symm == 1) then 
         order = 12
     else 
         order = 1
@@ -10549,7 +10549,7 @@ subroutine jij_irrep_deg(ndeg, t, dim, sites, Lx, Ly, nHel, symmetrize, id, mir,
                                     cycle 
                                 end if 
 
-                                call representative_irrep(newst, sites, nHel, 1, Lx, Ly, symmetrize, id, mir, rot, xtransl, ytransl, refl, c6, rep, l1, l2, signrep)
+                                call representative_irrep(newst, sites, nHel, 1, Lx, Ly, symm, id, mir, rot, xtransl, ytransl, refl, c6, rep, l1, l2, signrep)
                                 call findstate(dim, rep, basis, loc) 
                                 
                                 if(loc <= 0) cycle   
@@ -10819,7 +10819,7 @@ end subroutine
 !            Date and Time                  !
 !-------------------------------------------!
 
-subroutine datetime(dir, startend, params)
+subroutine timing(dir, startend, params)
     implicit none
 
     integer, intent(in) :: startend
@@ -10872,7 +10872,7 @@ subroutine datetime(dir, startend, params)
         write(77,"(' End date:',x,a,'.',x,a,'.',x,a)") ,datef(7:8), datef(5:6), datef(1:4)
         close(77)
     end if
-end subroutine datetime
+end subroutine timing
 
 !---------------------------------------------------!
 !            Number of discretization steps         !
@@ -11066,12 +11066,12 @@ subroutine printparams(nev, ndeg, nHel, tilt, k1, k2)
     print('(1x, a,i0)'), 'NEV = ', nev
 
     if(ndeg > 0) then 
-        if(degeneracy == 1) then 
+        if(degflag == 1) then 
             print*, ''
-            ! print('(1x, a,f20.16)'), 'Degeneracy threshold = ', deg
+            ! print('(1x, a,f20.16)'), 'degflag threshold = ', deg
             print('(1x, a,i0)'), 'NDEG = ', ndeg
             print*, ''
-        else if(degeneracy == 2) then 
+        else if(degflag == 2) then 
             print('(1x, a,f20.16)'), 'QNDEG = ', ndeg
             print*, ''
         end if 
@@ -11082,8 +11082,8 @@ subroutine printparams(nev, ndeg, nHel, tilt, k1, k2)
         print('(1x, a,i0)'), 'Ktot = ', k1 + ucx * k2
         print*, ''    
     end if 
-    if(symmetrize == 1) print('(1x, a,a)'),'IRREP = ', irrep 
-    if(symmetrize == 1) print*, ''
+    if(symm == 1) print('(1x, a,a)'),'IRREP = ', irrep 
+    if(symm == 1) print*, ''
     print*, '---------------------------------------------------------------'
     print*, ''    
     print('(1x, a,i0)'), 'OMP = ', othrds

@@ -8,7 +8,8 @@ fort.20
 *.o
 work_in_progress.f90
 /.venv/*
-*old*
 /build/*
-/old/
+*old*
+*dev*
+/old/*
 /dev/*

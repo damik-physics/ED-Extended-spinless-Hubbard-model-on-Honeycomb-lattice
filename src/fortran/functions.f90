@@ -3,6 +3,20 @@ module functions
     implicit none
     
     contains 
+    
+    function hopping(state, from, to) result(new_state)
+        ! Declarations
+        implicit none
+        ! Argument declarations
+        integer(kind=8), intent(in)  :: state
+        integer, intent(in)  :: from ! Site to hop from
+        integer, intent(in)  :: to   ! Site to hop to
+        integer(kind=8) :: new_state ! New state after hopping
+
+        ! First create particle at the 'to' site, then remove it from the 'from' site 
+        new_state = ibclr(ibset(state, to-1), from-1)
+
+    end function hopping
 
 
     function trim_name(file_name) result(trimmed_name) !Function to remove blank spaces from file names
@@ -50,7 +64,7 @@ module functions
         if(particles_up < 0 .or. particles_dn < 0) then
             combinations = 0
         else
-            combinations = int(fact(sites) / (fact(particles_up) * fact(max(1,sites - particles_up))), 8) * int(fact(sites) / (fact(particles_dn) * fact(max(1, sites-particles_dn))), 8)
+            combinations = int(fact(sites) /(fact(particles_up) * fact(max(1,sites - particles_up))), 8) * int(fact(sites) /(fact(particles_dn) * fact(max(1, sites-particles_dn))), 8)
         end if
 
     end function combs
@@ -80,7 +94,7 @@ module functions
 
     end function fact
 
-    function binomial(n, k) result(res) !Calculates the binomial coefficient C(n, k) = n! / (k! * (n-k)!)
+    function binomial(n, k) result(res) !Calculates the binomial coefficient C(n, k) = n! /(k! *(n-k)!)
 
         !---------------------------------------!
         !            Binomial coefficients      !
@@ -91,7 +105,7 @@ module functions
         
         double precision :: res
 
-        res = fact(n) / (fact(k) * fact(n - k))
+        res = fact(n) /(fact(k) * fact(n - k))
 
     end function binomial
 

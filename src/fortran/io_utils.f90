@@ -1,12 +1,13 @@
 module io_utils 
-
+    use types
     use functions 
     use file_utils
-    
+    use params 
+        
     implicit none 
 
     interface save
-        module procedure save_momenta, save_spectrum, save_ham, save_currents, save_cdw
+        module procedure save_momenta, save_spectrum_dp, save_spectrum_dc, save_ham, save_currents, save_cdw
     end interface save
 
     interface params_string
@@ -15,8 +16,7 @@ module io_utils
 
     interface printing
         module procedure print_configuration, &
-                         print_parameters!, &
-                         !print_results
+                         print_parameters
     end interface printing 
 
     contains 
@@ -30,7 +30,7 @@ module io_utils
 
         integer   :: k1 = 0, k2 = 0 
 
-        open(unit=unit, file=trim(outdir)//'momenta.dat', status='replace')
+        open(unit=unit, file=trim(dir)//'momenta.dat', status='replace')
         do k1 = 0, k1_max
             do k2 = 0, k2_max
                 write(unit,*) k1, k2 
@@ -42,16 +42,15 @@ module io_utils
 
     end subroutine save_momenta
 
-    subroutine save_spectrum(type, par, append, conf, unit, dim, states, nev, nest, rvec, en, st_dp, st_c)
-        
+    subroutine save_spectrum_dp(dir, par, append, conf, unit, dim, states, nev, nest, rvec, en, st)
+        ! Saves the spectrum of eigenvalues and real eigenstates to disk.
         implicit none 
-        
+        character(len=*), intent(in) :: dir
         integer,           intent(in) :: conf, unit, states, nev, nest 
         integer(kind=8),   intent(in) :: dim  
-        character(len=*),  intent(in) :: type, par
+        character(len=*),  intent(in) :: par
         logical,           intent(in) :: append, rvec 
-        double precision,  intent(in) :: en(dim), st_dp(dim, nest) 
-        double complex,    intent(in) :: st_c(dim, nest) 
+        double precision,  intent(in) :: en(dim), st(dim, nest) 
 
         integer         :: j = 0
         character       :: file*256, appchar*20
@@ -63,51 +62,78 @@ module io_utils
         else  
             appchar = 'SEQUENTIAL'
         end if 
-        file = trim(outdir)//'energy_'//par//'.dat'
+        file = trim(dir)//'energy_'//par//'.dat'
         open(unit=unit, file=trim(file), status='replace', access=appchar)
 
-        ! file = dir // "energies_" // par
-        ! file2 = dir // "states_" // par
-        
-        ! file = trim_name(file)
-        ! file2 = trim_name(file2)
-
-        ! open(unit, file = file, access = appchar)
         if(conf == 1) write(unit,*) nev
-
         do j = 1, nev
             write(unit, 100) en(j)
         end do
         close(unit)
 
         if(states == 1 .and. rvec) then
-            file = trim(outdir)//'eigenstates_'//par//'.dat'
-            if(type == "R") then 
-                open(unit=unit, file=trim(file) , status='replace', access=appchar)
-                ! open(unit, file = file2, access = appchar)
-                write(unit,*) dim
-                write(unit,*) nev
-                do j = 1, nest
-                    write(unit, 100) st_dp(1:dim, j)
-                end do
-            else if(type == "C") then
-                open(unit=unit, file=trim(file) , status='replace', access=appchar) 
-                ! open(unit, file = file2, access = appchar)
-                write(unit,*) dim
-                write(unit,*) nev
-                do j = 1, nest               
-                    write(unit, 100) dble(st_c(1:dim, j)), dimag(st_c(1:dim, j)) 
-                end do
-            end if
+            file = trim(dir)//'eigenstates_'//par//'.dat' 
+            open(unit=unit, file=trim(file) , status='replace', access=appchar)
+            write(unit,*) dim
+            write(unit,*) nev
+            do j = 1, nest
+                write(unit, 100) st(1:dim, j)
+            end do
             close(unit)
         end if 
 
 
         return 
 
-    end subroutine save_spectrum
+    end subroutine save_spectrum_dp
 
-    subroutine save_ham(type, unit, ti, sites, nnz, nDi, hamDi, ham_i, rc, ham_dp, ham_dc, occ)
+    subroutine save_spectrum_dc(dir, par, append, conf, unit, dim, states, nev, nest, rvec, en, st)
+        ! Saves the spectrum of eigenvalues and complex eigenstates to disk.
+        implicit none 
+        character(len=*), intent(in) :: dir
+        integer,           intent(in) :: conf, unit, states, nev, nest 
+        integer(kind=8),   intent(in) :: dim  
+        character(len=*),  intent(in) :: par
+        logical,           intent(in) :: append, rvec 
+        double precision,  intent(in) :: en(dim) 
+        double complex,    intent(in) :: st(dim, nest) 
+
+        integer         :: j = 0
+        character       :: file*256, appchar*20
+
+        100 format(1000(F40.30))
+        
+        if(append) then 
+            appchar = 'APPEND'
+        else  
+            appchar = 'SEQUENTIAL'
+        end if 
+        file = trim(dir)//'energy_'//par//'.dat'
+        open(unit=unit, file=trim(file), status='replace', access=appchar)
+
+        if(conf == 1) write(unit,*) nev
+        do j = 1, nev
+            write(unit, 100) en(j)
+        end do
+        close(unit)
+
+        if(states == 1 .and. rvec) then
+            file = trim(dir)//'eigenstates_'//par//'.dat'
+            open(unit=unit, file=trim(file) , status='replace', access=appchar) 
+            write(unit,*) dim
+            write(unit,*) nev
+            do j = 1, nest               
+                write(unit, 100) dble(st(1:dim, j)), dimag(st(1:dim, j)) 
+            end do
+            close(unit)
+        end if 
+
+
+        return 
+
+    end subroutine save_spectrum_dc
+
+    subroutine save_ham(outdir, mat_type, unit, ti, sites, nnz, nDi, hamDi, ham_i, rc, ham_dp, ham_dc, occ)
 
         implicit none 
 
@@ -116,30 +142,28 @@ module io_utils
         integer(kind=8),  intent(in), optional :: hamDi(nDi, 2), ham_i(nnz, 3), rc(nnz, 2), occ(sites, nDi)
         double precision, intent(in), optional :: ham_dp(nnz)
         double complex,   intent(in), optional :: ham_dc(nnz) 
-        character(len=*), intent(in)           :: type
+        character(len=*), intent(in)           :: outdir, mat_type
 
         integer(kind=8) :: i = 0
-        character       :: dir*1024, file*1024!, dir*256
+        character       :: dir*1024, file*1024
 
         print*, 'Saving Hamiltonian to disk...'
         dir = trim(outdir) // "hamiltonians/"
-        ! dir = trim_name(dir)
         file = trim(dir) // 'hamiltonian_off_diagonal.dat'
-        ! file = trim_name(file)
-        print*, 'Output directory: ', trim(outdir)
+        print*, 'Output directory: ', trim(dir)
         print*, 'File: ', trim(file)
         open(unit, file=trim(file), status='replace')
         write(unit,*) nnz 
         
-        if(type == "R" .and. ti == 0) then 
+        if(mat_type == "R" .and. ti == 0) then 
             do i = 1, nnz
                 if(ti == 0) write(unit,*) ham_i(i,1), ham_i(i,2), ham_i(i,3)
             end do 
-        else if(type == "R" .and. ti == 1) then         
+        else if(mat_type == "R" .and. ti == 1) then         
             do i = 1, nnz
                 write(unit,*) ham_dp(i), rc(i,1), rc(i,2)
             end do 
-        else if(type == "C" .and. ti == 1) then             
+        else if(mat_type == "C" .and. ti == 1) then             
             do i = 1, nnz
                 write(unit,*) ham_dc(i), rc(i,1), rc(i,2)
             end do 
@@ -170,11 +194,11 @@ module io_utils
 
     end subroutine save_ham
 
-    subroutine loadham(type, unit, ti, sites, nnz, nDi, hamDi, ham_i, rc, ham_dp, ham_dc, occupation, exist1, exist2, exist3)
+    subroutine loadham(mat_type, unit, ti, sites, nnz, nDi, hamDi, ham_i, rc, ham_dp, ham_dc, occupation, exist1, exist2, exist3)
         
         implicit none 
         
-        character(len=*), intent(in) :: type
+        character(len=*), intent(in) :: mat_type
         integer, intent(in) :: ti, unit, sites  
         integer(kind=8), intent(out) :: nnz, nDi       
         integer(kind=8), allocatable, intent(out), optional :: hamDi(:, :), ham_i(:, :), rc(:, :), occupation(:, :)
@@ -193,14 +217,14 @@ module io_utils
             open(unit=unit, file=trim(file))
             read(unit, *) nnz 
 
-            if(type == "R" .and. ti == 0) then 
+            if(mat_type == "R" .and. ti == 0) then 
                 if(allocated(ham_i)) deallocate(ham_i)
                 allocate(ham_i(nnz, 3))
                 ham_i = 0
                 do i = 1, nnz
                     read(unit,*) ham_i(i,1), ham_i(i,2), ham_i(i,3)
                 end do 
-            else if(type == "R" .and. ti == 1) then 
+            else if(mat_type == "R" .and. ti == 1) then 
                 if(allocated(ham_dp)) deallocate(ham_dp)
                 if(allocated(rc)) deallocate(rc)
                 allocate(ham_dp(nnz))
@@ -211,7 +235,7 @@ module io_utils
                 do i = 1, nnz
                     read(unit,*) ham_dp(i), rc(i,1), rc(i,2)
                 end do 
-            else if(type == "C" .and. ti == 1) then      
+            else if(mat_type == "C" .and. ti == 1) then      
                 if(allocated(ham_dc)) deallocate(ham_dc)
                 if(allocated(rc)) deallocate(rc)
                 allocate(ham_dc(nnz))
@@ -230,7 +254,7 @@ module io_utils
         file = trim(dir)//"hamiltonian_diagonal"
         inquire(file=trim(file), exist=exist2)
 
-        if( exist2 ) then 
+        if(exist2) then 
             open(unit, file=trim(file))
             read(unit, *) nDi 
             if(allocated(hamDi)) deallocate(hamDi)
@@ -243,11 +267,11 @@ module io_utils
             print*,''
         end if 
         
-        if(.not. (exist2)) print*,'Diagonal Hamiltonian does not yet exist.'
+        if(.not.(exist2)) print*,'Diagonal Hamiltonian does not yet exist.'
 
         file = trim(dir)//"site_occupation"
         inquire(file=trim(file), exist=exist3)
-        if( exist3 ) then 
+        if(exist3) then 
             open(unit, file=trim(file))
             read(unit, *) nDi 
             if(allocated(occupation)) deallocate(occupation)
@@ -260,8 +284,8 @@ module io_utils
             print*,''
         end if 
 
-        if(.not. (exist3)) print*,'Site occupation does not yet exist.'
-        if(.not. (exist3)) print*,''
+        if(.not.(exist3)) print*,'Site occupation does not yet exist.'
+        if(.not.(exist3)) print*,''
 
         return 
 
@@ -355,7 +379,7 @@ module io_utils
     end subroutine save_cdw
 
     subroutine save_dpd_cf(dir, params, append, unit, sites, rhocn, rho)
-        ! Calculates the density-density correlation function (dd_cf) as well as density correlation function and saves them to disk.
+        ! Calculates the density-density correlation function(dd_cf) as well as density correlation function and saves them to disk.
         implicit none
 
         integer,          intent(in) :: unit, sites
@@ -543,20 +567,18 @@ module io_utils
 
     end subroutine save_dc
 
-    subroutine params_string(sites, particles, k1, k2, refb, v1, v2, pattern, params, type)
+    subroutine params_string(tilted, cluster, bc, ti, symm, irrep, sites, particles, k1, k2, refb, ndis, v1, v2, mass, dis, pattern, params, mat_type)
 
-        ! Generates a string for the params of the Hamiltonian or energy and eigenstate files.
+        ! Generates a string for the parameters of the Hamiltonian or energy and eigenstate files.
         ! The string is used to create the file names for the respective files.
-        use input_vars
 
         implicit none 
+    
+        integer,          intent(in) :: tilted, ti, symm, sites, particles, k1, k2, refb, ndis
+        double precision, intent(in) :: v1, v2, mass, dis 
+        character(len=*), intent(in) :: pattern, cluster, bc, irrep 
 
-        integer,          intent(in) :: sites, particles, k1, k2, refb
-        double precision, intent(in) :: v1, v2 
-        character(len=*), intent(in) :: pattern 
-
-        character,        intent(out)           :: params*512 
-        character,        intent(out), optional :: type*1 
+        character,        intent(out)           :: params*512, mat_type*1 
 
         character :: string*256
 
@@ -566,19 +588,19 @@ module io_utils
         end if 
         params = ""    
         if(refb < 0) then !Name for Hamiltonian file
-            type = 'R'
-            if(((k1 .ne. 0) .or. (k2 .ne. 0))) type = 'C'
-            if(ti == 0) write (params, "('L=',i0,'N=',i0,'BC=',a,'_pat=',a2'.dat')") sites, particles, bc, pattern
-            if(ti == 1) write (params, "('L=',i0,'N=',i0,'k1=',i0,'k2=',i0,'BC=',a,'_pat=',a2'.dat')") sites, particles, k1, k2, bc, pattern
-            if(symm == 1) write (params, "('L=',i0,'N=',i0,'k1=',i0,'k2=',i0,'_',a,'_BC=',a,'_pat=',a2'.dat')") sites, particles, k1, k2, irrep, bc, pattern
+            mat_type = 'R'
+            if(((k1 .ne. 0) .or.(k2 .ne. 0))) mat_type = 'C'
+            if(ti == 0) write(params, "('L=',i0,'N=',i0,'BC=',a,'_pat=',a2'.dat')") sites, particles, bc, pattern
+            if(ti == 1) write(params, "('L=',i0,'N=',i0,'k1=',i0,'k2=',i0,'BC=',a,'_pat=',a2'.dat')") sites, particles, k1, k2, bc, pattern
+            if(symm == 1) write(params, "('L=',i0,'N=',i0,'k1=',i0,'k2=',i0,'_',a,'_BC=',a,'_pat=',a2'.dat')") sites, particles, k1, k2, irrep, bc, pattern
         else if(refb == 0) then !Name for energy/states file
-            if(ti == 0) write (params, "('L=',i0,'N=',i0,'V=',f7.4,'V2=',f7.4,'M=',f10.7,'W=',f7.4,'nDis=',i0,'BC=',a,'_pat=',a2'.dat')") sites, particles, v1, v2, mass, dis, nDis, bc, pattern
-            if(ti == 1) write (params, "('L=',i0,'N=',i0,'k1=',i0,'k2=',i0,'V=',f7.4,'V2=',f7.4,'M=',f10.7,'W=',f7.4,'nDis=',i0,'BC=',a,'_pat=',a2'.dat')") sites, particles, k1, k2, v1, v2, mass, dis, nDis, bc, pattern
-            if(symm == 1) write (params, "('L=',i0,'N=',i0,'k1=',i0,'k2=',i0,'_',a,'_V=',f7.4,'V2=',f7.4,'M=',f10.7,'W=',f7.4,'nDis=',i0,'BC=',a,'_pat=',a2'.dat')") sites, particles, k1, k2, irrep, v1, v2, mass, dis, nDis, bc, pattern
+            if(ti == 0) write(params, "('L=',i0,'N=',i0,'V=',f7.4,'V2=',f7.4,'M=',f10.7,'W=',f7.4,'nDis=',i0,'BC=',a,'_pat=',a2'.dat')") sites, particles, v1, v2, mass, dis, nDis, bc, pattern
+            if(ti == 1) write(params, "('L=',i0,'N=',i0,'k1=',i0,'k2=',i0,'V=',f7.4,'V2=',f7.4,'M=',f10.7,'W=',f7.4,'nDis=',i0,'BC=',a,'_pat=',a2'.dat')") sites, particles, k1, k2, v1, v2, mass, dis, nDis, bc, pattern
+            if(symm == 1) write(params, "('L=',i0,'N=',i0,'k1=',i0,'k2=',i0,'_',a,'_V=',f7.4,'V2=',f7.4,'M=',f10.7,'W=',f7.4,'nDis=',i0,'BC=',a,'_pat=',a2'.dat')") sites, particles, k1, k2, irrep, v1, v2, mass, dis, nDis, bc, pattern
         else if(refb > 0) then !Name for current files
-            if(ti == 0) write (params, "('L=',i0,'N=',i0,'V=',f7.4,'V2=',f7.4,'M=',f10.7,'W=',f7.4,'nDis=',i0,'BC=',a,'_pat=',a2,'_refb=',i0,'.dat')") sites, particles, v1, v2, mass, dis, nDis, bc, pattern, refb            
-            if(ti == 1) write (params, "('L=',i0,'N=',i0,'k1=',i0,'k2=',i0,'V=',f7.4,'V2=',f7.4,'M=',f10.7,'W=',f7.4,'nDis=',i0,'BC=',a,'_pat=',a2,'_refb=',i0,'.dat')") sites, particles, k1, k2, v1, v2, mass, dis, nDis, bc, pattern, refb 
-            if(symm == 1) write (params, "('L=',i0,'N=',i0,'k1=',i0,'k2=',i0,'_',a,'_V=',f7.4,'V2=',f7.4,'M=',f10.7,'W=',f7.4,'nDis=',i0,'BC=',a,'_pat=',a2,'_refb=',i0,'.dat')") sites, particles, k1, k2, irrep, v1, v2, mass, dis, nDis, bc, pattern, refb
+            if(ti == 0) write(params, "('L=',i0,'N=',i0,'V=',f7.4,'V2=',f7.4,'M=',f10.7,'W=',f7.4,'nDis=',i0,'BC=',a,'_pat=',a2,'_refb=',i0,'.dat')") sites, particles, v1, v2, mass, dis, nDis, bc, pattern, refb            
+            if(ti == 1) write(params, "('L=',i0,'N=',i0,'k1=',i0,'k2=',i0,'V=',f7.4,'V2=',f7.4,'M=',f10.7,'W=',f7.4,'nDis=',i0,'BC=',a,'_pat=',a2,'_refb=',i0,'.dat')") sites, particles, k1, k2, v1, v2, mass, dis, nDis, bc, pattern, refb 
+            if(symm == 1) write(params, "('L=',i0,'N=',i0,'k1=',i0,'k2=',i0,'_',a,'_V=',f7.4,'V2=',f7.4,'M=',f10.7,'W=',f7.4,'nDis=',i0,'BC=',a,'_pat=',a2,'_refb=',i0,'.dat')") sites, particles, k1, k2, irrep, v1, v2, mass, dis, nDis, bc, pattern, refb
         end if 
         params = trim_name(params)
         if(tilted == 1) params = trim_name(string // params)
@@ -586,18 +608,16 @@ module io_utils
 
     end subroutine params_string
 
-    subroutine params_string_dd_cf(sites, particles, k1, k2, v1, v2, refsite, pattern, params)
-        
-        ! Generates a string for the params of the density-density correlation function (dd_cf) for the output file-name.
-        use input_vars
+    subroutine params_string_dd_cf(tilted, cluster, bc, ti, symm, irrep, sites, particles, k1, k2, ndis, refsite, v1, v2, mass, dis, pattern, params)
+                
+
+        ! Generates a string for the params of the density-density correlation function(dd_cf) for the output file-name.
 
         implicit none 
-
-        integer,          intent(in)  :: sites, particles, k1, k2, refsite
-        double precision, intent(in)  :: v1, v2 
-        character(len=*), intent(in)  :: pattern 
- 
-        character,        intent(out) :: params*400 
+        integer,          intent(in) :: tilted, ti, symm, sites, particles, k1, k2, refsite, ndis
+        double precision, intent(in) :: v1, v2, mass, dis 
+        character(len=*), intent(in) :: pattern, cluster, bc, irrep 
+        character,        intent(out)           :: params*512 
 
         character :: string*256
 
@@ -607,9 +627,9 @@ module io_utils
         end if 
         params = ""    
         if(refsite > 0) then !Name for current files
-            if(ti == 0) write (params, "('L=',i0,'N=',i0,'V=',f7.4,'V2=',f7.4,'M=',f10.7,'W=',f7.4,'nDis=',i0,'BC=',a,'_pat=',a2,'_refsite=',i0,'.dat')") sites, particles, v1, v2, mass, dis, nDis, bc, pattern, refsite            
-            if(ti == 1) write (params, "('L=',i0,'N=',i0,'k1=',i0,'k2=',i0,'V=',f7.4,'V2=',f7.4,'M=',f10.7,'W=',f7.4,'nDis=',i0,'BC=',a,'_pat=',a2,'_refsite=',i0,'.dat')") sites, particles, k1, k2, v1, v2, mass, dis, nDis, bc, pattern, refsite 
-            if(symm == 1) write (params, "('L=',i0,'N=',i0,'k1=',i0,'k2=',i0,a,'V=',f7.4,'V2=',f7.4,'M=',f10.7,'W=',f7.4,'nDis=',i0,'BC=',a,'_pat=',a2,'_refsite=',i0,'.dat')") sites, particles, k1, k2, irrep, v1, v2, mass, dis, nDis, bc, pattern, refsite
+            if(ti == 0) write(params, "('L=',i0,'N=',i0,'V=',f7.4,'V2=',f7.4,'M=',f10.7,'W=',f7.4,'nDis=',i0,'BC=',a,'_pat=',a2,'_refsite=',i0,'.dat')") sites, particles, v1, v2, mass, dis, nDis, bc, pattern, refsite            
+            if(ti == 1) write(params, "('L=',i0,'N=',i0,'k1=',i0,'k2=',i0,'V=',f7.4,'V2=',f7.4,'M=',f10.7,'W=',f7.4,'nDis=',i0,'BC=',a,'_pat=',a2,'_refsite=',i0,'.dat')") sites, particles, k1, k2, v1, v2, mass, dis, nDis, bc, pattern, refsite 
+            if(symm == 1) write(params, "('L=',i0,'N=',i0,'k1=',i0,'k2=',i0,a,'V=',f7.4,'V2=',f7.4,'M=',f10.7,'W=',f7.4,'nDis=',i0,'BC=',a,'_pat=',a2,'_refsite=',i0,'.dat')") sites, particles, k1, k2, irrep, v1, v2, mass, dis, nDis, bc, pattern, refsite
         end if 
         params = trim_name(params)
         if(tilted == 1) then 
@@ -619,7 +639,7 @@ module io_utils
 
     end subroutine params_string_dd_cf
 
-    subroutine load_ham(type, params, unit, ti, sites, nnz, nDi, hamDi, ham_i, rc, ham_dp, ham_dc, occupation, exist1, exist2, exist3)
+    subroutine load_ham(mat_type, params, unit, ti, sites, nnz, nDi, hamDi, ham_i, rc, ham_dp, ham_dc, occupation, exist1, exist2, exist3)
         ! Loads the Hamiltonian from disk.
         ! The Hamiltonian is stored in two files: one for the off-diagonal part and
         ! one for the diagonal part. The off-diagonal part is stored in a file named
@@ -629,7 +649,7 @@ module io_utils
         implicit none 
         
         integer,          intent(in) :: ti, unit, sites  
-        character(len=*), intent(in) :: type, params
+        character(len=*), intent(in) :: mat_type, params
 
         integer,                       intent(out)           :: nnz, nDi       
         logical,                       intent(out)           :: exist1, exist2, exist3
@@ -647,18 +667,18 @@ module io_utils
         file = trim_name(file)
         inquire(file = file, exist = exist1)
 
-        if( exist1) then 
+        if(exist1) then 
             open(unit, file = file)
             read(unit, *) nnz 
 
-            if(type == "R" .and. ti == 0) then 
+            if(mat_type == "R" .and. ti == 0) then 
                 if(allocated(ham_i)) deallocate(ham_i)
                 allocate(ham_i(nnz, 3))
                 ham_i = 0
                 do i = 1, nnz
                     read(unit,*) ham_i(i,1), ham_i(i,2), ham_i(i,3)
                 end do 
-            else if(type == "R" .and. ti == 1) then 
+            else if(mat_type == "R" .and. ti == 1) then 
                 if(allocated(ham_dp)) deallocate(ham_dp)
                 if(allocated(rc)) deallocate(rc)
                 allocate(ham_dp(nnz))
@@ -669,7 +689,7 @@ module io_utils
                 do i = 1, nnz
                     read(unit,*) ham_dp(i), rc(i,1), rc(i,2)
                 end do 
-            else if(type == "C" .and. ti == 1) then      
+            else if(mat_type == "C" .and. ti == 1) then      
                 if(allocated(ham_dc)) deallocate(ham_dc)
                 if(allocated(rc)) deallocate(rc)
                 allocate(ham_dc(nnz))
@@ -683,14 +703,14 @@ module io_utils
             print*,''
         end if
 
-        if(.not. (exist1)) print*,'Off-diagonal Hamiltonian does not yet exist.'
+        if(.not.(exist1)) print*,'Off-diagonal Hamiltonian does not yet exist.'
 
         file = ""
         file = dir // "diagonal_hamiltonian_" // params
         file = trim_name(file)
         inquire(file = file, exist = exist2)
 
-        if( exist2) then 
+        if(exist2) then 
             open(unit, file = file)
             read(unit, *) nDi 
             if(allocated(hamDi)) deallocate(hamDi)
@@ -703,13 +723,13 @@ module io_utils
             print*,''
         end if 
         
-        if(.not. (exist2)) print*,'Diagonal Hamiltonian does not yet exist.'
+        if(.not.(exist2)) print*,'Diagonal Hamiltonian does not yet exist.'
 
         file = ""
         file = "hamiltonians/occupation_" // params
         file = trim_name(file)
         inquire(file = file, exist = exist3)
-        if( exist3) then 
+        if(exist3) then 
             open(unit, file = file)
             read(unit, *) nDi 
             if(allocated(occupation)) deallocate(occupation)
@@ -722,8 +742,8 @@ module io_utils
             print*,''
         end if 
 
-        if(.not. (exist3)) print*,'Occupation does not yet exist.'
-        if(.not. (exist3)) print*,''
+        if(.not.(exist3)) print*,'Occupation does not yet exist.'
+        if(.not.(exist3)) print*,''
 
         return 
 
@@ -743,18 +763,18 @@ module io_utils
 
     end subroutine print_configuration
 
-    subroutine print_parameters()
+    subroutine print_parameters(par, geo, thr, diag, out)
         ! Print the parameters used in the simulation
 
-        use input_vars
-        use vars
-        use params 
-        use types
+        
+
+
         implicit none
-        type(sim_params) par
-        type(geometry) geo
-        type(thread_params) thr
-        type(out_params) out  
+        type(sim_params),    intent(in) :: par
+        type(geometry),      intent(in) :: geo
+        type(thread_params), intent(in) :: thr
+        type(diag_params),   intent(in) :: diag
+        type(output),        intent(in) :: out  
         
         print*, '----------------------------------'
         print*, 'Simulation Parameters:'
@@ -763,39 +783,41 @@ module io_utils
         print*, 'Dimension:', geo%dim
         print*, 'V1-range:', par%v1min, '-', par%v1max, 'in steps of ', par%dv1
         print*, 'V2-range:', par%v2min, '-', par%v2max, 'in steps of ', par%dv2
-        print*, 'Number of eigenvalues (nev):', par%nev
-        print*, 'Number of convergence vectors (ncv):', par%ncv0
+        print*, 'Number of eigenvalues(nev):', diag%nev
+        print*, 'Number of convergence vectors(ncv):', par%ncv0
         print*, 'Number of disorder configurations:', par%nDis
-        if(dis > 0.d0) print*, 'Disorder strength:', par%dis
-        if(mass > 0.d0) print*, 'Sublattice imbalance:', par%mass
+        if(par%dis > 0.d0) print*, 'Disorder strength:', par%dis
+        if(par%mass > 0.d0) print*, 'Sublattice imbalance:', par%mass
         print*, 'Filling fraction:', par%filling
-        if(t /= 1.d0) print*, 'Hopping strength (t):', par%t
-        if(g_fact /= 2) print*, 'Electron g-factor:', par%g_fact
+        if(par%t /= 1.d0) print*, 'Hopping strength(t):', par%t
+        if(par%g_fact /= 2) print*, 'Electron g-factor:', par%g_fact
         print*, 'Diagonalization method:'
-        if (feast == 1) then
+        if(par%feast == 1) then
             print*, '  FEAST'
-        else if (arpack == 1) then
+        else if(par%arpack == 1) then
             print*, '  Arpack'
-        else if (mkl == 1) then
+        else if(par%mkl == 1) then
             print*, '  MKL'
-        else if (exact == 1) then
+        else if(par%exact == 1) then
             print*, '  Exact diagonalization'
         else
             print*, '  No diagonalization method selected'
         end if
-        if(othrds > 1) print*, 'Number of OpenMP threads for Arpack:', thr%othrds
-        if(mthrds > 1) print*, 'Number of OpenMP threads for MKL:', thr%mthrds
+        if(par%othrds > 1) print*, 'Number of OpenMP threads for Arpack:', par%othrds
+        if(par%mthrds > 1) print*, 'Number of OpenMP threads for MKL:', par%mthrds
         if(thr%dis_thrds > 1) print*, 'Disorder threads:', thr%dis_thrds
         if(thr%v1_thrds > 1) print*, 'V1 threads:', thr%v1_thrds
         if(thr%v2_thrds > 1) print*, 'V2 threads:', thr%v2_thrds
         if(thr%num_thrds > 1) print*, 'Number of threads for current calculations:', thr%num_thrds
-        if(corr == 1) print*, 'Correlation calculations enabled.'
-        if(curr == 1) print*, 'Current-current calculations enabled:', par%curr
-        if(curr == 1) print*, 'Reference bonds for current calculations:', par%refbonds
-        print*, 'degflag threshold:', out%deg
-        if(states == 1) print*, 'Saving of eigenstates enabled.'
+        if(par%corr == 1) print*, 'Correlation calculations enabled.'
+        if(par%curr == 1) print*, 'Current-current calculations enabled:', par%curr
+        if(par%curr == 1) print*, 'Reference bonds for current calculations:', par%refbonds
+        print*, 'degflag threshold:', par%deg
+        if(par%states == 1) print*, 'Saving of eigenstates enabled.'
         print*, '----------------------------------'
     
     end subroutine print_parameters
+
+
 
 end module io_utils

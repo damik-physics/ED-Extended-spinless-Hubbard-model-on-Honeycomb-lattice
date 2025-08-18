@@ -1,126 +1,96 @@
 program main
 
     use types
-    use params
-    use vars
-    use input_vars
+    use params    
     use functions
     use file_utils
     use io_utils
     use lattice 
     use basis
     use hamiltonian
+    use diagonalization
 
+    ! use utils
     ! use symmetries
-    ! use utilities
-    ! use diagonalization
+
     ! use correlationfunctions
 
     implicit none
     type(sim_params) :: par
-    type(out_params) :: out_par
-    type(system_params) :: sys_par
-    type(diag_params) :: diag_par
-    type(thread_params) :: thread_par
+    type(output) :: out
+    type(diag_params) :: diag
+    type(thread_params) :: thrd
     type(geometry) :: geo ! Geometry includes lattice-, basis- and symmetry related parameters 
-    type(hamiltonian_params) :: ham_par
+    type(hamiltonian_params) :: ham
+    type(system_state) :: st
 
     
-    call preprocess()
-
-    
-    call define_lattice(outdir, par, geo)
-    ! call define_lattice(outdir, tilted, ucx, ucy, nnBonds, nnnBonds, bc, pattern, cluster, bsites, hexsites, geopar%latticevecs, alattice, blattice, xyA, xyB, asitesbonds, bsitesbonds, cntrA, cntrB, nHel, tilt, phases, xy, xtransl, ytransl, reflections, nnnVec)
-    
-
-    if(ti == 0 .or. symm == 1 .or. k0 == 1) then 
-        geo%k1_max = 0
-        geo%k2_max = 0 
-    else if(ti == 1 .and. tilted == 0) then 
-        geo%k1_max = ucx - 1
-        geo%k2_max = ucy - 1
-        call save(outdir, cluster, sys_par%unit, tilted, geo%sites, geo%particles, bc, pattern, geo%k1_max, geo%k2_max)
-    else if(ti == 1 .and. tilted == 1) then 
-        if(geo%nHel == 1) then 
-            geo%k1_max = 0
-        else if(geo%nHel > 1) then
-            if(modulo(dble(geo%sites)/dble((geo%nHel*geo%tilt)), dble(geo%nHel)) == 0.d0) then 
-                geo%k1_max = geo%sites/(geo%nHel * geo%tilt) - 1
-            else if(modulo(dble(geo%sites)/dble((geo%nHel*geo%tilt)), dble(geo%nHel)) >= 1.d0) then 
-                geo%k1_max = geo%sites/geo%tilt - 1
-            else if(modulo(dble(geo%sites)/dble((geo%nHel*geo%tilt)), dble(geo%nHel)) < 1.d0) then 
-                geo%k2_max = ceiling(geo%sites/(geo%nHel * geo%tilt * modulo(dble(geo%sites)/dble((geo%nHel*geo%tilt)), 1.d0))) - 1
-            end if 
-        end if 
-        geo%k2_max = geo%sites/(2*geo%nHel) - 1
-        call save(outdir, cluster, sys_par%unit, tilted, geo%sites, geo%particles, bc, pattern, geo%k1_max, geo%k2_max)
-    end if
-
-
-    do k1 = 0, geo%k1_max
-    do k2 = 0, geo%k2_max
-    if(ti == 1) print('(1x,3(a,i0))'), '---------------------- K1 = ', k1, ' K2 = ', k2, ' -------------------------'
-    
-    if((k1 .ne. 0) .or. (k2 .ne. 0) .or. (geo%id == 2)) then 
-        diag_par%type = "C"
-        print('(1x, a)'), 'Matrix type: Complex'
+    call preprocess(par, geo, thrd, out, st)  
+    call define_lattice(out%outdir, par, geo, out)
+   
+    do k1_= 0, geo%k1_max
+    do k2_= 0, geo%k2_max
+    ! Loop over k1 and k2 values
+    ! k1 and k2 are the momentum values in the first Brillouin zone
+    st%k1 = k1_
+    st%k2 = k2_    
+    if((st%k1 .ne. 0) .or.(st%k2 .ne. 0) .or. (geo%id == 2)) then 
+        st%mat_type = "C"
     else 
-        diag_par%type = "R"
-        print('(1x, a)'), 'Matrix type: Real'
+        st%mat_type = "R"
     end if    
 
-    call make_basis(ti, tilted, pattern, nnnVec, sites, geo%particles, dim, symm, ucx, ucy, l1, l2, basis_states, abasis, bbasis, tilt, nHel, k1, k2, xtransl, ytransl, geo%id, mir, rot, refl, c6, period, norm, orbsize, orbits2D, phases2D, norm2D)
 
-    ! call print_params(nev, ndeg, nHel, tilt, k1, k2)
-    call printing()
-    ! if(otf == 0) call generate_hamiltonian(othrds, ti, sys_par%unit, param_list, sites, nnBonds, bsites, dim, basis_states, hamOff, nOff, k1, k2, tilted, nHel, tilt, l2, l1, ucx, ucy, orbsize, norm, norm2D, orbits2D, phases2D, xtransl, ytransl, symm, geo%id, mir, rot, refl, c6, t, rcOff, rcDi, parities, dplcts, hamOff_dp, hamDi_dp, nDi_dp, hamOff_dc, hamDi_off_dc, hamDi_dc, nnnBonds, hexsites, hamDi, occ, nDiOff)    
-    if(otf == 0) call generate_hamiltonian()
+    call make_basis(par, geo, st)
 
-    if (dim == 0) then
-        nev = int(dim, kind=4)
-        ncv = int(dim, kind=4)
+    call printing(par, geo, thrd, diag, out)
+
+    if(par%otf == 0) call generate_hamiltonian(par, geo, ham, out, thrd, st%k1, st%k2)
+
+    if(geo%dim == 0) then
+        diag%nev = int(geo%dim, kind=4)
+        diag%ncv = int(geo%dim, kind=4)
         print*, 'No basis states found.'
         goto 116
     end if
 
    
-    call set_thrds()
+    call set_thrds(par, thrd)
   
-    !$omp parallel do default(firstprivate) shared(sites, geo%particles, dim, nev, ncv, occ, parities, dplcts, hamOff, hamDi, basis, hamOff_dp, hamDi_d, rcOff, rcDi, hamOff_dc, num_thrds) num_threads(v2_thrds)
-    do nv2 = 0, ndv2-1, 1 ! Loop over V2 values
-        v2 = v2min + nv2*dv2
-        !$ thread_num = omp_get_thread_num()
+    !$omp parallel do default(firstprivate) shared(geo%sites, geo%particles, par%dim, diag%nev, diag%ncv, geo%occ, parities, dplcts, hamOff, hamDi, basis, hamOff_dp, hamDi_d, rcOff, rcDi, hamOff_dc, num_thrds) num_threads(v2_thrds)
+    do nv2_ = 0, thrd%ndv2-1, 1 ! Loop over V2 values
+        st%nv2 = nv2_
+        st%v2  = par%v2min + st%nv2 * par%dv2
+        !$ thrd_id = omp_get_thread_num()
             
-        !$omp parallel do default(firstprivate) shared(sites, geo%particles, dim, nev, ncv, occ, parities, dplcts, hamOff, hamDi, basis, hamOff_dp, hamDi_d, rcOff, rcDi, hamOff_dc, num_thrds) num_threads(v1_thrds)
-        do nv = 0, ndv-1, 1 ! Loop over V1 values
-            v1 = par%v1min + nv*par%dv1
+        !$omp parallel do default(firstprivate) shared(geo%sites, geo%particles, par%dim, diag%nev, diag%ncv, geo%occ, parities, dplcts, hamOff, hamDi, basis, hamOff_dp, hamDi_d, rcOff, rcDi, hamOff_dc, num_thrds) num_threads(v1_thrds)
+        do nv1_ = 0, thrd%ndv1-1, 1 ! Loop over V1 values
+            st%nv1 = nv1_
+            st%v1  = par%v1min + st%nv1 * par%dv1
+            !$ thrd_id_2 = omp_get_thread_num()
+            out%unit = 11 + thrd%units(thrd%thrd_id + 1, thrd%thrd_id_2 + 1)
 
-            !$ thread_num_2 = omp_get_thread_num()
-            thrd%unit = 11 + units(thread_num + 1, thread_num_2 + 1)
-
-            call ncv_from_nev(thrd%unit, param_list, dimthresh, exact, nevext, nst, ncv0, dim, full, nev, ncv, nest)
-
-            ! !$omp critical 
-            do conf = 1, nDis !Disorder loop 
-                call print(conf, ti, k1, k2, v1, v2)
-                ! call diagonalization(outdir, conf, nev, ncv, full, v1, v2, othrds, param_list, type, basis, bsites, hexsites, occ, nOff, nDi, nDi_d, hamOff, hamDi, hamOff_dp, hamDi_d, hamOff_dc, hamDi_c, hamDi_off_c, ham, ham_dc, ham_d, ham_dc, norm, rcOff, rcDi, rc, parities, dplcts, nnz, ndeg, sys_par%unit, nest, mode, energies, eigstate, eigstate_dc, gs, gs_c)
-                call diagonalize()
+            !$omp critical 
+            do conf_ = 1, par%nDis !Disorder loop 
+                st%conf = conf_
+                call printing(st%conf, par%ti, st%k1, st%k2, st%v1, st%v2)
+                call diagonalize(par, geo, ham, diag, st, out)
     
-                if(curr == 0) goto 15          
-            
-                
-                if(nv2 > 0) ndeg = 2
-                call currentcorrelations(outdir, ti, tilted, nHel, tilt, num_thrds, conf, degflag, full, feast, mkl, arpack, symm, sites, l2, l1, ucx, ucy, k1, k2, geo%id, mir, rot, nDis, ndeg, refbonds, cntrA, cntrB, sys_par%unit, dim, alattice, blattice, xyA, xyB, xtransl, ytransl, refl, c6, basis, v1, v2, dis, nnnVec, norm, eigstate, eigstate_dc)
-                15 continue 
+            !     if(curr == 0) goto 15          
+                par, out, st, thr, geo, 
+                call current_correlations(par, geo, out, st, thr)
+                call current_correlations(dir, ti, tilted, nHel, tilt, threads, conf, symm, sites, l2, l1, ucx, ucy, k1, k2, id, mir, rot, nDis, refbonds, cntrA, cntrB, unit, dim, alattice, blattice, xyA, xyB, xtransl, ytransl, refl, c6, basis, v1, v2, dis, nnnVec, norm, eigstate, eigstate_dc)
+            !     call currentcorrelations(out%outdir, ti, tilted, nHel, tilt, num_thrds, conf, degflag, symm, geo%sites, l2, l1, ucx, ucy, st%k1, st%k2, geo%id, mir, rot, nDis, refbonds, cntrA, cntrB, sys_par%unit, par%dim, alattice, blattice, xyA, xyB, xtransl, ytransl, refl, c6, basis, v1, v2, dis, nnnVec, norm, eigstate, eigstate_dc)
+            !     15 continue 
 
-                if(corr == 0) goto 16
-                do refsite = 1, sites
-                    call ddcf(outdir, refsite, conf, sys_par%unit, dim, sites, k1, k2, nDis, dis, v1, v2, basis, eigstate(1:dim, 1))
-                end do 
-                16 continue
+            !     if(corr == 0) goto 16
+            !     do refsite = 1, geo%sites
+            !         call ddcf(out%outdir, refsite, conf, sys_par%unit, par%dim, geo%sites, st%k1, st%k2, nDis, dis, v1, v2, basis, eigstate(1:dim, 1))
+            !     end do 
+            !     16 continue
 
             end do !Disorder loops
-            ! !$omp end critical 
+            !$omp end critical 
 
 
             100 format(1000(F30.20))
@@ -132,16 +102,13 @@ program main
 
     end do !v2loop
     !!$omp end parallel do
-   
-    call cleanup(inner=.true.)
-
+    call cleanup(.true., geo, ham, diag)   
     
     116 continue
 
-    call timing(outdir, 1)
-    ! call printparams(nev, ndeg, nHel, tilt, k1, k2)
-    call printing()
-    call cleanup(inner=.false.)
+    call timing(out%outdir, 1)
+    call printing(par, geo, thrd, diag, out)
+    call cleanup(.false., geo, ham, diag)
     end do 
     end do !Momentum loops 
 

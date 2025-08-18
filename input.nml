@@ -1,17 +1,17 @@
 &params_nml
     ! Lattice parameters
-    ucx       = 3         ! Number of unit cells in horizontal direction 
-    ucy       = 3         ! Number of unit cells in vertical direction
-    tilted    = 1         ! Whether to generate rectangular cluster ('0') or tilted cluster ('1') 
+    ucx     = 3         ! Number of unit cells in horizontal direction 
+    ucy     = 3         ! Number of unit cells in vertical direction
+    tilted  = 1         ! Whether to generate rectangular cluster('0') or tilted cluster('1') 
     cluster = '18C'     ! Label for tilted cluster if 'tilted == 1'
     bc      = 'p'       ! Boundary conDitions: 'p': periodic, 'o': open 
 
 
     ! Symmetization parameters
-    ti         = 1        ! Flag to include translation symmetry
-    k0         = 1        ! Flag to only calculate zero momentum sector 
-    symm = 0        ! symm basis in irreducible representation 'irrep'. Currently, irrep symmetrization is only supported on cluster '18A'.   
-    irrep      = 'A1'     ! Compute basis in irrep. Currently supported irreps = {A1, A2, B1, B2} 
+    ti    = 0        ! Flag to include translation symmetry
+    k0    = 1        ! Flag to only calculate zero momentum sector 
+    symm  = 0        ! symm basis in irreducible representation 'irrep'. Currently, irrep symmetrization is only supported on cluster '18A'.   
+    irrep = 'A1'     ! Compute basis in irrep. Currently supported irreps = {A1, A2, B1, B2} 
 
     ! if symm = 1: Reflection eigenvalues for given irrep. 
     p1 = 1                ! Reflection symmetry eigenvalue of sigma-1 axis 
@@ -22,8 +22,10 @@
     corr     = 0          ! Calculate single-operator correlation functions 
     curr     = 1          ! Calculate current-current correlation functions 
     refbonds = 3          ! Number of reference bonds for which currents are calculated: 0: all refbonds, >0: first 'refbonds'
-    states   = 0          ! Flag for saving eigenstates
+    states   = 1          ! Flag for saving eigenstates
     deg      = 1.0d-10    ! Threshold for considering eigenvalues degenerate, i.e. Abs(E_{i}-E_{i-1}) <= deg are degenerate 
+
+
 
     ! Diagonalization parameters
     feast      = 0        ! Use Sparse Feast algorithm
@@ -32,11 +34,11 @@
     exact      = 0        ! Use full exact diagonalization for dense matrices
     dimthresh  = 250      ! Threshold for dimension of the Hamiltonian to use sparse diagonalization methods
     rvec       = .True.   ! Flag for calculating eigenvectors
-    nevext     = 10       ! Number of eigenvalues to calculate
-    nst       = 10       ! Number of eigenstates to calculate
-    ncv0       = 180      ! Number of Lanczos vectors to use (see Arpack manual)
-    otf        = 0        ! Flag to generate Hamiltonian on-the-fly (does not store sparse Hamiltonian in arrays)
-    degflag = 1        ! Flag for including degenerate ground states: 0 = non-degenerate GS, 1 = include degeneracies, 2 = quasidegflag
+    nevext     = 10       ! Requested number of eigenvalues to calculate
+    nst        = 10       ! Requested number of eigenstates to calculate
+    ncv0       = 180      ! Number of Lanczos vectors to use(see Arpack manual)
+    otf        = 0        ! Flag to generate Hamiltonian on-the-fly(does not store sparse Hamiltonian in arrays)
+    degflag = 1           ! Flag for including degenerate ground states: 0 = non-degenerate GS, 1 = include degeneracies, 2 = quasidegflag
 
     ! If feast = 1: 
     nev0       = 200      ! Initial FEAST subspace size
@@ -50,7 +52,7 @@
     nDis    = 1           ! Number of disorder configurations
     dis     = 0.d0        ! Disorder strength
     mass    = 0.d0        ! Onsite potential on sublattices, M_A = mass, M_B = -mass 
-    filling = 0.5         ! Electron filling fraction (0: empty lattice, 1: fully occupied lattice)
+    filling = 0.5         ! Electron filling fraction(0: empty lattice, 1: fully occupied lattice)
     t       = 1.0d0       ! Hopping strength 
     g_fact  = 2           ! Electron g-factor, should be 2 for spin-1/2 electrons
     dv1      = 1.0d0      ! Increment for range of nearest-neighbor interaction strengths 

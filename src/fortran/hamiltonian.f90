@@ -5,11 +5,6 @@ module hamiltonian
     use basis
 
     implicit none 
-
-    interface unify 
-        module procedure unify, unify_dp, unify_dc, unify_dense, unify_dense_dp, unify_dense_dc
-    end interface
-
     interface hopping 
         module procedure hopping_i, hopping_dc, hopping_irrep, hopping_irrep2D
     end interface
@@ -25,12 +20,17 @@ module hamiltonian
     !               Hamiltonian                !
     !------------------------------------------!
 
-    subroutine generate_hamiltonian()
+    subroutine generate_hamiltonian(par, geo, ham, out, thrd, k1, k2)
     ! subroutine generate_hamiltonian(thrds, ti, unit, prms, sites, nbb, trisites, dim, basis, hamOff, nOff, k1, k2, tilted, nHel, tilt, lx, ly, ucx, ucy, orbsize, norm, norm2D, orbits, phases, xtransl, ytransl, symm, id, par, rot, refl, c6, t, rcoff, rcdi, parities, dplcts, hamOff_dp, hamDi_dp, nDi_off, hamOff_dc, hamDi_dc, hamDi_c2, nnnbb, hexsites, hamDi, occ, nDi)
-        use vars
-        use input_vars
+        ! 
         implicit none 
 
+        type(sim_params), intent(inout) :: par
+        type(geometry), intent(inout) :: geo
+        type(hamiltonian_params), intent(inout) :: ham
+        type(output), intent(inout) :: out
+        type(thread_params), intent(inout) :: thrd
+        integer, intent(in) :: k1, k2
         ! integer, intent(in)                          :: thrds, ti, ucx, ucy, tilted, nHel, tilt, lx, ly, k1, k2, symm, orbsize, refl(6, sites), c6(sites)
         ! double precision, intent(in)                 :: t, id, par(6), rot(5) 
 
@@ -41,7 +41,7 @@ module hamiltonian
         ! double precision, allocatable, intent(inout) :: norm(:), norm2D(:,:), hamDi_dp(:), hamOff_dp(:)
         ! double complex, allocatable, intent(inout)   :: hamOff_dc(:), hamDi_dc(:), hamDi_c2(:,:), phases(:,:,:)
         ! character(len=*), intent(inout)              ::         ! Local variables
-        ! character :: type*1 
+        character :: type*1 
         integer :: flag_i, flag_2D
         double precision :: flag_dp
         logical :: exist1, exist2, exist3
@@ -49,34 +49,33 @@ module hamiltonian
         print*, 'Generating Hamiltonian ...'
         print*, ''
 
-        call print_parameters()
-        call loadham(type, unit, ti, sites, nOff, nDi, hamDi, hamOff, rcoff, hamOff_dp, hamOff_dc, occ, exist1, exist2, exist3) ! Loads the sub-Hamiltonians from file if they exists. If not, sets corresponDing exist1, exist2, exist3 to .false. and generates the Hamiltonian.
+        call loadham(type, out%unit, par%ti, geo%sites, ham%nOff, ham%nDi, ham%hamDi, ham%hamOff, ham%rcoff, ham%hamOff_dp, ham%hamOff_dc, ham%occ, exist1, exist2, exist3) ! Loads the sub-Hamiltonians from file if they exists. If not, sets corresponDing exist1, exist2, exist3 to .false. and generates the Hamiltonian.
 
         if(.not.(exist1)) then ! Generates the off-diagonal part of the Hamiltonian if it does not exist yet.
-            if(ti == 0) then ! If no translation symmetry is used, generate the Hamiltonian with the standard hopping procedure
+            if(par%ti == 0) then ! If no translation symmetry is used, generate the Hamiltonian with the standard hopping procedure
                 ! call hopping(flag_i)
-                call hopping_i(othrds, unit, sites, nnBonds, bsites, dim, basis_states, hamOff, nOff)
-            else if(ti == 1 .and. k1 == 0 .and. k2 == 0) then ! If translation symmetry is used and k1 = k2 = 0, generate the Hamiltonian with the hopping procedure for irreducible representations
+                call hopping_i(par%othrds, out%unit, geo%sites, geo%nnBonds, geo%bsites, geo%dim, geo%basis_states, ham%hamOff, ham%nOff)
+            else if(par%ti == 1 .and. k1 == 0 .and. k2 == 0) then ! If translation symmetry is used and k1 = k2 = 0, generate the Hamiltonian with the hopping procedure for irreducible representations
                 
-                if(id == 1) then ! Hopping for irreducible representations in 1D 
+                if(geo%id == 1) then ! Hopping for irreducible representations in 1D 
                     ! call hopping(flag_dp)
-                    call hopping_irrep(othrds, tilted, nHel, tilt, l2, l1, ucx, ucy, sites, nnBonds, dim, basis_states, bsites, norm, xtransl, ytransl, symm, id, mir, rot, refl, c6, t, rcoff, rcdi, parities, dplcts, hamOff_dp, hamDi_dp, nOff, nDiOff)
-                else if(id == 2) then ! Hopping for irreducible representations in 2D (currently not supported)
+                    call hopping_irrep(par%othrds, par%tilted, geo%nHel, geo%tilt, geo%l2, geo%l1, par%ucx, par%ucy, geo%sites, geo%nnBonds, geo%dim, geo%basis_states, geo%bsites, geo%norm, geo%xtransl, geo%ytransl, par%symm, geo%id, geo%mir, geo%rot, geo%refl, geo%c6, par%t, ham%rcoff, ham%rcdi, geo%parities, geo%dplcts, ham%hamOff_dp, ham%hamDi_dp, ham%nOff, ham%nDiOff)
+                else if(geo%id == 2) then ! Hopping for irreducible representations in 2D(currently not supported)
                     ! call hopping(flag_dp, flag_2D)
-                    call hopping_irrep2D(othrds, tilted, nHel, tilt, l2, l1, sites, nnBonds, dim, basis_states, orbsize, orbits2D, phases2D, norm2D, bsites, xtransl, ytransl, symm, id, mir, rot, refl, c6, t, rcoff, rcdi, parities, dplcts, hamOff_dc, hamDi_dc_2, nOff, nDiOff)
+                    call hopping_irrep2D(par%othrds, par%tilted, geo%nHel, geo%tilt, geo%l2, geo%l1, geo%sites, geo%nnBonds, geo%dim, geo%basis_states, geo%orbsize, geo%orbits2D, geo%phases2D, geo%norm2D, geo%bsites, geo%xtransl, geo%ytransl, par%symm, geo%id, geo%mir, geo%rot, geo%refl, geo%c6, par%t, ham%rcoff, ham%rcdi, geo%parities, geo%dplcts, ham%hamOff_dc, ham%hamDi_off_dc, ham%nOff, ham%nDiOff)
                     ! call diagonal(flag_dp, flag_2D)
-                    call diagonal_irrep2D(sites, dim, bsites, hexsites, orbsize, orbits2D, phases2D, norm2D, hamDi_dc, occ)
+                    call diagonal_irrep2D(geo%sites, geo%dim, geo%bsites, geo%hexsites, geo%orbsize, geo%orbits2D, geo%phases2D, geo%norm2D, ham%hamDi_dc, ham%occ)
                 end if 
-            else if(ti == 1 .and. ((k1 .ne. 0) .or. (k2 .ne. 0))) then ! If translation symmetry is used and k1 or k2 are not zero, generate the Hamiltonian with the hopping procedure for complex entries. Currently only supported for 1D irreps. 
-                call hopping(unit, tilted, nHel, tilt, l2, l1, ucx, ucy, sites, nnBonds, dim, basis_states, bsites, norm, xtransl, ytransl, t, k1, k2, rcoff, hamOff_dc, nOff)
+            else if(par%ti == 1 .and.((k1 .ne. 0) .or.(k2 .ne. 0))) then ! If translation symmetry is used and k1 or k2 are not zero, generate the Hamiltonian with the hopping procedure for complex entries. Currently only supported for 1D irreps. 
+                call hopping(out%unit, par%tilted, geo%nHel, geo%tilt, geo%l2, geo%l1, par%ucx, par%ucy, geo%sites, geo%nnBonds, geo%dim, geo%basis_states, geo%bsites, geo%norm, geo%xtransl, geo%ytransl, par%t, k1, k2, ham%rcoff, ham%hamOff_dc, ham%nOff)
             end if 
         end if
         
         !Generates diagonal part of the Hamiltonian if it does not exist yet.
-        if(id == 1 .and. (.not.(exist2) .or. .not.(exist3))) call diagonal(unit, sites, nnBonds, nnnBonds, dim, bsites, hexsites, basis_states, hamDi, occ, nDi) 
+        if(geo%id == 1 .and.(.not.(exist2) .or. .not.(exist3))) call diagonal(out%unit, geo%sites, geo%nnBonds, geo%nnnBonds, geo%dim, geo%bsites, geo%hexsites, geo%basis_states, ham%hamDi, ham%occ, ham%nDi) 
         
         ! Saves the Hamiltonian to file if it does not exist yet.
-        if(id == 1 .and. (.not.(exist1) .or. .not.(exist2) .or. .not.(exist3))) call save_ham(type, unit, ti, sites, nOff, nDi, hamDi, hamOff, rcoff, hamOff_dp, hamOff_dc, occ)
+        if(geo%id == 1 .and.(.not.(exist1) .or. .not.(exist2) .or. .not.(exist3))) call save_ham(out%outdir, type, out%unit, par%ti, geo%sites, ham%nOff, ham%nDi, ham%hamDi, ham%hamOff, ham%rcoff, ham%hamOff_dp, ham%hamOff_dc, ham%occ)
 
         return 
 
@@ -115,20 +114,20 @@ module hamiltonian
                     
         !             if(id == 1) then ! Hopping for irreducible representations in 1D 
         !                 call hopping(thrds, tilted, nHel, tilt, lx, ly, ucx, ucy, sites, nbb, dim, basis, trisites, norm, xtransl, ytransl, symm, id, par, rot, refl, c6, t, rcoff, rcdi, parities, dplcts, hamOff_dp, hamDi_dp, nOff, nDi_off)
-        !             else if(id == 2) then ! Hopping for irreducible representations in 2D (currently not supported)
+        !             else if(id == 2) then ! Hopping for irreducible representations in 2D(currently not supported)
         !                 call hopping(thrds, tilted, nHel, tilt, lx, ly, sites, nbb, dim, basis, orbsize, orbits, phases, norm2D, trisites, xtransl, ytransl, symm, id, par, rot, refl, c6, t, rcoff, rcdi, parities, dplcts, hamOff_dc, hamDi_dc, nOff, nDi_off)
         !                 call diagonal(sites, dim, trisites, hexsites, orbsize, orbits, phases, norm2D, hamDi_c2, occ)
         !             end if 
-        !         else if(ti == 1 .and. ((k1 .ne. 0) .or. (k2 .ne. 0))) then ! If translation symmetry is used and k1 or k2 are not zero, generate the Hamiltonian with the hopping procedure for complex entries. Currently only supported for 1D irreps. 
+        !         else if(ti == 1 .and.((k1 .ne. 0) .or.(k2 .ne. 0))) then ! If translation symmetry is used and k1 or k2 are not zero, generate the Hamiltonian with the hopping procedure for complex entries. Currently only supported for 1D irreps. 
         !             call hopping(unit, prms, tilted, nHel, tilt, lx, ly, ucx, ucy, sites, nbb, dim, basis, trisites, norm, xtransl, ytransl, t, k1, k2, rcoff, hamOff_dc, nOff)
         !         end if 
         !     end if
             
         !     !Generates diagonal part of the Hamiltonian if it does not exist yet.
-        !     if(id == 1 .and. (.not.(exist2) .or. .not.(exist3))) call diagonal(unit, prms, sites, nbb, nnnbb, dim, trisites, hexsites, basis, hamDi, occ, nDi) 
+        !     if(id == 1 .and.(.not.(exist2) .or. .not.(exist3))) call diagonal(unit, prms, sites, nbb, nnnbb, dim, trisites, hexsites, basis, hamDi, occ, nDi) 
             
         !     ! Saves the Hamiltonian to file if it does not exist yet.
-        !     if(id == 1 .and. (.not.(exist1) .or. .not.(exist2) .or. .not.(exist3))) call save_ham(type, prms, unit, ti, sites, nOff, nDi, hamDi, hamOff, rcoff, hamOff_dp, hamOff_dc, occ)
+        !     if(id == 1 .and.(.not.(exist1) .or. .not.(exist2) .or. .not.(exist3))) call save_ham(type, prms, unit, ti, sites, nOff, nDi, hamDi, hamOff, rcoff, hamOff_dp, hamOff_dc, occ)
 
         !     return 
 
@@ -141,8 +140,7 @@ module hamiltonian
         !     !          Hopping procedure for real matrix entries          !
         !     !-------------------------------------------------------------!
         !     ! This subroutine generates the hopping Hamiltonian for a given basis and bond structure.
-        !     use vars
-        !     use input_vars
+        !     
         !     implicit none
             
         !     integer, intent(in) :: flag ! Integer flag to indicate this routine 
@@ -159,9 +157,9 @@ module hamiltonian
         !     integer(kind=8), allocatable :: cntr(:), ham_temp(:,:)
                 
             
-        !     arrsize = 2*nnBonds*dim ! Maximum number of non-zero elements in the Hamiltonian matrix. Each basis state can have at most 2*nnBonds non-zero elements (one for each bond).
+        !     arrsize = 2*nnBonds*dim ! Maximum number of non-zero elements in the Hamiltonian matrix. Each basis state can have at most 2*nnBonds non-zero elements(one for each bond).
             
-        !     if(allocated(ham_temp)) deallocate(ham_temp) ! Temporary array to store non-zero elements of the Hamiltonian matrix before number of non-zero elements (nnz) is known.
+        !     if(allocated(ham_temp)) deallocate(ham_temp) ! Temporary array to store non-zero elements of the Hamiltonian matrix before number of non-zero elements(nnz) is known.
         !     if(allocated(cntr))     deallocate(cntr)
         !     allocate(ham_temp(arrsize, 3))
         !     allocate(cntr(othrds))
@@ -178,27 +176,27 @@ module hamiltonian
 
         !             if(btest(basis_states(j), bsites(1, s) - 1) .and. .not. btest(basis_states(j), bsites(2, s) - 1)) then 
         !                 newst = ibclr(ibset(basis_states(j), bsites(2, s) - 1), bsites(1, s) - 1) !Create on site 2, annihilate on site 1 
-        !                 call findstate(dim, newst, basis_states, loc) 
+        !                 call binary_search(dim, newst, basis_states, loc) 
         !                 if(loc > 0) then 
         !                     cntr(id+1)      = cntr(id+1) + 1 !Count non-zero elements in each thread 
         !                     cntrj           = cntrj + 1 !Count non-zero elements per basis state 
-        !                     pos             = (j-1)*nnBonds + cntrj !Position of non-zero element in sparse array: Offset ((j-1)*nnBonds): Each basis state (j) has at most nnBonds non-zero elements. Cntrj gives the current increment.
+        !                     pos             =(j-1)*nnBonds + cntrj !Position of non-zero element in sparse array: Offset((j-1)*nnBonds): Each basis state(j) has at most nnBonds non-zero elements. Cntrj gives the current increment.
         !                     parity1         = popcnt(ibits(basis_states(j), bsites(1, s), sites)) !Parity of site 1
         !                     parity2         = popcnt(ibits(ibclr(basis_states(j), bsites(1, s) - 1), bsites(2, s), sites)) !Parity of site 2
-        !                     ham_temp(pos,1) = (-1)**(parity1 + parity2) 
+        !                     ham_temp(pos,1) =(-1)**(parity1 + parity2) 
         !                     ham_temp(pos,2) = j   !Row index of non-zero element in sparse matrix
         !                     ham_temp(pos,3) = loc !Column index of non-zero element in sparse matrix
         !                 end if 
         !             else if(btest(basis_states(j), bsites(2, s) - 1) .and. .not. btest(basis_states(j), bsites(1, s) - 1)) then 
         !                 newst = ibclr(ibset(basis_states(j), bsites(1, s) - 1), bsites(2, s) - 1) !Create on site 2, annihilate on site 1 
-        !                 call findstate(dim, newst, basis_states, loc) 
+        !                 call binary_search(dim, newst, basis_states, loc) 
         !                 if(loc > 0) then 
         !                     cntr(id+1)      = cntr(id+1) + 1
         !                     cntrj           = cntrj + 1
-        !                     pos             = (j-1)*nnBonds + cntrj 
+        !                     pos             =(j-1)*nnBonds + cntrj 
         !                     parity1         = popcnt(ibits(basis_states(j), bsites(2, s), sites)) !Parity of site 2
         !                     parity2         = popcnt(ibits(ibclr(basis_states(j), bsites(2,s) - 1), bsites(1, s), sites)) !Parity of site 1
-        !                     ham_temp(pos,1) = (-1)**(parity1 + parity2)  
+        !                     ham_temp(pos,1) =(-1)**(parity1 + parity2)  
         !                     ham_temp(pos,2) = j
         !                     ham_temp(pos,3) = loc
         !                 end if                    
@@ -254,9 +252,9 @@ module hamiltonian
         integer(kind=8), allocatable :: cntr(:), ham_temp(:,:)
             
         
-        arrsize = 2*nbonds*dim ! Maximum number of non-zero elements in the Hamiltonian matrix. Each basis state can have at most 2*nbonds non-zero elements (one for each bond).
+        arrsize = 2*nbonds*dim ! Maximum number of non-zero elements in the Hamiltonian matrix. Each basis state can have at most 2*nbonds non-zero elements(one for each bond).
         
-        if(allocated(ham_temp)) deallocate(ham_temp) ! Temporary array to store non-zero elements of the Hamiltonian matrix before number of non-zero elements (nnz) is known.
+        if(allocated(ham_temp)) deallocate(ham_temp) ! Temporary array to store non-zero elements of the Hamiltonian matrix before number of non-zero elements(nnz) is known.
         if(allocated(cntr))     deallocate(cntr)
         allocate(ham_temp(arrsize, 3))
         allocate(cntr(threads))
@@ -273,27 +271,27 @@ module hamiltonian
 
                 if(btest(basis_list(j), bsites(1, s) - 1) .and. .not. btest(basis_list(j), bsites(2, s) - 1)) then 
                     newst = ibclr(ibset(basis_list(j), bsites(2, s) - 1), bsites(1, s) - 1) !Create on site 2, annihilate on site 1 
-                    call findstate(dim, newst, basis_list, loc) 
+                    call binary_search(dim, newst, basis_list, loc) 
                     if(loc > 0) then 
                         cntr(id+1)      = cntr(id+1) + 1 !Count non-zero elements in each thread 
                         cntrj           = cntrj + 1 !Count non-zero elements per basis state 
-                        pos             = (j-1)*nbonds + cntrj !Position of non-zero element in sparse array: Offset ((j-1)*nbonds): Each basis state (j) has at most nbonds non-zero elements. Cntrj gives the current increment.
+                        pos             =(j-1)*nbonds + cntrj !Position of non-zero element in sparse array: Offset((j-1)*nbonds): Each basis state(j) has at most nbonds non-zero elements. Cntrj gives the current increment.
                         parity1         = popcnt(ibits(basis_list(j), bsites(1, s), sites)) !Parity of site 1
                         parity2         = popcnt(ibits(ibclr(basis_list(j), bsites(1, s) - 1), bsites(2, s), sites)) !Parity of site 2
-                        ham_temp(pos,1) = (-1)**(parity1 + parity2) 
+                        ham_temp(pos,1) =(-1)**(parity1 + parity2) 
                         ham_temp(pos,2) = j   !Row index of non-zero element in sparse matrix
                         ham_temp(pos,3) = loc !Column index of non-zero element in sparse matrix
                     end if 
                 else if(btest(basis_list(j), bsites(2, s) - 1) .and. .not. btest(basis_list(j), bsites(1, s) - 1)) then 
                     newst = ibclr(ibset(basis_list(j), bsites(1, s) - 1), bsites(2, s) - 1) !Create on site 2, annihilate on site 1 
-                    call findstate(dim, newst, basis_list, loc) 
+                    call binary_search(dim, newst, basis_list, loc) 
                     if(loc > 0) then 
                         cntr(id+1)      = cntr(id+1) + 1
                         cntrj           = cntrj + 1
-                        pos             = (j-1)*nbonds + cntrj 
+                        pos             =(j-1)*nbonds + cntrj 
                         parity1         = popcnt(ibits(basis_list(j), bsites(2, s), sites)) !Parity of site 2
                         parity2         = popcnt(ibits(ibclr(basis_list(j), bsites(2,s) - 1), bsites(1, s), sites)) !Parity of site 1
-                        ham_temp(pos,1) = (-1)**(parity1 + parity2)  
+                        ham_temp(pos,1) =(-1)**(parity1 + parity2)  
                         ham_temp(pos,2) = j
                         ham_temp(pos,3) = loc
                     end if                    
@@ -327,18 +325,18 @@ module hamiltonian
 
     end subroutine hopping_i
 
-    subroutine hopping_dc(unit, gencluster, nHel, tilt, lx, ly, ucx, ucy, sites, nbonds, dim, basis_list, bsites, norm, xtransl, ytransl, t, k1, k2, rc, ham, nnz)
-       
+    subroutine hopping_dc(unit, tilted, nHel, tilt, lx, ly, ucx, ucy, sites, nbonds, dim, basis_list, bsites, norm, xtransl, ytransl, t, k1, k2, rc, ham, nnz)
+
         !----------------------------------------------------------------!
         !          Hopping procedure for complex matrix entries          !
         !----------------------------------------------------------------!
-        ! This subroutine generates the hopping Hamiltonian for a given basis and bond structure in momentum sector (k1, k2).
+        ! This subroutine generates the hopping Hamiltonian for a given basis and bond structure in momentum sector(k1, k2).
        
         use params
 
         implicit none
 
-        integer, intent(in) :: unit, gencluster, nHel, tilt, lx, ly, ucx, ucy, sites, nbonds, k1, k2, bsites(2, nbonds), xtransl(2, sites), ytransl(2, sites)
+        integer, intent(in) :: unit, tilted, nHel, tilt, lx, ly, ucx, ucy, sites, nbonds, k1, k2, bsites(2, nbonds), xtransl(2, sites), ytransl(2, sites)
         integer(kind=8), intent(in) :: dim, basis_list(dim)
         double precision, intent(in) :: t, norm(dim)
 
@@ -352,7 +350,7 @@ module hamiltonian
         integer(kind=8), allocatable :: rc_temp(:,:)
         double complex, allocatable :: ham_temp(:)
 
-        arrsize = 6*sites*dim! Maximum number of non-zero elements in the Hamiltonian matrix. Each basis state can have at most 2*nbonds non-zero elements (one for each bond).
+        arrsize = 6*sites*dim! Maximum number of non-zero elements in the Hamiltonian matrix. Each basis state can have at most 2*nbonds non-zero elements(one for each bond).
         
         if(allocated(ham_temp)) deallocate(ham_temp)
         if(allocated(rc_temp))  deallocate(rc_temp)
@@ -371,52 +369,52 @@ module hamiltonian
                 ! !Create scattered basis state I'
                     ! mask = ibset(ibset(0,bsites(1,s)-1),bsites(2,s)-1) !Procedure suggested in Lin-paper. Sets a mask with only non-zero components on sites 1 and 2
                     ! k    = iand(mask, basis_list(j)) !K records the occupancy of those two sites.
-                    ! l    = ieor(mask,k) !L records whether hopping is allowed or not. If it's 0 or the same as the mask, hopping is not allowed. If it is allowed the occupations of both sites (01 or 10) are swapped (10 or 01)
+                    ! l    = ieor(mask,k) !L records whether hopping is allowed or not. If it's 0 or the same as the mask, hopping is not allowed. If it is allowed the occupations of both sites(01 or 10) are swapped(10 or 01)
                     ! if(l == 0 .or. l == mask) then
                     !     cycle
                     ! end if
                     ! call representative(basis_list(j) - k + l, sites, ucx, ucy, xtransl, ytransl, rep, l1, l2, sign) !Finds the representative of scattered state in momentum orbit and determines the number of translations 'ntrans' needed to map to representative.            
 
-                if(btest(basis_list(j), bsites(1,s) - 1) .and. .not. (btest(basis_list(j), bsites(2,s) - 1))) then 
+                if(btest(basis_list(j), bsites(1,s) - 1) .and. .not.(btest(basis_list(j), bsites(2,s) - 1))) then 
                     newst = ibclr(ibset(basis_list(j), bsites(2, s) - 1), bsites(1, s) - 1) 
-                else if(btest(basis_list(j), bsites(2,s) - 1) .and. .not. (btest(basis_list(j), bsites(1,s) - 1))) then 
+                else if(btest(basis_list(j), bsites(2,s) - 1) .and. .not.(btest(basis_list(j), bsites(1,s) - 1))) then 
                     newst = ibclr(ibset(basis_list(j), bsites(1, s) - 1), bsites(2, s) - 1) 
                 else 
                     cycle 
                 end if 
-                if(gencluster == 1) then 
+                if(tilted == 1) then 
                     call representative(newst, sites, ucx, ucy, xtransl, ytransl, rep, l1, l2, sign) !Finds the representative of scattered state in momentum orbit and determines the number of translations 'ntrans' needed to map to representative.            
                     l11 = ucx 
                     l22 = ucy
-                else if(gencluster == 0) then 
+                else if(tilted == 0) then 
                     call representative_tilted(newst, sites, nHel, tilt, lx, ly, xtransl, ytransl, rep, l1, l2, sign)
                     l11 = ly 
                     l22 = lx
                 end if 
-                call findstate(dim, rep, basis_list, loc) !Finds the location of representative in basis_list
+                call binary_search(dim, rep, basis_list, loc) !Finds the location of representative in basis_list
                 if(loc > 0) then
-                    if(btest(basis_list(j),bsites(1,s)-1) .and. .not.(btest(basis_list(j),bsites(2,s)-1))) then !Hopping from 1->2
+                    if(btest(basis_list(j),bsites(1,s)-1) .and. .not.(btest(basis_list(j),bsites(2,s)-1))) then !Hopping from 1 -> 2
                         parity1 = popcnt(ibits(basis_list(j), bsites(1,s), sites))
                         parity2 = popcnt(ibits(ibclr(basis_list(j), bsites(1,s) - 1), bsites(2,s), sites)) 
-                    else if(btest(basis_list(j),bsites(2,s)-1) .and. .not.(btest(basis_list(j),bsites(1,s)-1))) then !Hopping from 2->1
-                        parity1 = popcnt(ibits(ibclr(basis_list(j), bsites(2,s) - 1), bsites(1,s), sites ))
+                    else if(btest(basis_list(j),bsites(2,s)-1) .and. .not.(btest(basis_list(j),bsites(1,s)-1))) then !Hopping from 2 -> 1
+                        parity1 = popcnt(ibits(ibclr(basis_list(j), bsites(2,s) - 1), bsites(1,s), sites))
                         parity2 = popcnt(ibits(basis_list(j), bsites(2,s), sites)) 
                     end if 
-                    dbl  = 0 !Flag for whether a new matrix element should be created (0) or an old matrix element was updated (1)
+                    dbl  = 0 !Flag for whether a new matrix element should be created(0) or an old matrix element was updated(1)
                     cntr = cntr + 1
                     if(cntr > 1) then
                         do i = max(cntrj,1), cntrj + cntr !Loop for updating existing elements: Goes through all matrix elements already calculated for row 'j' and checks whether column 'loc' already exists.
                             if(rc_temp(i,2) == loc .and. rc_temp(i,1) == j) then !If yes, update existing element.                            
-                                ham_temp(i) = ham_temp(i) + sign * (-1) * t * (-1)**(parity1 + parity2) * sqrt(real(norm(loc))/real(norm(j))) * exp(-ii*2*pi*((dble(k1*l1)/dble(l11)) + (dble(k2*l2)/dble(l22))))       
+                                ham_temp(i) = ham_temp(i) + sign *(-1) * t *(-1)**(parity1 + parity2) * sqrt(real(norm(loc))/real(norm(j))) * exp(-ii*2*pi*((dble(k1*l1)/dble(l11)) +(dble(k2*l2)/dble(l22))))       
                                 dbl = 1 !Found and updated existing element.
                             end if
                         end do
                     end if
                     if(dbl == 0) then !If no existing element was found, create new matrix element.
                         n_temp = n_temp + 1 !Counter for non-zero matrix elements.
-                        ham_temp(n_temp) = ham_temp(n_temp) + sign * (-1) * t * (-1)**(parity1 + parity2) * sqrt(real(norm(loc))/real(norm(j))) * exp(-ii*2*pi*((dble(k1*l1)/dble(l11)) + (dble(k2*l2)/dble(l22))))
-                        ! ham_temp(n_temp) = ham_temp(n_temp) + (-1) * t * (-1)**(parity1 + parity2) * exp(-ii*2*pi*(k1*l1 + k2*l2)/sites)
-                        ! ham_temp(n_temp) = ham_temp(n_temp) + (-1) * t * (-1)**(parity1 + parity2) * sqrt(real(norm(loc))/real(norm(j))) * exp(-ii*2*pi*(k1*dble(l1-Lx)/2.d0 + k2*dble(l2-Ly)/2.d0)/sites)
+                        ham_temp(n_temp) = ham_temp(n_temp) + sign *(-1) * t *(-1)**(parity1 + parity2) * sqrt(real(norm(loc))/real(norm(j))) * exp(-ii*2*pi*((dble(k1*l1)/dble(l11)) +(dble(k2*l2)/dble(l22))))
+                        ! ham_temp(n_temp) = ham_temp(n_temp) +(-1) * t *(-1)**(parity1 + parity2) * exp(-ii*2*pi*(k1*l1 + k2*l2)/sites)
+                        ! ham_temp(n_temp) = ham_temp(n_temp) +(-1) * t *(-1)**(parity1 + parity2) * sqrt(real(norm(loc))/real(norm(j))) * exp(-ii*2*pi*(k1*dble(l1-Lx)/2.d0 + k2*dble(l2-Ly)/2.d0)/sites)
                         rc_temp(n_temp,1) = j !Row of matrix element
                         rc_temp(n_temp,2) = loc !Column of matrix element
                     end if
@@ -481,7 +479,7 @@ module hamiltonian
         !         order = 1
         !     end if 
 
-        !     arrsize = dim * nbonds * order ! Maximum number of non-zero elements in the Hamiltonian matrix. Each basis state can have at most nbonds*order non-zero elements (one for each bond and point group operator).
+        !     arrsize = dim * nbonds * order ! Maximum number of non-zero elements in the Hamiltonian matrix. Each basis state can have at most nbonds*order non-zero elements(one for each bond and point group operator).
         !     if(allocated(ham_temp))    deallocate(ham_temp)
         !     if(allocated(rc_temp))     deallocate(rc_temp)
         !     if(allocated(hamDi_temp))  deallocate(hamDi_temp)
@@ -512,7 +510,7 @@ module hamiltonian
         !     !$omp parallel do default(firstprivate) shared(ham_temp, bsites, basis) num_threads(threads)
         !     do j = 1, dim
         !         cntrj = 0 !Counts the number of already calculated matrix elements of each row 'j'
-        !         rowst = (j-1) * nbonds * order 
+        !         rowst =(j-1) * nbonds * order 
         !         !$ id = omp_get_thread_num()
         !         do k = 1, order !Loop over point groups operators 
         !             h_add     = 0.d0 !Scattering contribution to matrix element
@@ -528,10 +526,10 @@ module hamiltonian
         !             end if 
 
         !             do s = 1, nbonds !Takes care of translations
-        !                 if(btest(state, bsites(1,s)-1) .and. .not.(btest(state, bsites(2,s)-1))) then !Hopping from 1->2
+        !                 if(btest(state, bsites(1,s)-1) .and. .not.(btest(state, bsites(2,s)-1))) then !Hopping from 1 -> 2
         !                     newst  = ibclr(ibset(state, bsites(2, s) - 1), bsites(1, s) - 1)            
         !                     parity = popcnt(ibits(state, bsites(1,s), sites)) + popcnt(ibits(ibclr(state, bsites(1,s) - 1), bsites(2,s), sites))      
-        !                 else if(btest(state, bsites(2,s)-1) .and. .not.(btest(state, bsites(1,s)-1))) then !Hopping from 2->1
+        !                 else if(btest(state, bsites(2,s)-1) .and. .not.(btest(state, bsites(1,s)-1))) then !Hopping from 2 -> 1
         !                     newst  = ibclr(ibset(state, bsites(1, s) - 1), bsites(2, s) - 1) 
         !                     parity = popcnt(ibits(state, bsites(2,s), sites)) + popcnt(ibits(ibclr(state, bsites(2,s) - 1), bsites(1,s), sites))
         !                 else 
@@ -543,9 +541,9 @@ module hamiltonian
         !                     call representative_irrep(newst, sites, nHel, tilt, Lx, Ly, symm, id, par, rot, xtransl, ytransl, refl, c6, rep, l1, l2, signrep)
         !                 end if 
                         
-        !                 call findstate(dim, rep, basis, loc) !Finds the location of representative in basis
+        !                 call binary_search(dim, rep, basis, loc) !Finds the location of representative in basis
         !                 if(loc <= 0) cycle 
-        !                 sign  = signrep * signstate * (-1) * (-1)**parity 
+        !                 sign  = signrep * signstate *(-1) *(-1)**parity 
         !                 h_add = sign * t * sqrt(dble(norm(loc))/dble(norm(j)))  
 
         !                 if(loc == j) then !Diagonal element contributes to diagonal Hamiltonian
@@ -559,13 +557,13 @@ module hamiltonian
         !                         cntr_di(j, 2)   = nDi
         !                     end if 
         !                 else !Off-diagonal elements 
-        !                     dbl = 0 !Flag for whether a new matrix element should be created (0) or an old matrix element was updated (1)
+        !                     dbl = 0 !Flag for whether a new matrix element should be created(0) or an old matrix element was updated(1)
         !                     if(cntrj > 0) then !Not the first element in row j. Check elements for double entries. 
         !                         do i = rowst + 1, rowst + cntrj + 1 !Go from beginning of row j to current element. 
         !                             if(rc_temp(i,2) == loc .and. rc_temp(i,1) == j) then !If yes, update existing element.
         !                                 if(i > arrsize) stop 'hopping irrep: i > arrsize'
         !                                 ham_temp(i)    = ham_temp(i) + h_add 
-        !                                 parities_temp(i)   = (-1)**parity
+        !                                 parities_temp(i)   =(-1)**parity
         !                                 dplcts_temp(i) = dplcts_temp(i) + 1 
         !                                 dbl            = 1 !Found and updated existing element.       
         !                             end if
@@ -578,7 +576,7 @@ module hamiltonian
         !                         n_temp           = n_temp + 1 !Counter for non-zero matrix elements. Needed later.
         !                         pos              = rowst + cntrj !Position corresponds to position in row j. 
         !                         ham_temp(pos)    = ham_temp(pos) + h_add !Value of matrix element. 
-        !                         parities_temp(pos)   = (-1)**parity !Save parities for later. 
+        !                         parities_temp(pos)   =(-1)**parity !Save parities for later. 
         !                         dplcts_temp(pos) = dplcts_temp(pos) + 1 !Save number of dplcts for later. 
         !                         rc_temp(pos,1)   = j !Row of matrix element. 
         !                         rc_temp(pos,2)   = loc !Column of matrix element.                          
@@ -670,7 +668,7 @@ module hamiltonian
             order = 1
         end if 
 
-        arrsize = dim * nbonds * order ! Maximum number of non-zero elements in the Hamiltonian matrix. Each basis state can have at most nbonds*order non-zero elements (one for each bond and point group operator).
+        arrsize = dim * nbonds * order ! Maximum number of non-zero elements in the Hamiltonian matrix. Each basis state can have at most nbonds*order non-zero elements(one for each bond and point group operator).
         if(allocated(ham_temp))    deallocate(ham_temp)
         if(allocated(rc_temp))     deallocate(rc_temp)
         if(allocated(hamDi_temp))  deallocate(hamDi_temp)
@@ -701,7 +699,7 @@ module hamiltonian
         !$omp parallel do default(firstprivate) shared(ham_temp, bsites, basis) num_threads(threads)
         do j = 1, dim
             cntrj = 0 !Counts the number of already calculated matrix elements of each row 'j'
-            rowst = (j-1) * nbonds * order 
+            rowst =(j-1) * nbonds * order 
             !$ id = omp_get_thread_num()
             do k = 1, order !Loop over point groups operators 
                 h_add     = 0.d0 !Scattering contribution to matrix element
@@ -717,10 +715,10 @@ module hamiltonian
                 end if 
 
                 do s = 1, nbonds !Takes care of translations
-                    if(btest(state, bsites(1,s)-1) .and. .not.(btest(state, bsites(2,s)-1))) then !Hopping from 1->2
+                    if(btest(state, bsites(1,s)-1) .and. .not.(btest(state, bsites(2,s)-1))) then !Hopping from 1 -> 2
                         newst  = ibclr(ibset(state, bsites(2, s) - 1), bsites(1, s) - 1)            
                         parity = popcnt(ibits(state, bsites(1,s), sites)) + popcnt(ibits(ibclr(state, bsites(1,s) - 1), bsites(2,s), sites))      
-                    else if(btest(state, bsites(2,s)-1) .and. .not.(btest(state, bsites(1,s)-1))) then !Hopping from 2->1
+                    else if(btest(state, bsites(2,s)-1) .and. .not.(btest(state, bsites(1,s)-1))) then !Hopping from 2 -> 1
                         newst  = ibclr(ibset(state, bsites(1, s) - 1), bsites(2, s) - 1) 
                         parity = popcnt(ibits(state, bsites(2,s), sites)) + popcnt(ibits(ibclr(state, bsites(2,s) - 1), bsites(1,s), sites))
                     else 
@@ -732,9 +730,9 @@ module hamiltonian
                         call representative_irrep(newst, sites, nHel, tilt, Lx, Ly, symm, id, par, rot, xtransl, ytransl, refl, c6, rep, l1, l2, signrep)
                     end if 
                     
-                    call findstate(dim, rep, basis, loc) !Finds the location of representative in basis
+                    call binary_search(dim, rep, basis, loc) !Finds the location of representative in basis
                     if(loc <= 0) cycle 
-                    sign  = signrep * signstate * (-1) * (-1)**parity 
+                    sign  = signrep * signstate *(-1) *(-1)**parity 
                     h_add = sign * t * sqrt(dble(norm(loc))/dble(norm(j)))  
 
                     if(loc == j) then !Diagonal element contributes to diagonal Hamiltonian
@@ -748,13 +746,13 @@ module hamiltonian
                             cntr_di(j, 2)   = nDi
                         end if 
                     else !Off-diagonal elements 
-                        dbl = 0 !Flag for whether a new matrix element should be created (0) or an old matrix element was updated (1)
+                        dbl = 0 !Flag for whether a new matrix element should be created(0) or an old matrix element was updated(1)
                         if(cntrj > 0) then !Not the first element in row j. Check elements for double entries. 
                             do i = rowst + 1, rowst + cntrj + 1 !Go from beginning of row j to current element. 
                                 if(rc_temp(i,2) == loc .and. rc_temp(i,1) == j) then !If yes, update existing element.
                                     if(i > arrsize) stop 'hopping irrep: i > arrsize'
                                     ham_temp(i)    = ham_temp(i) + h_add 
-                                    parities_temp(i)   = (-1)**parity
+                                    parities_temp(i)   =(-1)**parity
                                     dplcts_temp(i) = dplcts_temp(i) + 1 
                                     dbl            = 1 !Found and updated existing element.       
                                 end if
@@ -767,7 +765,7 @@ module hamiltonian
                             n_temp           = n_temp + 1 !Counter for non-zero matrix elements. Needed later.
                             pos              = rowst + cntrj !Position corresponds to position in row j. 
                             ham_temp(pos)    = ham_temp(pos) + h_add !Value of matrix element. 
-                            parities_temp(pos)   = (-1)**parity !Save parities for later. 
+                            parities_temp(pos)   =(-1)**parity !Save parities for later. 
                             dplcts_temp(pos) = dplcts_temp(pos) + 1 !Save number of dplcts for later. 
                             rc_temp(pos,1)   = j !Row of matrix element. 
                             rc_temp(pos,2)   = loc !Column of matrix element.                          
@@ -838,7 +836,7 @@ module hamiltonian
         !     implicit none
         !     integer, intent(in) :: flag2 ! Integer precision flag to indicate 2D irrep
         !     double precision, intent(in) :: flag1 ! Double precision flag to indicate this routine
-        !     ! integer, intent(in):: orbsize, threads, tilted, nHel, tilt, lx, ly, sites, nbonds, symm, bsites(2, nbonds), xtransl(2, sites), ytransl(2, sites), refl(6, sites), c6(sites)
+        !     ! integer, intent(in) :: orbsize, threads, tilted, nHel, tilt, lx, ly, sites, nbonds, symm, bsites(2, nbonds), xtransl(2, sites), ytransl(2, sites), refl(6, sites), c6(sites)
         !     ! integer(kind=8), intent(in) :: dim, basis(dim)
         !     ! integer(kind=8), allocatable, intent(in) :: orbits(:,:,:)
         !     ! double precision, intent(in) :: t, id, par(6), rot(5), norm(dim,2)
@@ -863,7 +861,7 @@ module hamiltonian
         !         order = 1
         !     end if 
 
-        !     arrsize = dim * orbsize * 2 !Each representative (dim) has two basis states (2), each of which is a linear combination of at most 'orbsize' states. 
+        !     arrsize = dim * orbsize * 2 !Each representative(dim) has two basis states(2), each of which is a linear combination of at most 'orbsize' states. 
         !     if(allocated(ham_temp))    deallocate(ham_temp)
         !     if(allocated(rc_temp))     deallocate(rc_temp)
         !     if(allocated(hamDi_temp))  deallocate(hamDi_temp)
@@ -901,18 +899,18 @@ module hamiltonian
         !         do c = 1, 2 !First and second basis state of 2D irrep 
                 
         !             h_add = 0.d0 !Scattering contribution to matrix element
-        !             cntrjc = 0 !Counts the number of already calculated matrix elements of each combination row 'j' and basist state 'c', i.e. tuple (j, c) 
+        !             cntrjc = 0 !Counts the number of already calculated matrix elements of each combination row 'j' and basist state 'c', i.e. tuple(j, c) 
         !             rowIndx = 2*(j-1) + c
-        !             rowst = (rowIndx-1) * orbsize !Position-1 of beginning of tuple (j,c)   
+        !             rowst =(rowIndx-1) * orbsize !Position-1 of beginning of tuple(j,c)   
         !             do s = 1, orbsize !Loop through orbit of state basis(j)
         !                 state = orbits(j, s, c)
         !                 coeff = phases(j, s, c)
         !                 if(state == 0) exit 
         !                 if(abs(dble(coeff)) <= tol .and. abs(aimag(coeff)) <= tol) cycle 
-        !                 if(btest(state, site1-1) .and. .not.(btest(state, site2-1))) then !Hopping from 1->2
+        !                 if(btest(state, site1-1) .and. .not.(btest(state, site2-1))) then !Hopping from 1 -> 2
         !                     newst  = ibclr(ibset(state, site2-1), site1-1)            
         !                     parity = popcnt(ibits(state, site1, sites)) + popcnt(ibits(ibclr(state, site1 - 1), site2, sites))      
-        !                 else if(btest(state, site2-1) .and. .not.(btest(state, site1-1))) then !Hopping from 2->1
+        !                 else if(btest(state, site2-1) .and. .not.(btest(state, site1-1))) then !Hopping from 2 -> 1
         !                     newst  = ibclr(ibset(state, site1-1), site2-1) 
         !                     parity = popcnt(ibits(state, site2, sites)) + popcnt(ibits(ibclr(state, site2-1), site1, sites))
         !                 else 
@@ -923,7 +921,7 @@ module hamiltonian
         !                 else if(tilted == 1) then 
         !                     call representative_irrep(newst, sites, nHel, tilt, Lx, Ly, symm, id, par, rot, xtransl, ytransl, refl, c6, rep, l1, l2, signrep)
         !                 end if 
-        !                 call findstate(dim, rep, basis, loc) !Finds the location of representative in basis
+        !                 call binary_search(dim, rep, basis, loc) !Finds the location of representative in basis
         !                 if(loc <= 0) cycle !New state is compatible with momentum and symmetry 
         !                 do d = 1, 2 !Irrep basis states of scattered representative
         !                     colIndx = 2*(loc-1) + d
@@ -936,7 +934,7 @@ module hamiltonian
         !                     end do 
         !                     if(abs(dble(newcf)) <= tol .and. abs(aimag(newcf)) <= tol) cycle 
 
-        !                     sign  = (-1) * (-1)**parity     
+        !                     sign  =(-1) *(-1)**parity     
         !                     h_add = sign * t * sqrt(dble(norm(loc, d))/dble(norm(j, c))) * coeff * newcf !Contribution to value of matrix element <j,c| H | loc, c>  
                             
         !                     if(colIndx == rowIndx) then !Matrix element contributes to diagonal Hamiltonian
@@ -950,13 +948,13 @@ module hamiltonian
         !                             cntr_di(rowIndx, 2) = nDi !Position of existing element of 'rowIndx' in array 'hamDi_temp'
         !                         end if 
         !                     else !Off-diagonal elements 
-        !                         dbl = 0 !Flag for whether a new matrix element should be created (0) or an old matrix element was updated (1)
+        !                         dbl = 0 !Flag for whether a new matrix element should be created(0) or an old matrix element was updated(1)
         !                         if(cntrjc > 0) then !Not the first element in row j. Check elements for double entries. 
         !                             do i = rowst + 1, rowst + cntrjc + 1 !Go from beginning of row j to current element. 
         !                                 if(rc_temp(i,2) == colIndx .and. rc_temp(i,1) == rowIndx) then !If yes, update existing element.
         !                                     if(i > arrsize) stop 'Subroutine hopping_irrep2D: i > arrsize'
         !                                     ham_temp(i)    = ham_temp(i) + h_add 
-        !                                     parities_temp(i)   = (-1)**parity
+        !                                     parities_temp(i)   =(-1)**parity
         !                                     dplcts_temp(i) = dplcts_temp(i) + 1 
         !                                     dbl            = 1 !Found and updated existing element.       
         !                                 end if
@@ -969,16 +967,16 @@ module hamiltonian
         !                             pos              = rowst + cntrjc !Position corresponds to position in row j. 
         !                             if(pos > arrsize) stop 'Subroutine hopping_irrep2D: pos > arrsize'
         !                             ham_temp(pos)    = ham_temp(pos) + h_add !Value of matrix element. 
-        !                             parities_temp(pos)   = (-1)**parity !Save parities for later. 
+        !                             parities_temp(pos)   =(-1)**parity !Save parities for later. 
         !                             dplcts_temp(pos) = dplcts_temp(pos) + 1 !Save number of dplcts for later. 
         !                             rc_temp(pos,1)   = rowIndx !Row of matrix element. 
         !                             rc_temp(pos,2)   = colIndx !Column of matrix element.                       
         !                         end if
         !                     end if 
-        !                 end do !Loop over scattered irrep basis states (d) 
-        !             end do !Loop over symmetry orbit (s)
-        !         end do !Loop over irrep basis states (c)
-        !     end do !Loop over representatives (j)
+        !                 end do !Loop over scattered irrep basis states(d) 
+        !             end do !Loop over symmetry orbit(s)
+        !         end do !Loop over irrep basis states(c)
+        !     end do !Loop over representatives(j)
 
         !     nnz = n_temp
             
@@ -1040,7 +1038,7 @@ module hamiltonian
 
         use params
         implicit none
-        integer, intent(in):: orbsize, threads, tilted, nHel, tilt, lx, ly, sites, nbonds, symm, bsites(2, nbonds), xtransl(2, sites), ytransl(2, sites), refl(6, sites), c6(sites)
+        integer, intent(in) :: orbsize, threads, tilted, nHel, tilt, lx, ly, sites, nbonds, symm, bsites(2, nbonds), xtransl(2, sites), ytransl(2, sites), refl(6, sites), c6(sites)
         integer(kind=8), intent(in) :: dim, basis(dim)
         integer(kind=8), allocatable, intent(in) :: orbits(:,:,:)
         double precision, intent(in) :: t, id, par(6), rot(5), norm(dim,2)
@@ -1068,7 +1066,7 @@ module hamiltonian
             order = 1
         end if 
 
-        arrsize = dim * orbsize * 2 !Each representative (dim) has two basis states (2), each of which is a linear combination of at most 'orbsize' states. 
+        arrsize = dim * orbsize * 2 !Each representative(dim) has two basis states(2), each of which is a linear combination of at most 'orbsize' states. 
         if(allocated(ham_temp))    deallocate(ham_temp)
         if(allocated(rc_temp))     deallocate(rc_temp)
         if(allocated(hamDi_temp))  deallocate(hamDi_temp)
@@ -1106,18 +1104,18 @@ module hamiltonian
             do c = 1, 2 !First and second basis state of 2D irrep 
             
                 h_add = 0.d0 !Scattering contribution to matrix element
-                cntrjc = 0 !Counts the number of already calculated matrix elements of each combination row 'j' and basist state 'c', i.e. tuple (j, c) 
+                cntrjc = 0 !Counts the number of already calculated matrix elements of each combination row 'j' and basist state 'c', i.e. tuple(j, c) 
                 rowIndx = 2*(j-1) + c
-                rowst = (rowIndx-1) * orbsize !Position-1 of beginning of tuple (j,c)   
+                rowst =(rowIndx-1) * orbsize !Position-1 of beginning of tuple(j,c)   
                 do s = 1, orbsize !Loop through orbit of state basis(j)
                     state = orbits(j, s, c)
                     coeff = phases(j, s, c)
                     if(state == 0) exit 
                     if(abs(dble(coeff)) <= tol .and. abs(aimag(coeff)) <= tol) cycle 
-                    if(btest(state, site1-1) .and. .not.(btest(state, site2-1))) then !Hopping from 1->2
+                    if(btest(state, site1-1) .and. .not.(btest(state, site2-1))) then !Hopping from 1 -> 2
                         newst  = ibclr(ibset(state, site2-1), site1-1)            
                         parity = popcnt(ibits(state, site1, sites)) + popcnt(ibits(ibclr(state, site1 - 1), site2, sites))      
-                    else if(btest(state, site2-1) .and. .not.(btest(state, site1-1))) then !Hopping from 2->1
+                    else if(btest(state, site2-1) .and. .not.(btest(state, site1-1))) then !Hopping from 2 -> 1
                         newst  = ibclr(ibset(state, site1-1), site2-1) 
                         parity = popcnt(ibits(state, site2, sites)) + popcnt(ibits(ibclr(state, site2-1), site1, sites))
                     else 
@@ -1128,7 +1126,7 @@ module hamiltonian
                     else if(tilted == 1) then 
                         call representative_irrep(newst, sites, nHel, tilt, Lx, Ly, symm, id, par, rot, xtransl, ytransl, refl, c6, rep, l1, l2, signrep)
                     end if 
-                    call findstate(dim, rep, basis, loc) !Finds the location of representative in basis
+                    call binary_search(dim, rep, basis, loc) !Finds the location of representative in basis
                     if(loc <= 0) cycle !New state is compatible with momentum and symmetry 
                     do d = 1, 2 !Irrep basis states of scattered representative
                         colIndx = 2*(loc-1) + d
@@ -1141,7 +1139,7 @@ module hamiltonian
                         end do 
                         if(abs(dble(newcf)) <= tol .and. abs(aimag(newcf)) <= tol) cycle 
 
-                        sign  = (-1) * (-1)**parity     
+                        sign  =(-1) *(-1)**parity     
                         h_add = sign * t * sqrt(dble(norm(loc, d))/dble(norm(j, c))) * coeff * newcf !Contribution to value of matrix element <j,c| H | loc, c>  
                         
                         if(colIndx == rowIndx) then !Matrix element contributes to diagonal Hamiltonian
@@ -1155,13 +1153,13 @@ module hamiltonian
                                 cntr_di(rowIndx, 2) = nDi !Position of existing element of 'rowIndx' in array 'hamDi_temp'
                             end if 
                         else !Off-diagonal elements 
-                            dbl = 0 !Flag for whether a new matrix element should be created (0) or an old matrix element was updated (1)
+                            dbl = 0 !Flag for whether a new matrix element should be created(0) or an old matrix element was updated(1)
                             if(cntrjc > 0) then !Not the first element in row j. Check elements for double entries. 
                                 do i = rowst + 1, rowst + cntrjc + 1 !Go from beginning of row j to current element. 
                                     if(rc_temp(i,2) == colIndx .and. rc_temp(i,1) == rowIndx) then !If yes, update existing element.
                                         if(i > arrsize) stop 'Subroutine hopping_irrep2D: i > arrsize'
                                         ham_temp(i)    = ham_temp(i) + h_add 
-                                        parities_temp(i)   = (-1)**parity
+                                        parities_temp(i)   =(-1)**parity
                                         dplcts_temp(i) = dplcts_temp(i) + 1 
                                         dbl            = 1 !Found and updated existing element.       
                                     end if
@@ -1174,16 +1172,16 @@ module hamiltonian
                                 pos              = rowst + cntrjc !Position corresponds to position in row j. 
                                 if(pos > arrsize) stop 'Subroutine hopping_irrep2D: pos > arrsize'
                                 ham_temp(pos)    = ham_temp(pos) + h_add !Value of matrix element. 
-                                parities_temp(pos)   = (-1)**parity !Save parities for later. 
+                                parities_temp(pos)   =(-1)**parity !Save parities for later. 
                                 dplcts_temp(pos) = dplcts_temp(pos) + 1 !Save number of dplcts for later. 
                                 rc_temp(pos,1)   = rowIndx !Row of matrix element. 
                                 rc_temp(pos,2)   = colIndx !Column of matrix element.                       
                             end if
                         end if 
-                    end do !Loop over scattered irrep basis states (d) 
-                end do !Loop over symmetry orbit (s)
-            end do !Loop over irrep basis states (c)
-        end do !Loop over representatives (j)
+                    end do !Loop over scattered irrep basis states(d) 
+                end do !Loop over symmetry orbit(s)
+            end do !Loop over irrep basis states(c)
+        end do !Loop over representatives(j)
 
         nnz = n_temp
         
@@ -1263,22 +1261,22 @@ module hamiltonian
         !         do s = 1, nbonds !Loop runs over all nn-bonds
         !             if(btest(basis(j), bsites(1, s) - 1) .and. &
         !                 btest(basis(j), bsites(2, s) - 1)) counter_v = counter_v + 1
-        !             if(.not. (btest(basis(j), bsites(1, s) - 1)) .and. &
-        !                 .not. (btest(basis(j), bsites(2, s) - 1))) counter_v = counter_v + 1
+        !             if(.not.(btest(basis(j), bsites(1, s) - 1)) .and. &
+        !                 .not.(btest(basis(j), bsites(2, s) - 1))) counter_v = counter_v + 1
         !             if(btest(basis(j), bsites(1, s) - 1) .and. &
-        !                 .not. (btest(basis(j), bsites(2, s) - 1))) counter_v = counter_v - 1
-        !             if(.not. (btest(basis(j), bsites(1, s) - 1)) .and. &
+        !                 .not.(btest(basis(j), bsites(2, s) - 1))) counter_v = counter_v - 1
+        !             if(.not.(btest(basis(j), bsites(1, s) - 1)) .and. &
         !                 btest(basis(j), bsites(2, s) - 1)) counter_v = counter_v - 1
         !         end do
 
         !         do s = 1, nbonds2 !Loop runs over all nnn-bonds
         !             if(btest(basis(j), bsites2(1, s) - 1) .and. &
         !                 btest(basis(j), bsites2(2, s) - 1)) counter_v2 = counter_v2 + 1
-        !             if(.not. (btest(basis(j), bsites2(1, s) - 1)) .and. &
-        !                 .not. (btest(basis(j), bsites2(2, s) - 1))) counter_v2 = counter_v2 + 1
+        !             if(.not.(btest(basis(j), bsites2(1, s) - 1)) .and. &
+        !                 .not.(btest(basis(j), bsites2(2, s) - 1))) counter_v2 = counter_v2 + 1
         !             if(btest(basis(j), bsites2(1, s) - 1) .and. &
-        !                 .not. (btest(basis(j), bsites2(2, s) - 1))) counter_v2 = counter_v2 - 1
-        !             if(.not. (btest(basis(j), bsites2(1, s) - 1)) .and. &
+        !                 .not.(btest(basis(j), bsites2(2, s) - 1))) counter_v2 = counter_v2 - 1
+        !             if(.not.(btest(basis(j), bsites2(1, s) - 1)) .and. &
         !                 btest(basis(j), bsites2(2, s) - 1)) counter_v2 = counter_v2 - 1
         !         end do
     
@@ -1323,22 +1321,22 @@ module hamiltonian
             do s = 1, nbonds !Loop runs over all nn-bonds
                 if(btest(basis(j), bsites(1, s) - 1) .and. &
                     btest(basis(j), bsites(2, s) - 1)) counter_v = counter_v + 1
-                if(.not. (btest(basis(j), bsites(1, s) - 1)) .and. &
-                    .not. (btest(basis(j), bsites(2, s) - 1))) counter_v = counter_v + 1
+                if(.not.(btest(basis(j), bsites(1, s) - 1)) .and. &
+                    .not.(btest(basis(j), bsites(2, s) - 1))) counter_v = counter_v + 1
                 if(btest(basis(j), bsites(1, s) - 1) .and. &
-                    .not. (btest(basis(j), bsites(2, s) - 1))) counter_v = counter_v - 1
-                if(.not. (btest(basis(j), bsites(1, s) - 1)) .and. &
+                    .not.(btest(basis(j), bsites(2, s) - 1))) counter_v = counter_v - 1
+                if(.not.(btest(basis(j), bsites(1, s) - 1)) .and. &
                     btest(basis(j), bsites(2, s) - 1)) counter_v = counter_v - 1
             end do
 
             do s = 1, nbonds2 !Loop runs over all nnn-bonds
                 if(btest(basis(j), bsites2(1, s) - 1) .and. &
                     btest(basis(j), bsites2(2, s) - 1)) counter_v2 = counter_v2 + 1
-                if(.not. (btest(basis(j), bsites2(1, s) - 1)) .and. &
-                    .not. (btest(basis(j), bsites2(2, s) - 1))) counter_v2 = counter_v2 + 1
+                if(.not.(btest(basis(j), bsites2(1, s) - 1)) .and. &
+                    .not.(btest(basis(j), bsites2(2, s) - 1))) counter_v2 = counter_v2 + 1
                 if(btest(basis(j), bsites2(1, s) - 1) .and. &
-                    .not. (btest(basis(j), bsites2(2, s) - 1))) counter_v2 = counter_v2 - 1
-                if(.not. (btest(basis(j), bsites2(1, s) - 1)) .and. &
+                    .not.(btest(basis(j), bsites2(2, s) - 1))) counter_v2 = counter_v2 - 1
+                if(.not.(btest(basis(j), bsites2(1, s) - 1)) .and. &
                     btest(basis(j), bsites2(2, s) - 1)) counter_v2 = counter_v2 - 1
             end do
  
@@ -1384,21 +1382,21 @@ module hamiltonian
             do s = 1, nbonds !Loop runs over all nn-bonds
                 if(btest(basis(j), bsites(1, s) - 1) .and. &
                     btest(basis(j), bsites(2, s) - 1)) counter_v = counter_v + 1
-                if(.not. (btest(basis(j), bsites(1, s) - 1)) .and. &
-                    .not. (btest(basis(j), bsites(2, s) - 1))) counter_v = counter_v + 1
+                if(.not.(btest(basis(j), bsites(1, s) - 1)) .and. &
+                    .not.(btest(basis(j), bsites(2, s) - 1))) counter_v = counter_v + 1
                 if(btest(basis(j), bsites(1, s) - 1) .and. &
-                    .not. (btest(basis(j), bsites(2, s) - 1))) counter_v = counter_v - 1
-                if(.not. (btest(basis(j), bsites(1, s) - 1)) .and. &
+                    .not.(btest(basis(j), bsites(2, s) - 1))) counter_v = counter_v - 1
+                if(.not.(btest(basis(j), bsites(1, s) - 1)) .and. &
                     btest(basis(j), bsites(2, s) - 1)) counter_v = counter_v - 1
             end do
             do s = 1, nbonds2 !Loop runs over all nnn-bonds
                 if(btest(basis(j), bsites2(1, s) - 1) .and. &
                     btest(basis(j), bsites2(2, s) - 1)) counter_v2 = counter_v2 + 1
-                if(.not. (btest(basis(j), bsites2(1, s) - 1)) .and. &
-                    .not. (btest(basis(j), bsites2(2, s) - 1))) counter_v2 = counter_v2 + 1
+                if(.not.(btest(basis(j), bsites2(1, s) - 1)) .and. &
+                    .not.(btest(basis(j), bsites2(2, s) - 1))) counter_v2 = counter_v2 + 1
                 if(btest(basis(j), bsites2(1, s) - 1) .and. &
-                    .not. (btest(basis(j), bsites2(2, s) - 1))) counter_v2 = counter_v2 - 1
-                if(.not. (btest(basis(j), bsites2(1, s) - 1)) .and. &
+                    .not.(btest(basis(j), bsites2(2, s) - 1))) counter_v2 = counter_v2 - 1
+                if(.not.(btest(basis(j), bsites2(1, s) - 1)) .and. &
                     btest(basis(j), bsites2(2, s) - 1)) counter_v2 = counter_v2 - 1
             end do
 
@@ -1467,9 +1465,9 @@ module hamiltonian
                         
         !                 ham(rowIndx, 1) = ham(rowIndx, 1) + phases(j, o, c) * cntr_v / sqrt(norm(j, c))
         !                 ham(rowIndx, 2) = ham(rowIndx, 2) + phases(j, o, c) * cntr_v2 / sqrt(norm(j, c))
-        !             end do !Loop over orbit of irrep basis states (o)
-        !         end do !Loop over irrep basis states (c)
-        !     end do !Loop over representatives (j)
+        !             end do !Loop over orbit of irrep basis states(o)
+        !         end do !Loop over irrep basis states(c)
+        !     end do !Loop over representatives(j)
 
         !     print*,'Generated diagonal Hamiltonian.'
         !     print*, ''
@@ -1529,9 +1527,9 @@ module hamiltonian
                     
                     ham(rowIndx, 1) = ham(rowIndx, 1) + phases(j, o, c) * cntr_v / sqrt(norm(j, c))
                     ham(rowIndx, 2) = ham(rowIndx, 2) + phases(j, o, c) * cntr_v2 / sqrt(norm(j, c))
-                end do !Loop over orbit of irrep basis states (o)
-            end do !Loop over irrep basis states (c)
-        end do !Loop over representatives (j)
+                end do !Loop over orbit of irrep basis states(o)
+            end do !Loop over irrep basis states(c)
+        end do !Loop over representatives(j)
 
         print*,'Generated diagonal Hamiltonian.'
         print*, ''
@@ -1621,378 +1619,6 @@ module hamiltonian
 
     end subroutine diagonal_p
 
-    !---------------------------------------------!
-    !            Unify sparse Hamiltonian         !
-    !---------------------------------------------!
-
-    subroutine unify(t, v1, v2, w, mass, pattern, sites, occ, nOff, nDi, hamOff, hamDi, ham, rc, nnz)
-
-        implicit none
-        ! save 
-        integer, intent(in):: sites, nOff, nDi, occ(sites,nDi)
-        integer, intent(in):: hamOff(nOff,3)
-        integer, intent(in):: hamDi(nDi,2)
-        double precision, intent(in) :: t, v1, v2, w, mass 
-        character*2, intent(in) :: pattern
-
-        integer, intent(out)::  nnz
-        integer, allocatable, intent(out):: rc(:,:)
-        double precision, allocatable, intent(out):: ham(:)
-
-        integer :: j = 0, ab = 0 
-        integer :: slstaggering(sites)
-        double precision :: rand(sites)
-
-        if(allocated(ham)) deallocate(ham)
-        if(allocated(rc))  deallocate(rc)
-        nnz = nOff + nDi !Number of non-zero elements
-        allocate(ham(nnz))
-        allocate(rc(nnz,2))
-        
-        ham = 0
-        rc  = 0
-        if(pattern == "AB") then 
-            ab = 1 
-        else if(pattern == "BA") then 
-            ab = 0
-        end if 
-
-        !Staggered sublattice potential: +1 on A lattice, -1 on B lattice
-        do j = 1, sites 
-            slstaggering(j) = (-1)**(j-ab)
-        end do 
-        
-        call random_number(rand)
-
-        rand = 2 * (rand - 0.5)
-
-        ham(1:nOff)  = - t * hamOff(1:nOff,1)
-        rc(1:nOff,1) = hamOff(1:nOff,2)
-        rc(1:nOff,2) = hamOff(1:nOff,3)
-        do j = 1, nDi !Fill diagonal Hamiltonian
-            ham(nOff+j)  = v1 * 0.25 * hamDi(j,1) + v2 * 0.25 * hamDi(j,2) + mass * dot_product(slstaggering, occ(1:sites,j)) + w * sum(rand * occ(1:sites,j))
-            ! if(j == 1) ham(nOff+j)  = ham(nOff+j) + 0.01
-            rc(nOff+j,1) = j
-            rc(nOff+j,2) = j
-        end do
-        
-        return
-        
-    end subroutine unify
-
-    subroutine unify_dp(v1, v2, w, mass, pattern, sites, occ, nOff, nDi, nDi2, hamOff, rcoff, rcdi, hamDi2, hamDi, ham, rc, nnz)
-
-        implicit none
-
-        integer, intent(in):: sites, nOff, nDi, nDi2, occ(sites,nDi)
-        double precision, intent(in):: hamOff(nOff), hamDi2(nDi2)
-        integer, intent(in):: rcoff(nOff,2), rcdi(nDi2)
-        integer, intent(in):: hamDi(nDi,2)
-        double precision, intent(in) :: v1, v2, w, mass 
-        character*2, intent(in) :: pattern
-
-        integer, intent(out)::  nnz
-        integer, allocatable, intent(out):: rc(:,:)
-        double precision, allocatable, intent(out):: ham(:)
-
-        integer :: j = 0, ab = 0 
-        integer :: slstaggering(sites)
-        double precision :: rand(sites)
-
-        if(allocated(ham)) deallocate(ham)
-        if(allocated(rc))  deallocate(rc)
-        if(v1 == 0.d0 .and. v2 == 0.d0 .and. mass == 0.d0) then 
-            nnz = nOff + nDi2
-        else 
-            nnz = nOff + max(nDi , nDi2) !Number of non-zero elements
-        end if 
-        allocate(ham(nnz))
-        allocate(rc(nnz,2))   
-
-        ham = 0.d0
-        rc  = 0
-        if(pattern == "AB") then 
-            ab = 1 
-        else if(pattern == "BA") then 
-            ab = 0
-        end if 
-
-        !Staggered sublattice potential: +1 on A lattice, -1 on B lattice
-        do j = 1, sites 
-            slstaggering(j) = (-1)**(j-ab)
-        end do   
-        
-        call random_number(rand)
-        rand = 2 * (rand - 0.5)
-        ham(1:nOff)  = hamOff(1:nOff)
-        rc(1:nOff,1) = rcoff(1:nOff,1)
-        rc(1:nOff,2) = rcoff(1:nOff,2)
-
-        if(v1 == 0.d0 .and. v2 == 0.d0 .and. mass == 0.d0) go to 110 !Don't fill diagonal with zeroes
-        do j = 1, nDi !Fill diagonal Hamiltonian        
-            ham(nOff+j)  = v1 * 0.25 * hamDi(j,1) + v2 * 0.25 * hamDi(j,2) + mass * dot_product(slstaggering, occ(1:sites,j)) + w * sum(rand * occ(1:sites,j)) !- 3 * v1 * sum(occ(1:sites,j)) - 6 * v2 * sum(occ(1:sites,j))        
-            rc(nOff+j,1) = j
-            rc(nOff+j,2) = j
-        end do
-        
-        
-        if(nDi2 > 0) then 
-            do j = 1, nDi2 
-                ham(nOff+rcdi(j)) = ham(nOff+rcdi(j)) + hamDi2(j)
-            end do 
-        end if 
-        110 continue 
-
-        if(v1 == 0.d0 .and. v2 == 0.d0 .and. mass == 0.d0) then !Still need to fill diagonal entries from hopping 
-            if(nDi2 > 0) then 
-                do j = 1, nDi2 
-                    ham(nOff+ j) = ham(nOff+ j) + hamDi2(j)
-                    rc(nOff + j, 1) = rcdi(j) 
-                    rc(nOff + j, 2) = rcdi(j)
-                end do 
-            end if 
-        end if 
-
-
-        return
-
-    end subroutine unify_dp 
-
-    subroutine unify_dc(v1, v2, w, mass, pattern, sites, occ, nOff, nDi, hamOff, rcoff, hamDi, ham, rc, nnz)
-
-        implicit none
-
-        integer, intent(in)          :: sites 
-        integer(kind=8), intent(in)  :: nOff, nDi, occ(sites,nDi), rcoff(nOff,2), hamDi(nDi,2)
-        double precision, intent(in) :: v1, v2, w, mass
-        double complex, intent(in)   :: hamOff(nOff)
-        character*2, intent(in)      :: pattern
-
-        integer(kind=8), intent(out)              :: nnz
-        integer(kind=8), allocatable, intent(out) :: rc(:,:)
-        double complex, allocatable, intent(out)  :: ham(:)
-
-        !Local variables
-        integer          :: ab = 0, slstaggering(sites) 
-        integer(kind=8)  :: j = 0
-        double precision :: rand(sites)
-
-        if(allocated(ham)) deallocate(ham)
-        if(allocated(rc))  deallocate(rc)
-        
-        nnz = 0
-        nnz = nOff + nDi !Number of non-zero elements
-        allocate(ham(nnz))
-        allocate(rc(nnz,2))    
-
-        ham = 0
-        rc  = 0
-        if(pattern == "AB") then 
-            ab = 1 
-        else if(pattern == "BA") then 
-            ab = 0
-        end if 
-
-        !Staggered sublattice potential: +1 on A lattice, -1 on B lattice
-        do j = 1, sites 
-            slstaggering(j) = int((-1)**(j-ab), kind=4)
-        end do 
-        
-        call random_number(rand)
-        rand         = 2 * (rand - 0.5)
-        ham(1:nOff)  = hamOff(1:nOff)
-        rc(1:nOff,1) = rcoff(1:nOff,1)
-        rc(1:nOff,2) = rcoff(1:nOff,2)
-        do j = 1, nDi !Fill diagonal Hamiltonian
-            ham(nOff+j)  = v1 * 0.25 * hamDi(j,1) + v2 * 0.25 * hamDi(j,2) + mass * dot_product(slstaggering, occ(1:sites,j)) + w * sum(rand * occ(1:sites,j))
-            rc(nOff+j,1) = j
-            rc(nOff+j,2) = j
-        end do
-
-        return
-
-    end subroutine unify_dc 
-
-    subroutine unify_dc_2D(sites, nOff, nDi_off, dim, v1, v2, w, mass, pattern, occ, hamOff, rcoff, hamDi_off, rcdi, hamDi, ham, rc, nnz)
-
-        implicit none
-
-        integer, intent(in)                      :: sites
-        integer(kind=8), intent(in)              :: dim, nOff, nDi_off
-        integer(kind=8), allocatable, intent(in) :: rcoff(:,:), rcdi(:), occ(:,:)
-        double precision, intent(in)             :: v1, v2, w, mass 
-        double complex, allocatable, intent(in)  :: hamOff(:), hamDi_off(:), hamDi(:,:)
-        character*2, intent(in)                  :: pattern
-
-        integer(kind=8), intent(out)              :: nnz
-        integer(kind=8), allocatable, intent(out) :: rc(:,:)
-        double complex, allocatable, intent(out)  :: ham(:)
-
-        integer          :: slstaggering(sites)
-        integer(kind=8)  :: j, ab, nDi
-        double precision :: rand(sites)
-
-        if(allocated(ham)) deallocate(ham)
-        if(allocated(rc))  deallocate(rc)
-        nDi = 2*dim 
-
-        if(v1 == 0.d0 .and. v2 == 0.d0 .and. mass == 0.d0) then 
-            nnz = nOff + nDi_off
-        else 
-            nnz = nOff + max(nDi, nDi_off) !Number of non-zero elements
-        end if 
-        allocate(ham(nnz))
-        allocate(rc(nnz,2))    
-
-        ham = 0.d0
-        rc  = 0
-        if(pattern == "AB") then 
-            ab = 1 
-        else if(pattern == "BA") then 
-            ab = 0
-        end if 
-
-        !Staggered sublattice potential: +1 on A lattice, -1 on B lattice
-        do j = 1, sites 
-            slstaggering(j) = int((-1)**(j-ab), kind=4)
-        end do 
-        
-        call random_number(rand)
-        rand         = 2 * (rand - 0.5)
-        !Off diagonal matrix elements
-        ham(1:nOff)  = hamOff(1:nOff)
-        rc(1:nOff,1) = rcoff(1:nOff,1)
-        rc(1:nOff,2) = rcoff(1:nOff,2)
-
-        if(v1 == 0.d0 .and. v2 == 0.d0 .and. mass == 0.d0) go to 110 !Don't fill diagonal with zeroes
-        do j = 1, nDi !Fill diagonal Hamiltonian
-            ham(nOff+j)  = v1 * 0.25 * hamDi(j,1) + v2 * 0.25 * hamDi(j,2) + mass * dot_product(slstaggering, occ(1:sites,j)) + w * sum(rand * occ(1:sites,j))
-            rc(nOff+j,1) = j
-            rc(nOff+j,2) = j
-        end do
-
-        if(nDi_off > 0) then !Fill diagonal elements generated by hopping 
-            do j = 1, nDi_off 
-                ham(nOff+rcdi(j)) = ham(nOff+rcdi(j)) + hamDi_off(j)
-            end do 
-        end if 
-        110 continue 
-
-        if(v1 == 0.d0 .and. v2 == 0.d0 .and. mass == 0.d0) then !Still need to fill diagonal entries from hopping 
-            if(nDi_off > 0) then 
-                do j = 1, nDi_off 
-                    ham(nOff+j) = ham(nOff+j) + hamDi_off(j)
-                    rc(nOff+j, 1) = rcdi(j) 
-                    rc(nOff+j, 2) = rcdi(j)
-                end do 
-            end if 
-        end if 
-
-
-        return
-
-    end subroutine unify_dc_2D 
-
-    subroutine unify_dense(dim, t, v1, v2, w, sites, occ, nOff, nDi, hamOff, hamDi, ham)
-
-        implicit none
-
-        integer, intent(in)          :: sites
-        integer(kind=8), intent(in)  :: dim,  nOff, nDi, occ(sites,*), hamOff(nOff,3), hamDi(nDi,2)       
-        double precision, intent(in) :: t, v1, v2, w
-
-        double precision, allocatable, intent(out):: ham(:,:)
-
-        integer(kind=8)  :: j = 0
-        double precision :: rand(sites) 
-        logical          :: symm 
-
-        if(allocated(ham)) deallocate(ham)
-        allocate(ham(dim, dim))
-        ham = 0
-        
-        call random_number(rand)
-        rand = 2 * (rand - 0.5)
-        do j = 1, nOff
-            ham(hamOff(j,2), hamOff(j,3))  = -t * hamOff(j,1)
-        end do 
-        do j = 1, nDi !Fill diagonal Hamiltonian
-            ham(j,j) = v1 * hamDi(j,1) + v2 * hamDi(j,2) + w * sum(rand * occ(1:sites,j))
-        end do
-        call test_symm(symm, dim, ham)
-        
-        return
-
-    end subroutine unify_dense
-
-    subroutine unify_dense_dp(dim, v1, v2, w, sites, occ, nOff, nDi, nDi2, hamOff, rcoff, rcdi, hamDi2, hamDi, ham)
-        
-        implicit none
-
-        integer, intent(in)          :: sites
-        integer(kind=8), intent(in)  :: dim, nOff, nDi, nDi2, occ(sites,*), rcoff(nOff,2), rcdi(nDi2), hamDi(nDi,2)
-        double precision, intent(in) :: v1, v2, w
-        double precision, intent(in) :: hamOff(nOff), hamDi2(nDi2)
-        
-        double precision, allocatable, intent(out) :: ham(:,:)
-
-        integer(kind=8)  :: j = 0
-        double precision :: rand(sites)
-        logical          :: symm 
-
-        if(allocated(ham)) deallocate(ham)
-        allocate(ham(dim, dim))
-        ham = 0.d0 
-        
-        call random_number(rand)
-        rand = 2 * (rand - 0.5)
-        do j = 1, nOff
-            ham(rcoff(j,1), rcoff(j,2)) = ham(rcoff(j,1), rcoff(j,2)) + hamOff(j)
-        end do 
-        do j = 1, nDi !Fill diagonal Hamiltonian
-            ham(j,j) = v1 * hamDi(j,1) + v2 * hamDi(j,2) + w * sum(rand * occ(1:sites,j))
-        end do
-        call test_symm(symm, dim, ham)
-        
-        do j = 1, nDi2 
-            ham(rcdi(j), rcdi(j)) = ham(rcdi(j), rcdi(j)) + hamDi2(j)
-        end do 
-
-        return
-
-    end subroutine unify_dense_dp
-
-    subroutine unify_dense_dc(dim, v1, v2, w, sites, occ, nOff, nDi, hamOff, rcoff, hamDi, ham)
-        
-        implicit none
-
-        integer, intent(in)          :: sites
-        integer(kind=8), intent(in)  :: dim, nOff, nDi, occ(sites,*), rcoff(nOff,2), hamDi(nDi,2)
-        double precision, intent(in) :: v1, v2, w
-        double complex, intent(in)   :: hamOff(nOff)
-        
-        double complex, allocatable, intent(out) :: ham(:,:)
-
-        integer(kind=8)  :: j = 0
-        double precision :: rand(sites)
-        logical          :: symm 
-
-        if(allocated(ham)) deallocate(ham)
-        allocate(ham(dim, dim))
-        ham = 0.d0 
-        
-        call random_number(rand)
-        rand = 2 * (rand - 0.5)
-        do j = 1, nOff
-            ham(rcoff(j,1), rcoff(j,2)) = ham(rcoff(j,1), rcoff(j,2)) + hamOff(j)
-        end do 
-        do j = 1, nDi !Fill diagonal Hamiltonian
-            ham(j,j) = v1 * hamDi(j,1) + v2 * hamDi(j,2) + w * sum(rand * occ(1:sites,j))
-        end do
-
-        return
-
-    end subroutine unify_dense_dc
 
 
 

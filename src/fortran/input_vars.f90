@@ -7,8 +7,8 @@ implicit none
     ! Lattice parameters
     integer   :: ucx = 3, ucy = 3, tilted = 1     
     character :: cluster*3 = '18A', bc*1 = 'p' 
-        ! ucx, ucy: Number of unit cells in x (horizontal) and y (vertical) directions
-        ! tilted: Flag to use tilted clusters (1 = yes, 0 = no)
+        ! ucx, ucy: Number of unit cells in x(horizontal) and y(vertical) directions
+        ! tilted: Flag to use tilted clusters(1 = yes, 0 = no)
         ! cluster: Cluster name, e.g. '18A' for a 18-site cluster
         ! bc: Boundary conDitions, 'p' for periodic, 'o' for open
 
@@ -17,7 +17,7 @@ implicit none
     character        :: irrep*2 = 'A1' 
         ! ti = 1: Include translation symmetry, k0 = 1: Only k=0 sector
         ! symm = 1: Symmetrization flag; compute basis in irreducible representation
-        ! irrep = 'B2': Compute basis in irreducible representation B2 (currently supported irreps = {A1, A2, B1, B2})
+        ! irrep = 'B2': Compute basis in irreducible representation B2(currently supported irreps = {A1, A2, B1, B2})
         ! p1, p2, p3: Reflection symmetry eigenvalues for sigma-1, sigma-2, and sigma-3 axes
         ! irrep: Irreducible representation for symmetrization 
 
@@ -44,8 +44,8 @@ implicit none
         ! rvec : Flag for calculating eigenvectors
         ! nevext : Number of eigenvalues to calculate
         ! nst : Number of eigenstates to calculate
-        ! ncv0 : Number of Lanczos vectors to use (see Arpack manual). Typical on the order of 100-200
-        ! otf = 1: Flag to generate Hamiltonian on-the-fly (does not store sparse Hamiltonian in arrays)
+        ! ncv0 : Number of Lanczos vectors to use(see Arpack manual). Typical on the order of 100-200
+        ! otf = 1: Flag to generate Hamiltonian on-the-fly(does not store sparse Hamiltonian in arrays)
         ! degflag = 1: Flag for including degenerate ground states:
         !                0 = non-degenerate ground state, 1 = include degeneracies, 2 = quasideg
         ! nev0 : Initial FEAST subspace size
@@ -67,13 +67,13 @@ implicit none
     ! g_fact : Electron g-factor, typically 2 for spin-1/2 electrons
     ! dis  : Disorder strength
     ! mass : Onsite potential on sublattices, M_A = mass, M_B = -mass
-    ! filling : Electron filling fraction (0: empty lattice, 1: fully occupied lattice)
+    ! filling : Electron filling fraction(0: empty lattice, 1: fully occupied lattice)
     ! t : Hopping strength
     ! Note: The Hamiltonian is defined as H = -t * sum_{<i,j>} c_i^dagger c_j + sum_i M_A * n_{i,A} - M_B * n_{i,B} + V * sum_{<i,j>} n_i n_j + V2 * sum_{<<i,j>>} n_i n_j 
     ! where c_i^dagger and c_i are the creation and annihilation operators, n_{i,A} and n_{i,B} are the number operators for sublattices A and B, V is the nearest-neighbor interaction strength, and V2 is the next-nearest-neighbor interaction strength.
     ! Interaction strengths are defined as:
-    ! V = vmin + dv * i, where i = 0, 1, ..., (vmax - vmin) / dv
-    ! V2 = v2min + dv2 * j, where j = 0, 1, ..., (v2max - v2min) / dv2
+    ! V = vmin + dv * i, where i = 0, 1, ...,(vmax - vmin) / dv
+    ! V2 = v2min + dv2 * j, where j = 0, 1, ...,(v2max - v2min) / dv2
      
 
 end module input_vars

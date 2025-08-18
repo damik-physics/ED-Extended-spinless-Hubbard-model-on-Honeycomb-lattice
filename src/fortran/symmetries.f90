@@ -17,10 +17,10 @@ module symmetries
         ! symm = 0: No symmetrization, only identity
         ! symm = 1: Symmetrization, use character table
         ! irrep = "A1", "A2", "B1", "B2", "E1", "E2"
-        ! mir: reflection (mirror) characters, rot: rotation characters, id: identity character
+        ! mir: reflection(mirror) characters, rot: rotation characters, id: identity character
         ! For C6v group, the characters are defined as
         ! mir(1) = sigma_v_1, mir(2) = sigma_v_2, mir(3) = sigma_v_3, mir(4) = sigma_d_1, mir(5) = sigma_d_2, mir(6) = sigma_d_3
-        ! rot(1) = c6, rot(2) = (c6)^2 = c3, rot(3) = (c6)^3 = c2, rot(4) = (c6)^4 = -c3, rot(5) = (c6)^5 = -c6
+        ! rot(1) = c6, rot(2) =(c6)^2 = c3, rot(3) =(c6)^3 = c2, rot(4) =(c6)^4 = -c3, rot(5) =(c6)^5 = -c6
 
         implicit none
         integer, intent(in) :: symm
@@ -103,12 +103,12 @@ module symmetries
             ty    = 0
             nx    = 0
             ny    = 0
-            info  = 0    !On output: InDicates whether new state was found (info = 0) or state is already contained in list (info < 1).
+            info  = 0    !On output: InDicates whether new state was found(info = 0) or state is already contained in list(info < 1).
             sign  = 1
             edgeA = 0
             edgeB = 0
             rowSt = 0
-            orbit = orbit + 1    !Include initial state (if not already in the list) to orbit.
+            orbit = orbit + 1    !Include initial state(if not already in the list) to orbit.
             flag  = 1 
 
             do i = 1, orbit 
@@ -131,7 +131,7 @@ module symmetries
                     edgeA = sites-2 !Last A site in helix
                     if(btest(tx, edgeB) .neqv. btest(tx, edgeA)) then !If only one edge occupied 
                         rowSt = 0 !First site 
-                        sign = sign * (-1)**popcnt( ibits( tx, rowst, sites - 2 ) ) !Occupation of rest of helix 
+                        sign = sign *(-1)**popcnt(ibits(tx, rowst, sites - 2 ) ) !Occupation of rest of helix 
                     end if 
                 else !More than one helix
                     do i = 1, nHel !Calculate anticommutation sign from x-translations 
@@ -140,8 +140,8 @@ module symmetries
                         if(btest(tx, edgeB) .and. btest(tx, edgeA)) then !If both edges occupied, no sign
                             cycle 
                         else if(btest(tx, edgeB) .neqv. btest(tx, edgeA)) then !If only one edge occupied 
-                            rowSt = (i-1)*2*Lx !First site on y-layer 'i' 
-                            sign = sign * (-1)**popcnt(ibits(tx, rowst, 2*Lx-2)) !Occupation of y-layer 'i'
+                            rowSt =(i-1)*2*Lx !First site on y-layer 'i' 
+                            sign = sign *(-1)**popcnt(ibits(tx, rowst, 2*Lx-2)) !Occupation of y-layer 'i'
                         end if 
                     end do 
                 end if 
@@ -164,7 +164,7 @@ module symmetries
                         shift = nx * a2  
                         phase = phase + exp( - ii * dot_product(k, shift)) * sign * char * signpg 
                     end if 
-                    if (t < s0) then !Representative is already in the list 
+                    if(t < s0) then !Representative is already in the list 
                         info = -1 
                         return
                     end if
@@ -173,7 +173,7 @@ module symmetries
 
                     do ny = 1, Ly 
                         ty = t
-                        sign = sign * ((-1)**(ntot-popcnt(ibits(ty, 2*Lx*(nHel-1), 2*Lx))))**popcnt(ibits(ty, 2*Lx*(nHel-1), 2*Lx)) 
+                        sign = sign *((-1)**(ntot-popcnt(ibits(ty, 2*Lx*(nHel-1), 2*Lx))))**popcnt(ibits(ty, 2*Lx*(nHel-1), 2*Lx)) 
                         if(tilted == 1) then !Minus sign from re-ordering after y-translation. Only if cluster is tilted.  
                             do i = 1, nHel
                                 edgeB = i*2*Lx-1 !Last B site on y-layer 'i'
@@ -181,8 +181,8 @@ module symmetries
                                 if(btest(ty, edgeB) .and. btest(ty, edgeA)) then !If both edges occupied, no sign
                                     cycle 
                                 else if(btest(ty, edgeB) .neqv. btest(ty, edgeA)) then !If only one edge occupied 
-                                    rowSt = (i-1)*2*Lx !First site on y-layer 'i' 
-                                    sign = sign * (-1)**popcnt( ibits( ty, rowst, 2*Lx-2 ) ) !Occupation of y-layer 'i'
+                                    rowSt =(i-1)*2*Lx !First site on y-layer 'i' 
+                                    sign = sign *(-1)**popcnt(ibits(ty, rowst, 2*Lx-2)) !Occupation of y-layer 'i'
                                 end if 
                             end do     
                         end if 
@@ -202,7 +202,7 @@ module symmetries
                             shift = ny * a1 + nx * a2  
                             phase = phase + exp(-ii * dot_product(k, shift)) * sign * char * signpg 
                         end if 
-                        if (t < s0) then !Representative is already in the list 
+                        if(t < s0) then !Representative is already in the list 
                             info = -1
                             return
                         end if
@@ -244,8 +244,8 @@ module symmetries
         t = sr 
         do i = 1, sites !Sign change due to reflection 
             if(btest(t, refl(i) - 1)) then 
-                ! if(i < refl(i)) sign = sign * (-1)**popcnt(ibits(t, i-1, refl(i) - 1)) 
-                sign = sign * (-1)**popcnt(ibits(t, 0, refl(i) - 1)) 
+                ! if(i < refl(i)) sign = sign *(-1)**popcnt(ibits(t, i-1, refl(i) - 1)) 
+                sign = sign *(-1)**popcnt(ibits(t, 0, refl(i) - 1)) 
                 t = ibclr(t, refl(i) - 1)
             end if 
         end do 
@@ -285,8 +285,8 @@ module symmetries
             t = sr 
             do i = 1, sites !Sign change due anticommutations resulting from rotation 
                 if(btest(t, c6(i) - 1)) then 
-                    ! if(i < c6(i)) sign = sign * (-1)**popcnt(ibits(t, i-1, c6(i) - 1)) 
-                    sign = sign * (-1)**popcnt(ibits(t, 0, c6(i) - 1)) 
+                    ! if(i < c6(i)) sign = sign *(-1)**popcnt(ibits(t, i-1, c6(i) - 1)) 
+                    sign = sign *(-1)**popcnt(ibits(t, 0, c6(i) - 1)) 
 
                     t = ibclr(t, c6(i) - 1)
                 end if 
@@ -301,35 +301,40 @@ module symmetries
     end subroutine c6n
 
 
-    subroutine translation2D(s0, s, sites, ntot, orbsize, orbit, orbits, tilted, nHel, Lx, Ly, char, signpg, a1, a2, xtransl, ytransl, k, phases, phase, info)
+    subroutine translation2D(par, geo, s0, s, orbit, orbits, ntot, nHel, char, signpg, a1, a2, k, phases, phase, info)
+    ! subroutine translation2D(s0, s, sites, ntot, orbsize, orbit, orbits, tilted, nHel, Lx, Ly, char, signpg, a1, a2, xtransl, ytransl, k, phases, phase, info)
 
         !If tilted == 0, swap input vectors a1 and a2 and set nHel = Ly 
         implicit none 
-        integer, intent(in) :: orbsize, sites, ntot, tilted, nHel, Lx, Ly
-        integer, intent(in) :: xtransl(2, sites), ytransl(2, sites)
+        type(sim_params), intent(in) :: par
+        type(geometry), intent(in) :: geo
+        integer, intent(in) :: ntot, nHel
+
         integer(kind=8), intent(in) :: s0, s
         double precision, intent(in) :: a1(2), a2(2), k(2), char, signpg
         integer, intent(out) :: info  
         integer, intent(inout) :: orbit
-        integer(kind=8), intent(inout) :: orbits(orbsize)
-        double complex, intent(inout) :: phases(orbsize), phase 
+        integer(kind=8), intent(inout) :: orbits(geo%orbsize)
+        double complex, intent(inout) :: phases(geo%orbsize), phase 
 
-        integer :: nx, ny, i, rowst, edgeA, edgeB, flag
-        integer(kind=8) :: t, tx, ty 
+        integer :: nx, ny, i, rowst, edgeA, edgeB, flag, lx, ly
+        integer(kind=8) :: t, tx, ty
         double precision :: shift(2), sign
 
+            lx = geo%l2
+            ly = geo%l1
             t = 0 
             tx = 0 
             ty = 0
             nx = 0
             ny = 0
-            info = 0 !On output: InDicates whether new state was found (info = 0) or state is already contained in list (info < 1)
+            info = 0 !On output: InDicates whether new state was found(info = 0) or state is already contained in list(info < 1)
             sign = 1.d0
             edgeA = 0
             edgeB = 0
             rowSt = 0
             flag  = 1 
-            ! !Include initial state (if not already in the list) to orbit 
+            ! !Include initial state(if not already in the list) to orbit 
             ! orbit = orbit + 1 
             
 
@@ -349,11 +354,11 @@ module symmetries
                 end if  
                 
                 if(nhel == 1) then !Single helix, quasi-1D
-                    edgeB = sites-1 !Last B site in helix
-                    edgeA = sites-2 !Last A site in helix
+                    edgeB = geo%sites-1 !Last B site in helix
+                    edgeA = geo%sites-2 !Last A site in helix
                     if(btest(tx, edgeB) .neqv. btest(tx, edgeA)) then !If only one edge occupied 
                         rowSt = 0 !First site 
-                        sign = sign * (-1)**popcnt( ibits( tx, rowst, sites - 2 ) ) !Occupation of rest of helix 
+                        sign = sign *(-1)**popcnt(ibits(tx, rowst, geo%sites - 2 ) ) !Occupation of rest of helix 
                     end if 
                 else !More than one helix
                     do i = 1, nHel!Ly !Calculate anticommutation sign from x-translations 
@@ -362,14 +367,14 @@ module symmetries
                         if(btest(tx, edgeB) .and. btest(tx, edgeA)) then !If both edges occupied, no sign
                             cycle 
                         else if(btest(tx, edgeB) .neqv. btest(tx, edgeA)) then !If only one edge occupied 
-                            rowSt = (i-1)*2*Lx !First site on y-layer 'i' 
-                            sign = sign * (-1)**popcnt(ibits(tx, rowst, 2*Lx-2)) !Occupation of y-layer 'i'
+                            rowSt =(i-1)*2*Lx !First site on y-layer 'i' 
+                            sign = sign *(-1)**popcnt(ibits(tx, rowst, 2*Lx-2)) !Occupation of y-layer 'i'
                         end if 
                     end do 
                 end if 
 
-                do i = 1, sites
-                    call mvbits(tx, xtransl(1,i)-1, 1, t, xtransl(2,i)-1) !Translate one site in x direction
+                do i = 1, geo%sites
+                    call mvbits(tx, geo%xtransl(1,i)-1, 1, t, geo%xtransl(2,i)-1) !Translate one site in x direction
                 end do
 
                 if(nHel == 1) then !No y-translations for single helix
@@ -397,21 +402,21 @@ module symmetries
                     do ny = 1, Ly 
                         ty    = t
                         shift = ny * a1 + nx * a2  
-                        sign  = sign * ((-1)**(ntot-popcnt(ibits(ty, 2*Lx*(nHel-1), 2*Lx))))**popcnt(ibits(ty, 2*Lx*(nHel-1), 2*Lx)) 
-                        if(tilted == 1) then !Minus sign from re-ordering after y-translation. Only if cluster is tilted.  
+                        sign  = sign *((-1)**(ntot-popcnt(ibits(ty, 2*Lx*(nHel-1), 2*Lx))))**popcnt(ibits(ty, 2*Lx*(nHel-1), 2*Lx)) 
+                        if(par%tilted == 1) then !Minus sign from re-ordering after y-translation. Only if cluster is tilted.  
                             do i = 1, nHel
                                 edgeB = i*2*Lx-1 !Last B site on y-layer 'i'
                                 edgeA = i*2*Lx-2 !Last A site on y-layer 'i'
                                 if(btest(ty, edgeB) .and. btest(ty, edgeA)) then !If both edges occupied, no sign
                                     cycle 
                                 else if(btest(ty, edgeB) .neqv. btest(ty, edgeA)) then !If only one edge occupied 
-                                    rowSt = (i-1)*2*Lx !First site on y-layer 'i' 
-                                    sign = sign * (-1)**popcnt( ibits( ty, rowst, 2*Lx-2 ) ) !Occupation of y-layer 'i'
+                                    rowSt =(i-1)*2*Lx !First site on y-layer 'i' 
+                                    sign = sign *(-1)**popcnt(ibits(ty, rowst, 2*Lx-2)) !Occupation of y-layer 'i'
                                 end if 
                             end do     
                         end if 
-                        do i = 1, sites 
-                            call mvbits(ty, ytransl(1,i)-1, 1, t, ytransl(2,i)-1)
+                        do i = 1, geo%sites 
+                            call mvbits(ty, geo%ytransl(1,i)-1, 1, t, geo%ytransl(2,i)-1)
                         end do
                         orbit = orbit + 1 
                         flag  = 1 
@@ -421,17 +426,7 @@ module symmetries
                                 orbit = orbit - 1 
                                 phases(i) = phases(i) + exp(-ii * dot_product(k, shift)) * sign * char * signpg 
 
-                                if(t == s0) phase = phase + exp(-ii * dot_product(k, shift)) * sign * char * signpg 
-                                if(s0 == 511 .and. t == s0) then 
-                                    print*, 'trans2D.1'
-
-                                    print* ,i, 'orbit position'
-                                    print* ,sign, 'sign'
-                                    print* ,signpg, 'signpg'    
-                                    print* ,char, 'character'
-                                    print* , exp(-ii * dot_product(k, shift)) * sign * char * signpg , ' phi+'
-                                    print* ,phase, 'phase'
-                                end if
+                                if(t == s0) phase = phase + exp(-ii * dot_product(k, shift)) * sign * char * signpg                             
                                 exit 
                             end if 
                         end do 
@@ -439,21 +434,11 @@ module symmetries
                             orbits(orbit) = t 
                             phases(orbit) = phases(orbit) + exp(-ii * dot_product(k, shift)) * sign * char * signpg 
                             if(t == s0) phase = phase + exp(-ii * dot_product(k, shift)) * sign * char * signpg
-                            if(s0 == 511 .and. t == s0) then 
-                                print*, 'trans2D.2'
-                                    
-                                print* ,orbit, 'orbit position'
-                                print* ,sign, 'sign'
-                                print* ,signpg, 'signpg'    
-                                print* ,char, 'character'
-                                print* , exp(-ii * dot_product(k, shift)) * sign * char * signpg , ' phi+'
-                                print* ,phase, 'phase'
-                            end if
                         end if 
                 
         
 
-                        if (t < s0) then !Representative is already in the list 
+                        if(t < s0) then !Representative is already in the list 
                             info = -1
                             return
                         end if
@@ -505,7 +490,7 @@ module symmetries
                 edgeA = n-2 !Last A site in helix
                 if(btest(tx, edgeB) .neqv. btest(tx, edgeA)) then !If only one edge occupied 
                     rowSt = 0 !First site 
-                    signt = signt * (-1)**popcnt( ibits( tx, rowst, n-2 ) ) !Occupation of rest of helix 
+                    signt = signt *(-1)**popcnt(ibits(tx, rowst, n-2 ) ) !Occupation of rest of helix 
                 end if 
             else
                 do i = 1, nHel !Calculate anticommutation sign from x-translations 
@@ -514,8 +499,8 @@ module symmetries
                     if(btest(tx, edgeB) .and. btest(tx, edgeA)) then !If both edges occupied, no sign
                         cycle 
                     else if(btest(tx, edgeB) .neqv. btest(tx, edgeA)) then !If only one edge occupied 
-                        rowSt = (i-1)*2*Lx !First site on y-layer 'i' 
-                        signt = signt * (-1)**popcnt( ibits( tx, rowst, 2*Lx-2 ) ) !Occupation of y-layer 'i'
+                        rowSt =(i-1)*2*Lx !First site on y-layer 'i' 
+                        signt = signt *(-1)**popcnt(ibits(tx, rowst, 2*Lx-2)) !Occupation of y-layer 'i'
                     end if 
                 end do 
             end if 
@@ -523,7 +508,7 @@ module symmetries
                 call mvbits(tx, xtransl(1,i)-1, 1, t, xtransl(2,i)-1)      
             end do
             if(nHel == 1) then 
-                if (t < r) then
+                if(t < r) then
                     sign = signt 
                     r    = t
                     l1   = ny
@@ -533,17 +518,17 @@ module symmetries
                 do ny = 1, Ly 
                     ty = t
                     if(nhel == 1) then !Single helix
-                        signt = signt * ((-1)**(ntot-popcnt( ibits( ty, n - tilt, tilt ) ) ))**popcnt( ibits( ty, n - tilt, tilt ) ) 
+                        signt = signt *((-1)**(ntot-popcnt(ibits(ty, n - tilt, tilt ) ) ))**popcnt(ibits(ty, n - tilt, tilt ) ) 
                     else 
-                        signt = signt * ((-1)**(ntot-popcnt( ibits( ty, 2*Lx*(nHel-1), 2*Lx ) ) ))**popcnt( ibits( ty, 2*Lx*(nHel-1), 2*Lx ) ) 
+                        signt = signt *((-1)**(ntot-popcnt(ibits(ty, 2*Lx*(nHel-1), 2*Lx)) ))**popcnt(ibits(ty, 2*Lx*(nHel-1), 2*Lx)) 
                         do i = 1, nHel
                             edgeB = i*2*Lx-1 !Last B site on y-layer 'i'
                             edgeA = i*2*Lx-2 !Last A site on y-layer 'i'
                             if(btest(ty, edgeB) .and. btest(ty, edgeA)) then !If both edges occupied, no sign
                                 cycle 
                             else if(btest(ty, edgeB) .neqv. btest(ty, edgeA)) then !If only one edge occupied 
-                                rowSt = (i-1)*2*Lx !First site on y-layer 'i' 
-                                signt = signt * (-1)**popcnt( ibits( ty, rowst, 2*Lx-2 ) ) !Occupation of y-layer 'i'
+                                rowSt =(i-1)*2*Lx !First site on y-layer 'i' 
+                                signt = signt *(-1)**popcnt(ibits(ty, rowst, 2*Lx-2)) !Occupation of y-layer 'i'
                             end if 
                         end do     
                     end if 
@@ -551,7 +536,7 @@ module symmetries
                     do i = 1, n
                         call mvbits(ty, ytransl(1,i)-1, 1, t, ytransl(2,i)-1)
                     end do
-                    if (t < r) then
+                    if(t < r) then
                         sign = signt 
                         r    = t
                         l1   = ny
@@ -607,8 +592,8 @@ module symmetries
                 if(btest(tx, edgeB) .and. btest(tx, edgeA)) then 
                     cycle 
                 else if(btest(tx, edgeB) .neqv. btest(tx, edgeA)) then 
-                    rowSt = (i-1)*2*Lx
-                    signt = signt * (-1)**popcnt( ibits( tx, rowst, 2*Lx-2 ) )  
+                    rowSt =(i-1)*2*Lx
+                    signt = signt *(-1)**popcnt(ibits(tx, rowst, 2*Lx-2))  
                 end if 
             end do      
 
@@ -618,11 +603,11 @@ module symmetries
 
             do ny = 1, Ly
                 ty    = t
-                signt = signt * ((-1)**(ntot-popcnt( ibits( ty, 2*Lx*(Ly-1), 2*Lx ) ) ))**popcnt( ibits( ty, 2*Lx*(Ly-1), 2*Lx ) ) 
+                signt = signt *((-1)**(ntot-popcnt(ibits(ty, 2*Lx*(Ly-1), 2*Lx)) ))**popcnt(ibits(ty, 2*Lx*(Ly-1), 2*Lx)) 
                 do i = 1, n
                     call mvbits(ty, ytransl(1,i)-1, 1, t, ytransl(2,i)-1)       
                 end do
-                if (t < r) then
+                if(t < r) then
                     sign = signt 
                     r    = t
                     l1   = nx
@@ -670,7 +655,7 @@ module symmetries
             if(nx == 1) tx = s 
             if(nx > 1) tx = t
             call xtranslate(tx, nHel, n, Lx, xtransl, signt, t)
-            if (t < r) then !New rep found
+            if(t < r) then !New rep found
                 sign = signt !Update sign 
                 r    = t
                 l1   = 0
@@ -681,7 +666,7 @@ module symmetries
                     ty = t                
                     !Note, 'signt' and 't' are carried on through out all translations. 
                     call ytranslate(ty, nHel, tilt, n, Lx, ytransl, signt, t)
-                    if (t < r) then
+                    if(t < r) then
                         sign = signt 
                         r    = t
                         l1   = ny
@@ -736,7 +721,7 @@ module symmetries
                 if(nx == 1) tx = s 
                 if(nx > 1) tx = t
                 call xtranslate(tx, Ly, n, Lx, xtransl, signt, t)
-                if (t < r) then !New rep found
+                if(t < r) then !New rep found
                     sign = signt !Update sign 
                     r    = t
                     l1   = 0
@@ -747,7 +732,7 @@ module symmetries
                     ty = t                
                     !Note, 'signt' and 't' are carried on through out all translations. 
                     call ytranslate(ty, Ly, -1, n, Lx, ytransl, signt, t)
-                    if (t < r) then
+                    if(t < r) then
                         sign = signt 
                         r    = t
                         l1   = nx
@@ -826,7 +811,7 @@ module symmetries
             edgeA = n-2 !Last A site in helix
             if(btest(s, edgeB) .neqv. btest(s, edgeA)) then !If only one edge occupied 
                 rowSt = 0 !First site 
-                sign = sign * (-1)**popcnt( ibits( s, rowst, n-2 ) ) !Occupation of rest of helix 
+                sign = sign *(-1)**popcnt(ibits(s, rowst, n-2 ) ) !Occupation of rest of helix 
             end if 
         else
             do i = 1, nHel !Calculate anticommutation sign from x-translations 
@@ -835,8 +820,8 @@ module symmetries
                 if(btest(s, edgeB) .and. btest(s, edgeA)) then !If both edges occupied, no sign
                     cycle 
                 else if(btest(s, edgeB) .neqv. btest(s, edgeA)) then !If only one edge occupied 
-                    rowSt = (i-1)*2*Lx !First site on y-layer 'i' 
-                    sign = sign * (-1)**popcnt(ibits(s, rowst, 2*Lx-2)) !Occupation of y-layer 'i'
+                    rowSt =(i-1)*2*Lx !First site on y-layer 'i' 
+                    sign = sign *(-1)**popcnt(ibits(s, rowst, 2*Lx-2)) !Occupation of y-layer 'i'
                 end if 
             end do 
         end if 
@@ -864,9 +849,9 @@ module symmetries
         t = 0
         ntot = popcnt(s)
         if(nhel == 1) then !Single helix
-            sign = sign * ((-1)**(ntot-popcnt(ibits(s, n - tilt, tilt))))**popcnt(ibits(s, n - tilt, tilt)) 
+            sign = sign *((-1)**(ntot-popcnt(ibits(s, n - tilt, tilt))))**popcnt(ibits(s, n - tilt, tilt)) 
         else 
-            sign = sign * ((-1)**(ntot-popcnt(ibits(s, 2*Lx*(nHel-1), 2*Lx))))**popcnt(ibits(s, 2*Lx*(nHel-1), 2*Lx)) 
+            sign = sign *((-1)**(ntot-popcnt(ibits(s, 2*Lx*(nHel-1), 2*Lx))))**popcnt(ibits(s, 2*Lx*(nHel-1), 2*Lx)) 
             if(tilt < 0) goto 11
             do i = 1, nHel
                 edgeB = i*2*Lx-1 !Last B site on y-layer 'i'
@@ -874,8 +859,8 @@ module symmetries
                 if(btest(s, edgeB) .and. btest(s, edgeA)) then !If both edges occupied, no sign
                     cycle 
                 else if(btest(s, edgeB) .neqv. btest(s, edgeA)) then !If only one edge occupied 
-                    rowSt = (i-1)*2*Lx !First site on y-layer 'i' 
-                    sign = sign * (-1)**popcnt( ibits( s, rowst, 2*Lx-2 ) ) !Occupation of y-layer 'i'
+                    rowSt =(i-1)*2*Lx !First site on y-layer 'i' 
+                    sign = sign *(-1)**popcnt(ibits(s, rowst, 2*Lx-2)) !Occupation of y-layer 'i'
                 end if 
             end do     
             11 continue 
@@ -894,7 +879,7 @@ module symmetries
         integer(kind=8), intent(in) :: s !original state
         integer, intent(in) :: n, nHel, tilt, Lx, Ly, refl(n), xtransl(2,n), ytransl(2,n)     
         double precision, intent(in) :: p
-        integer(kind=8), intent(inout) :: r !potential rep (r<=s) 
+        integer(kind=8), intent(inout) :: r !potential rep(r<=s) 
         integer, intent(inout) :: l1, l2 
         double precision, intent(inout) :: sign !If 'r' remains unchanged, previous sign remains unchanged. Otherwise updated. 
 
@@ -905,7 +890,7 @@ module symmetries
         signp = 1
         signt = 1
         call reflect(s, s, n, refl, signp, info, t) ! compare to s, reflect s onto t
-        if (t < r) then !compare to previously identified potenital representative 'r' 
+        if(t < r) then !compare to previously identified potenital representative 'r' 
             sign = signp * p 
             r    = t
             l1   = 0 !No shifts for k=0
@@ -915,7 +900,7 @@ module symmetries
             tx = t 
             call xtranslate(tx, nHel, n, Lx, xtransl, signt, t)
             if(nHel == 1) then 
-                if (t < r) then
+                if(t < r) then
                     sign = signt * p * signp  
                     r    = t
                     l1   = 0
@@ -925,7 +910,7 @@ module symmetries
                 do ny = 1, Ly 
                     ty = t               
                     call ytranslate(ty, nHel, tilt, n, Lx, ytransl, signt, t)                
-                    if (t < r) then
+                    if(t < r) then
                         sign = signt * signp * p
                         r    = t
                         l1   = ny
@@ -943,7 +928,7 @@ module symmetries
         integer(kind=8), intent(in) :: s !original state
         integer, intent(in) :: n, nHel, tilt, nrot, Lx, Ly, c6(n), xtransl(2,n), ytransl(2,n)     
         double precision, intent(in) :: eval
-        integer(kind=8), intent(inout) :: r !potential rep (r<=s) 
+        integer(kind=8), intent(inout) :: r !potential rep(r<=s) 
         integer, intent(inout) :: l1, l2
         double precision, intent(inout) :: sign !If 'r' remains unchanged, previous sign remains unchanged. Otherwise updated. 
 
@@ -954,7 +939,7 @@ module symmetries
         signrot = 1
         signt   = 1 
         call c6n(s, s, n, nrot, c6, signrot, info, t) ! compare to s, reflect s onto t
-        if (t < r) then !compare to previously identified potenital representative 'r' 
+        if(t < r) then !compare to previously identified potenital representative 'r' 
             sign = signrot * eval 
             r    = t
             l1   = 0 !No shifts for k=0
@@ -964,7 +949,7 @@ module symmetries
             tx = t 
             call xtranslate(tx, nHel, n, Lx, xtransl, signt, t)
             if(nHel == 1) then 
-                if (t < r) then
+                if(t < r) then
                     sign = signt * eval * signrot  
                     r    = t
                     l1   = 0
@@ -974,7 +959,7 @@ module symmetries
                 do ny = 1, Ly 
                     ty = t               
                     call ytranslate(ty, nHel, tilt, n, Lx, ytransl, signt, t)                
-                    if (t < r) then
+                    if(t < r) then
                         sign = signt * eval * signrot
                         r    = t
                         l1   = ny

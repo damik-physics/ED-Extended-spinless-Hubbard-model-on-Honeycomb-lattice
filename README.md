@@ -9,7 +9,7 @@ This project computes the **exact many-body spectrum and eigenstates** of the **
   - **Density-density correlation function**  
   - **Charge and spin correlations**  
   <!-- Extension to include entanglement entropy, level spacing and inverse partition ratio is under work. -->
-- **Symmetrization under the** $C_{6v}$ **space group** (translations, rotations, and mirror symmetries)
+- **Symmetrization under the** $C_{6v}$ **space group**(translations, rotations, and mirror symmetries)
 - **Hamiltonian diagonalization within individual irreducible representations**  
 - **Parallelization with OpenMP** for improved performance  
 
@@ -81,8 +81,8 @@ All files should be placed in the **same directory** before compilation.
 
 ### **Prerequisites**  
 Ensure you have:  
-- A **Fortran compiler** (e.g., `gfortran`, Intel `ifort/ifx`, or `flang`)  
-- **OpenMP** support (for parallelization)  
+- A **Fortran compiler**(e.g., `gfortran`, Intel `ifort/ifx`, or `flang`)  
+- **OpenMP** support(for parallelization)  
 - **Make** installed  
 
 ### **Compiling the Code**  
@@ -121,4 +121,4 @@ python3 src/python/analyze_runs.py output/run_YYYYMMDD_HHMMSS/
 Add support for:
 - entanglement entropy
 - Level spacing statistics
-- Inverse participation ratio (IPR)
+- Inverse participation ratio(IPR)

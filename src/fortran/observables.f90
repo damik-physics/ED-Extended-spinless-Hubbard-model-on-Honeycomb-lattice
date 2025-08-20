@@ -1,4 +1,5 @@
 module observables
+    use types
     use functions 
     use file_utils
     use corr_writer
@@ -16,35 +17,31 @@ module observables
     end interface representative
 
     contains 
-
-subroutine current_correlations(dir, ti, tilted, nHel, tilt, threads, conf, degflag, full, feast, mkl, arpack, symm, sites, l2, l1, ucx, ucy, k1, k2, id, mir, rot, nDis, ndeg, refbonds, cntrA, cntrB, unit, dim, alattice, blattice, xyA, xyB, xtransl, ytransl, refl, c6, basis, v1, v2, dis, nnnVec, norm, eigstate, eigstate_dc)
-
-    implicit none 
     
-    integer,                       intent(in) :: ti, tilted, nHel, tilt, threads, conf, degflag, full, feast, mkl, arpack, symm, sites, l2, l1, ucx, ucy, k1, k2, nDis, ndeg, refbonds, cntrA, cntrB, unit
-    integer(kind=8),               intent(in) :: dim
-    integer,          allocatable, intent(in) :: alattice(:,:), blattice(:,:), xyA(:,:), xyB(:,:), xtransl(:,:), ytransl(:,:), refl(:,:), c6(:) 
-    integer(kind=8),  allocatable, intent(in) :: basis(:)
-    double precision,              intent(in) :: v1, v2, dis, nnnVec(2,3), id, mir(6), rot(5)
-    double precision, allocatable, intent(in) :: norm(:), eigstate(:,:)
-    double complex,   allocatable, intent(in) :: eigstate_dc(:,:)
-    character(len=*),              intent(in) :: dir
+subroutine current_correlations(par, geo, out, st, thr)
+    implicit none 
+    type(sim_params), intent(in) :: par
+    type(geometry), intent(in) :: geo
+    type(output), intent(in) :: out
+    type(system_state), intent(in) :: st
+    type(thread_params), intent(in) :: thr
+    character(len=*), parameter :: dir = out%outdir
 
     integer                       :: refbond = 0, case = 0, nbonds = 0, numthrds = 0, thread = 0, i = 0, j = 0, nrefb = 0, l11 = 0, l22 = 0
     integer,          allocatable :: site_coords(:,:), lattice(:,:)
     double precision              :: current = 0.d0 
     double precision, allocatable :: bondcurrent(:)
     character                     :: sl*1, fname1*512, fname2*512 
-    logical                       :: append 
     class(*)                      :: gs(:)
-    !$omp threadprivate(refbond, j, nrefb, current, bondcurrent, sl)
     
-    if(ti == 1 .and. tilted == 1) then 
-        l11 = l2
-        l22 = l1 
+    !$omp threadprivate(par%refbond, j, nrefb, current, bondcurrent, sl)
+    
+    if(ti == 1 .and. par%tilted == 1) then 
+        l11 = geo%l2
+        l22 = geo%l1 
     else 
-        l11 = ucx 
-        l22 = ucy 
+        l11 = par%ucx 
+        l22 = par%ucy 
     end if 
 
     print*,'Calculate current current correlations...'
@@ -54,56 +51,59 @@ subroutine current_correlations(dir, ti, tilted, nHel, tilt, threads, conf, degf
             sl = "A"
             fname1 = "current_A"
             fname2 = "bond_current_A"
-            nbonds = cntrA
+            nbonds = geo%cntrA
             if(allocated(lattice)) deallocate(lattice)
             if(allocated(site_coords)) deallocate(site_coords)
             allocate(lattice(5, nbonds))
             allocate(site_coords(4, nbonds))
-            lattice     = alattice
-            site_coords = xyA
+            lattice     = geo%alattice
+            site_coords = geo%xyA
         else if(i == 2) then 
             sl = "B"
             fname1 = "current_B"
             fname2 = "bond_current_B"
-            nbonds = cntrB
+            nbonds = geo%cntrB
             if(allocated(lattice)) deallocate(lattice)
             if(allocated(site_coords)) deallocate(site_coords)
             allocate(lattice(5, nbonds))
             allocate(site_coords(4, nbonds))
-            lattice     = blattice
-            site_coords = xyB
+            lattice     = geo%blattice
+            site_coords = geo%xyB
         end if 
 
-        if(refbonds > 0)  nrefb = refbonds 
-        if(refbonds == 0) nrefb = nbonds
+        if(par%refbonds > 0)  nrefb = par%refbonds 
+        if(par%refbonds == 0) nrefb = nbonds
 
         if(allocated(gs)) deallocate(gs)
-        allocate(gs(dim))
+        allocate(gs(geo%dim))
         if(ti == 1 .and. ((k1 .ne. 0) .or. (k2 .ne. 0))) then 
-            gs   = eigstate_dc(1:dim, 1)
+            gs   = diag%eigstate_dc(1:geo%dim, 1)
             case = 2
         else 
-            gs   = eigstate(1:dim, 1)
+            gs   = diag%eigstate(1:geo%dim, 1)
             case = 1
         end if
 
-        !$ call omp_set_num_threads(threads)
-        !$omp parallel do default(firstprivate) shared(sites, particles, dim, basis) num_threads(threads)
+        !$ call omp_set_num_threads(thrd%num_threads)
+        !$omp parallel do default(firstprivate) shared(geo%sites, geo%particles, geo%dim, geo%basis_states) num_threads(thrd%num_threads)
         do j = 1, nrefb
             refbond = lattice(4,j)       
             !$ numthrds = omp_get_num_threads()
             !$ thread = omp_get_thread_num()
             select case(case)
-            case(1) ! Real eigenstates 
-                if(tilted==0) call current_cf(t, dim, sites, l11, l22, ti, symm, id, mir, rot, basis, lattice, xtransl, ytransl, refl, c6, nbonds, refbond, gs, nnnVec, norm, bondcurrent, current)
-                if(tilted==1) call current_cf(nHel, tilt, t, dim, sites, l11, l22, ti, symm, id, mir, rot, basis, lattice, xtransl, ytransl, refl, c6, nbonds, refbond, gs, nnnVec, norm, bondcurrent, current)
+            case(1) ! Real eigenstates
+                ! Regular (rectangular) cluster  
+                if(par%tilted==0) call current_cf(par%t, geo%dim, geo%sites, l11, l22, par%ti, par%symm, geo%id, geo%mir, geo%rot, geo%basis_states, lattice, geo%xtransl, geo%ytransl, geo%refl, geo%c6, nbonds, refbond, gs, geo%nnnVec, geo%norm, bondcurrent, current)
+                ! Tilted cluster
+                if(par%tilted==1) call current_cf(geo%nHel, geo%tilt, par%t, geo%dim, geo%sites, l11, l22, par%ti, par%symm, geo%id, geo%mir, geo%rot, geo%basis_states, lattice, geo%xtransl, geo%ytransl, geo%refl, geo%c6, nbonds, refbond, gs, geo%nnnVec, geo%norm, bondcurrent, current)
             case(2) ! Complex eigenstates
-                call current_cf(tilted, nHel, tilt, k1, k2, t, dim, sites, l11, l22, basis, lattice, site_coords, xtransl, ytransl, nbonds, refbond, gs, nnnVec, norm, bondcurrent, current)
+                ! Regular and tilted cluster
+                call current_cf(par%tilted, geo%nHel, geo%tilt, k1, k2, t, geo%dim, geo%sites, l11, l22, geo%basis_states, lattice, site_coords, geo%xtransl, geo%ytransl, nbonds, refbond, gs, geo%nnnVec, geo%norm, bondcurrent, current)
             end select
             
-            ! Store results
-            call append_corr_csv(fname1, dir, ti, ndis, k1, k2, conf, v1, v2, current)
-            call append_corr_csv(fname2, dir, ti, ndis, k1, k2, conf, v1, v2, bondcurrent)
+            ! Store results in csv file  
+            call append_corr_csv(fname1, dir, par%ti, par%ndis, st%k1, st%k2, st%conf, st%v1, st%v2, current)
+            call append_corr_csv(fname2, dir, par%ti, par%ndis, st%k1, st%k2, st%conf, st%v1, st%v2, bondcurrent)
             
         end do !Loop over bonds 
         !$omp end parallel do 
@@ -117,7 +117,7 @@ end subroutine current_correlations
 subroutine current_reg_dp(t, dim, sites, Lx, Ly, ti, symm, id, mir, rot, basis, bsites, xtransl, ytransl, refl, c6, nbonds, refbond, psi, nnnVec, norm, bcurrent, current)
     implicit none
     integer, intent(in) :: nbonds, refbond, sites, Lx, Ly, ti, symm
-    integer, intent(in) :: bsites(5,nbonds), xtransl(2, sites), ytransl(2, sites), refl(6, sites), c6(sites)
+    integer, intent(in) :: bsites(5,nbonds), xtransl(2, sites), ytransl(2, sites), refl(6, sites), c6(geo%sites)
     integer(kind=8), intent(in) :: dim, basis(dim)
     double precision, intent(in) :: id, mir(6), rot(5), t, psi(dim), nnnVec(2, 3), norm(dim) 
     double precision, intent(out) :: current
@@ -234,7 +234,7 @@ subroutine current_tilted_dp(nHel, tilt, t, dim, sites, Lx, Ly, ti, symm, id, mi
     ! Calculates current-current structure factor (current) and local current current correlations (bondcurrent) on the sublattice for a given reference bond.
     ! This subroutine is used for the tilted case.
     implicit none
-    integer,                       intent(in)  :: nHel, tilt, nbonds, refbond, sites, Lx, Ly, ti, symm, bsites(5,nbonds), xtransl(2, sites), ytransl(2, sites), refl(6, sites), c6(sites)
+    integer,                       intent(in)  :: nHel, tilt, nbonds, refbond, sites, Lx, Ly, ti, symm, bsites(5,nbonds), xtransl(2, sites), ytransl(2, sites), refl(6, sites), c6(geo%sites)
     integer(kind=8),               intent(in)  :: dim, basis(dim)
     double precision,              intent(in)  :: id, mir(6), rot(5), t, psi(dim), nnnVec(2, 3), norm(dim) 
     double precision,              intent(out) :: current
@@ -786,7 +786,7 @@ subroutine reflect(s0, s, sites, refl, sign, info, sr)
   
     integer(kind=8), intent(in) :: s0, s
     integer, intent(in) :: sites 
-    integer, intent(in) :: refl(sites)
+    integer, intent(in) :: refl(geo%sites)
     integer(kind=8), intent(out) :: sr !Reflected state 
     integer, intent(out) :: sign, info 
 
@@ -825,7 +825,7 @@ subroutine c6n(s0, s, sites, n, c6, sign, info, sr)
   
     integer(kind=8), intent(in) :: s0, s
     integer, intent(in) :: sites, n  
-    integer, intent(in) :: c6(sites)
+    integer, intent(in) :: c6(geo%sites)
     integer(kind=8), intent(out) :: sr !Rotated state 
     integer, intent(out) :: sign, info 
 

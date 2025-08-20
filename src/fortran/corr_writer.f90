@@ -2,12 +2,14 @@ module corr_writer
     implicit none
     private
 
-    public :: append_corr_csv_dp, append_corr_csv_dc, append_corr_csv
-
     interface append_corr_csv
         module procedure append_corr_csv_dp
         module procedure append_corr_csv_dc
     end interface append_corr_csv
+    
+    public :: append_corr_csv_dp, append_corr_csv_dc, append_corr_csv
+
+
     
 contains
 

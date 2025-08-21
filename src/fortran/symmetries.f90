@@ -1,13 +1,14 @@
 module symmetries
-    
+    ! Module for handling symmetries in the C6v point group and translations in a 2D lattice. 
+    ! This module provides functions to calculate characters, perform translations, and find representatives of states under symmetries.
     use params
     use functions
     use types
     implicit none
 
     contains 
-
-
+    
+    
     subroutine characters(symm, irrep, geo)
         !---------------------------------------!
         !            Character table            !
@@ -73,8 +74,8 @@ module symmetries
             geo%rot(2) = -1
             geo%rot(4) = -1
             geo%rot(3) = +2
+            end if
         end if
-    end if
 
     end subroutine characters
 
@@ -214,91 +215,6 @@ module symmetries
             if(t .ne. s ) stop
 
     end subroutine translation
-
-    ! subroutine reflect(s0, s, sites, refl, sign, info, sr)
-
-    !     implicit none
-
-    !     integer(kind=8), intent(in) :: s0, s
-    !     integer, intent(in) :: sites 
-    !     integer, intent(in) :: refl(sites)
-    !     integer(kind=8), intent(out) :: sr !Reflected state 
-    !     double precision, intent(out) :: sign
-    !     integer, intent(out) :: info 
-
-    !     integer(kind=8) :: t = 0
-    !     integer :: i = 0, flag = 0
-
-    !     i = 0
-    !     t = 0
-    !     sr = 0 
-    !     sign = 1 
-    !     flag = 0 
-    !     info = 0
-        
-    !     do i = 1, sites  !Reflect state 
-    !         call mvbits(s, i - 1, 1, sr, refl(i) - 1)
-    !     end do
-
-    !     t = sr 
-    !     do i = 1, sites !Sign change due to reflection 
-    !         if(btest(t, refl(i) - 1)) then 
-    !             ! if(i < refl(i)) sign = sign *(-1)**popcnt(ibits(t, i-1, refl(i) - 1)) 
-    !             sign = sign *(-1)**popcnt(ibits(t, 0, refl(i) - 1)) 
-    !             t = ibclr(t, refl(i) - 1)
-    !         end if 
-    !     end do 
-
-    !     if(sr < s0) info = - 1 !Reflected state is already contained
-        
-    !     return  
-
-    ! end subroutine reflect
-
-    ! subroutine c6n(s0, s, sites, n, c6, sign, info, sr)
-
-    !     implicit none
-    
-    !     integer(kind=8), intent(in) :: s0, s
-    !     integer, intent(in) :: sites, n  
-    !     integer, intent(in) :: c6(sites)
-    !     integer(kind=8), intent(out) :: sr !Rotated state 
-    !     integer, intent(out) :: info 
-    !     double precision, intent(out) :: sign 
-
-    !     integer(kind=8) :: t = 0, si = 0
-    !     integer :: i = 0, j = 0
-
-    !     i = 0
-    !     t = 0
-    !     sr = 0 
-    !     si = s
-    !     sign = 1 
-    !     info = 0
-
-    !     do j = 1, n !Number of subsequent C6 rotations 
-    !         if(j > 1) si = sr !If more than one C6 rotation, start with rotated state from previous rotation 
-    !         do i = 1, sites  !Rotate state 
-    !             call mvbits(si, i - 1, 1, sr, c6(i) - 1)
-    !         end do
-    !         t = sr 
-    !         do i = 1, sites !Sign change due anticommutations resulting from rotation 
-    !             if(btest(t, c6(i) - 1)) then 
-    !                 ! if(i < c6(i)) sign = sign *(-1)**popcnt(ibits(t, i-1, c6(i) - 1)) 
-    !                 sign = sign *(-1)**popcnt(ibits(t, 0, c6(i) - 1)) 
-
-    !                 t = ibclr(t, c6(i) - 1)
-    !             end if 
-    !         end do 
-
-    !     end do 
-
-    !     if(sr < s0) info = - 1 !Rotated state is already contained
-    
-    !     return  
-    
-    ! end subroutine c6n
-
 
     subroutine translation2D(par, geo, s0, s, orbit, orbits, ntot, nHel, char, signpg, a1, a2, k, phases, phase, info)
         !Compares translated state to initially tested basis state, NOT the reflected or rotated state. Does not check for phase=0.
@@ -845,7 +761,6 @@ module symmetries
         sy = t
 
     end subroutine ytranslate
-
 
 
 end module symmetries

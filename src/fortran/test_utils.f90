@@ -15,7 +15,6 @@ module test_utils
     end interface check_matrix
 
     contains 
-
     
     subroutine check_spectrum_dp(dim, nnz, nev, nest, energies, eigstate, ndeg, rc, mat)
         ! Runs sanity checks on the spectrum of eigenvalues and real eigenstates. 
@@ -300,7 +299,6 @@ module test_utils
         return 
 
     end subroutine check_orthogonal_dc
-
 
     subroutine check_symmetry(symmetric, dim, nz, rc, ham)
 

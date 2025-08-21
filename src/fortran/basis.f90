@@ -1,4 +1,5 @@
-module basis ! Module for defining the basis for the extended Hubbard model on the honeycomb lattice.
+module basis 
+    ! Module for defining the basis for the extended Hubbard model on the honeycomb lattice.
     use types
     use params
     use functions
@@ -7,8 +8,6 @@ module basis ! Module for defining the basis for the extended Hubbard model on t
     implicit none
     
     contains 
-
-
 
     subroutine make_basis(par, geo, st)
         

@@ -1,4 +1,5 @@
 module io_utils 
+    ! Module for input/output utilities in Fortran. 
     use types
     use functions 
     use file_utils
@@ -9,11 +10,9 @@ module io_utils
     interface save
         module procedure save_momenta, save_spectrum_dp, save_spectrum_dc, save_ham, save_currents, save_cdw
     end interface save
-
     interface params_string
         module procedure params_string, params_string_dd_cf
     end interface params_string
-
     interface printing
         module procedure print_configuration, &
                          print_parameters

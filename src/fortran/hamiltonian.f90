@@ -1,6 +1,5 @@
 module hamiltonian 
-
-    
+   
     use io_utils
     use basis
 
@@ -23,7 +22,9 @@ module hamiltonian
 
 
     subroutine generate_hamiltonian(par, geo, ham, out, thrd, k1, k2)
-        
+        ! Generates the Hamiltonian matrix based on the parameters and geometry in COO format. 
+        ! Diagonal and offdiagonal parts are generated separately.
+        ! The option of reading/writing the Hamiltonian from/to HDF5 format is under construction.
         use ham_hdf5_io
         implicit none 
 
@@ -46,27 +47,22 @@ module hamiltonian
         print*, 'Generating Hamiltonian ...'
         print*, ''
 
-        ! call loadham(type, out%unit, par%ti, geo%sites, ham%nOff, ham%nDi, ham%hamDi, ham%hamOff, ham%rcoff, ham%hamOff_dp, ham%hamOff_dc, ham%occ, exist1, exist2, exist3) ! Loads the sub-Hamiltonians from file if they exists. If not, sets corresponDing exist1, exist2, exist3 to .false. and generates the Hamiltonian.
-
-        if(.not.(exist1)) then ! Generates the off-diagonal part of the Hamiltonian if it does not exist yet.
-            if(par%ti == 0) then ! If no translation symmetry is used, generate the Hamiltonian with the standard hopping procedure
-                call generate_offdiag_coo(par%othrds, out%unit, geo%sites, geo%nnBonds, geo%bsites, geo%dim, geo%basis_states, ham%hamOff, ham%nOff) !offdiag_coo_i
-                ! call save_ham_hdf5_coo(out%outdir//"hamiltonians/ham.h5", "offdiag", ham%nOff, ham%nOff, ham%hamOff(1:,2:3), ham%hamOff(1:,1), overwrite=.false.)
-            else if(par%ti == 1 .and. k1 == 0 .and. k2 == 0) then ! If translation symmetry is used and k1 = k2 = 0, generate the Hamiltonian with the hopping procedure for irreducible representations
-                if(geo%id == 1) then ! Hopping for irreducible representations in 1D 
-                    call generate_offdiag_coo(par%othrds, par%tilted, geo%nHel, geo%tilt, geo%l2, geo%l1, par%ucx, par%ucy, geo%sites, geo%nnBonds, geo%dim, geo%basis_states, geo%bsites, geo%norm, geo%xtransl, geo%ytransl, par%symm, geo%id, geo%mir, geo%rot, geo%refl, geo%c6, par%t, ham%rcoff, ham%rcdi, geo%parities, geo%dplcts, ham%hamOff_dp, ham%hamDi_dp, ham%nOff, ham%nDiOff) !offdiag_coo_irrep
-                    ! call save_ham_hdf5_coo(out%outdir//"hamiltonians/ham.h5", "offdiag", ham%nOff, ham%nOff, ham%rcoff, ham%hamOff_dp, overwrite=.false.)
-                else if(geo%id == 2) then ! Hopping for irreducible representations in 2D(currently not supported)
-                    call generate_offdiag_coo(par%othrds, par%tilted, geo%nHel, geo%tilt, geo%l2, geo%l1, geo%sites, geo%nnBonds, geo%dim, geo%basis_states, geo%orbsize, geo%orbits2D, geo%phases2D, geo%norm2D, geo%bsites, geo%xtransl, geo%ytransl, par%symm, geo%mir, geo%rot, geo%refl, geo%c6, par%t, ham%rcoff, ham%rcdi, geo%parities, geo%dplcts, ham%hamOff_dc, ham%hamDi_off_dc, ham%nOff, ham%nDiOff) !offdiag_coo_irrep2d
-                    
-                    ! call save_ham_hdf5_coo(out%outdir//"hamiltonians/ham.h5", "offdiag", ham%nOff, ham%nOff, ham%rcoff, ham%hamOff_dc, overwrite=.false.)
-                    call generate_diag_coo(geo%sites, geo%dim, geo%bsites, geo%hexsites, geo%orbsize, geo%orbits2D, geo%phases2D, geo%norm2D, ham%hamDi_dc, ham%occ) !diag_coo_irrep2d
-                end if 
-            else if(par%ti == 1 .and.((k1 .ne. 0) .or.(k2 .ne. 0))) then ! If translation symmetry is used and k1 or k2 are not zero, generate the Hamiltonian with the hopping procedure for complex entries. Currently only supported for 1D irreps. 
-                call generate_offdiag_coo(out%unit, par%tilted, par%symm, geo%nHel, geo%tilt, geo%l2, geo%l1, par%ucx, par%ucy, geo%sites, geo%nnBonds, geo%dim, geo%basis_states, geo%bsites, geo%norm, geo%xtransl, geo%ytransl, geo%mir, geo%rot, geo%refl, geo%c6, par%t, k1, k2, ham%rcoff, ham%hamOff_dc, ham%nOff) !offdiag_coo_dc
+        if(par%ti == 0) then ! If no translation symmetry is used, generate the Hamiltonian with the standard hopping procedure
+            call generate_offdiag_coo(par%othrds, out%unit, geo%sites, geo%nnBonds, geo%bsites, geo%dim, geo%basis_states, ham%hamOff, ham%nOff) 
+            ! call save_ham_hdf5_coo(out%outdir//"hamiltonians/ham.h5", "offdiag", ham%nOff, ham%nOff, ham%hamOff(1:,2:3), ham%hamOff(1:,1), overwrite=.false.)
+        else if(par%ti == 1 .and. k1 == 0 .and. k2 == 0) then ! If translation symmetry is used and k1 = k2 = 0, generate the Hamiltonian with the hopping procedure for irreducible representations
+            if(geo%id == 1) then ! Hopping for irreducible representations in 1D 
+                call generate_offdiag_coo(par%othrds, par%tilted, geo%nHel, geo%tilt, geo%l2, geo%l1, par%ucx, par%ucy, geo%sites, geo%nnBonds, geo%dim, geo%basis_states, geo%bsites, geo%norm, geo%xtransl, geo%ytransl, par%symm, geo%id, geo%mir, geo%rot, geo%refl, geo%c6, par%t, ham%rcoff, ham%rcdi, geo%parities, geo%dplcts, ham%hamOff_dp, ham%hamDi_dp, ham%nOff, ham%nDiOff) 
+                ! call save_ham_hdf5_coo(out%outdir//"hamiltonians/ham.h5", "offdiag", ham%nOff, ham%nOff, ham%rcoff, ham%hamOff_dp, overwrite=.false.)
+            else if(geo%id == 2) then ! Hopping for irreducible representations in 2D(currently not supported)
+                call generate_offdiag_coo(par%othrds, par%tilted, geo%nHel, geo%tilt, geo%l2, geo%l1, geo%sites, geo%nnBonds, geo%dim, geo%basis_states, geo%orbsize, geo%orbits2D, geo%phases2D, geo%norm2D, geo%bsites, geo%xtransl, geo%ytransl, par%symm, geo%mir, geo%rot, geo%refl, geo%c6, par%t, ham%rcoff, ham%rcdi, geo%parities, geo%dplcts, ham%hamOff_dc, ham%hamDi_off_dc, ham%nOff, ham%nDiOff) 
                 ! call save_ham_hdf5_coo(out%outdir//"hamiltonians/ham.h5", "offdiag", ham%nOff, ham%nOff, ham%rcoff, ham%hamOff_dc, overwrite=.false.)
+                call generate_diag_coo(geo%sites, geo%dim, geo%bsites, geo%hexsites, geo%orbsize, geo%orbits2D, geo%phases2D, geo%norm2D, ham%hamDi_dc, ham%occ)
             end if 
-        end if                 
+        else if(par%ti == 1 .and.((k1 .ne. 0) .or.(k2 .ne. 0))) then ! If translation symmetry is used and k1 or k2 are not zero, generate the Hamiltonian with the hopping procedure for complex entries. Currently only supported for 1D irreps. 
+            call generate_offdiag_coo(out%unit, par%tilted, par%symm, geo%nHel, geo%tilt, geo%l2, geo%l1, par%ucx, par%ucy, geo%sites, geo%nnBonds, geo%dim, geo%basis_states, geo%bsites, geo%norm, geo%xtransl, geo%ytransl, geo%mir, geo%rot, geo%refl, geo%c6, par%t, k1, k2, ham%rcoff, ham%hamOff_dc, ham%nOff) 
+            ! call save_ham_hdf5_coo(out%outdir//"hamiltonians/ham.h5", "offdiag", ham%nOff, ham%nOff, ham%rcoff, ham%hamOff_dc, overwrite=.false.)
+        end if 
         !Generates diagonal part of the Hamiltonian.
         if(geo%id == 1) then 
             call generate_diag_coo(out%unit, geo%sites, geo%nnBonds, geo%nnnBonds, geo%dim, geo%bsites, geo%hexsites, geo%basis_states, ham%hamDi, ham%occ, ham%nDi) 
@@ -812,9 +808,5 @@ module hamiltonian
         print*, ''
 
     end subroutine diag_coo_irrep2d
-
-
-
-
 
 end module hamiltonian 

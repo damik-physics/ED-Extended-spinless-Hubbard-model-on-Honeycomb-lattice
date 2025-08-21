@@ -11,7 +11,6 @@ module basis ! Module for defining the basis for the extended Hubbard model on t
 
 
     subroutine make_basis(par, geo, st)
-
         
         implicit none
         type(sim_params), intent(inout) :: par
@@ -80,14 +79,15 @@ module basis ! Module for defining the basis for the extended Hubbard model on t
             I_in = temp + I_tail
         end do
 
-        print*, 'Basis generated.'
-        if(par%ti == 0) return 
         if(allocated(geo%refl)) deallocate(geo%refl)
         allocate(geo%refl(6, geo%sites))
         if(allocated(geo%c6)) deallocate(geo%c6)
         allocate(geo%c6(geo%sites))
         geo%refl = 0
         geo%c6   = 0    
+        print*, 'Basis generated.'
+        if(par%ti == 0) return 
+
         if(par%tilted == 1) then !18A
             geo%refl(1, 1:geo%sites) = [16,17,18,13,14,15,10,11,12,7,8,9,4,5,6,1,2,3] !Mirror axis through edges
             geo%refl(2, 1:geo%sites) = [8,7,4,3,18,17,2,1,16,15,12,11,14,13,10,9,6,5] !Mirror axis through edges
@@ -107,6 +107,7 @@ module basis ! Module for defining the basis for the extended Hubbard model on t
             geo%refl(6, 1:geo%sites) = [1,8,9,16,17,6,13,2,3,10,11,18,7,14,15,4,5,12] !Mirror axis through geo%sites
             geo%c6               = [2,3,10,11,18,13,6,1,8,9,16,17,4,5,12,7,14,15] !C6 rotation
         end if 
+
 
         if(par%tilted == 0) then 
             geo%l2 = par%ucx 
@@ -283,11 +284,12 @@ module basis ! Module for defining the basis for the extended Hubbard model on t
         integer :: ntot = 0, info = 0
         integer :: i = 0, n = 0, flag = 0, rt = 0
         integer(kind=8), allocatable :: orbits(:)
-        double precision :: sign = 1.d0, kx(2), ky(2), k(2)
+        double precision :: sign, kx(2), ky(2), k(2)
         double precision :: a1(2), a2(2)
         double precision, parameter :: tolerance = 1.0e-8
-        double complex :: phase = 0.d0
+        double complex :: phase
 
+        
         ntot = popcnt(state) !Number of geo%particles 
         a1 = geo%nnnVec(1:2, 1)
         a2 = geo%nnnVec(1:2, 2)
@@ -299,9 +301,12 @@ module basis ! Module for defining the basis for the extended Hubbard model on t
             k  =(dble(st%k1)/dble(geo%l1)) * ky +(dble(st%k2)/dble(geo%l2)) * kx 
         end if
 
+        sign = 1.d0
+        info = 0
         period = -1 !r is the orbit size. If r = -1, the state is not compatible with the momentum k or point group symmetry.
         rt = 0 
         s0 = state
+        sr = 0
         flag  = 0 
         norm_sym  = 0.d0 
         orbit = 0 
@@ -347,8 +352,6 @@ module basis ! Module for defining the basis for the extended Hubbard model on t
         period   = rt 
         norm_sym = period * abs(phase)**2
         return
-
-
    
     end subroutine checkstate
 
@@ -431,8 +434,7 @@ module basis ! Module for defining the basis for the extended Hubbard model on t
         return
 
   
-    end subroutine checkstate_rect
-                      
+    end subroutine checkstate_rect                   
 
     subroutine checkstate2D(par, geo, st, state, period, orbits, norm, phases)
         

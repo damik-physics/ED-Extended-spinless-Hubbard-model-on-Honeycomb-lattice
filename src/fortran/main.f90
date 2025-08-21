@@ -9,11 +9,7 @@ program main
     use basis
     use hamiltonian
     use diagonalization
-
-    ! use utils
-    ! use symmetries
-
-    ! use correlationfunctions
+    use observables
 
     implicit none
     type(sim_params) :: par
@@ -76,32 +72,19 @@ program main
                 call printing(st%conf, par%ti, st%k1, st%k2, st%v1, st%v2)
                 call diagonalize(par, geo, ham, diag, st, out)
     
-            !     if(curr == 0) goto 15          
-                par, out, st, thr, geo, 
-                call current_correlations(par, geo, out, st, thr)
-                call current_correlations(dir, ti, tilted, nHel, tilt, threads, conf, symm, sites, l2, l1, ucx, ucy, k1, k2, id, mir, rot, nDis, refbonds, cntrA, cntrB, unit, dim, alattice, blattice, xyA, xyB, xtransl, ytransl, refl, c6, basis, v1, v2, dis, nnnVec, norm, eigstate, eigstate_dc)
-            !     call currentcorrelations(out%outdir, ti, tilted, nHel, tilt, num_thrds, conf, degflag, symm, geo%sites, l2, l1, ucx, ucy, st%k1, st%k2, geo%id, mir, rot, nDis, refbonds, cntrA, cntrB, sys_par%unit, par%dim, alattice, blattice, xyA, xyB, xtransl, ytransl, refl, c6, basis, v1, v2, dis, nnnVec, norm, eigstate, eigstate_dc)
-            !     15 continue 
-
-            !     if(corr == 0) goto 16
-            !     do refsite = 1, geo%sites
-            !         call ddcf(out%outdir, refsite, conf, sys_par%unit, par%dim, geo%sites, st%k1, st%k2, nDis, dis, v1, v2, basis, eigstate(1:dim, 1))
-            !     end do 
-            !     16 continue
+                if(curr == 0) goto 15          
+                call current_correlations(par, geo, diag, out, st, thrd)
+                15 continue 
 
             end do !Disorder loops
             !$omp end critical 
 
-
-            100 format(1000(F30.20))
-            101 format(2000(F30.20))
-        
-    
         end do !vloop
         !!$omp end parallel do
 
     end do !v2loop
     !!$omp end parallel do
+
     call cleanup(.true., geo, ham, diag)   
     
     116 continue

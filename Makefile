@@ -16,7 +16,12 @@ ARPACK_DIR ?= /usr/local
 HDF5_DIR ?= /opt/hdf5_ifx
 
 # Compiler flags: include MKL sources, build dir, ARPACK, and HDF5
-FFLAGS ?= -O2 -g -check all -traceback -MMD -MF $(BUILD_DIR)/$*.d \
+# FFLAGS ?= -O2 -g -check all -traceback -MMD -MF $(BUILD_DIR)/$*.d \
+           -I$(MKL_INC) \
+           -I$(BUILD_DIR) \
+           -I$(ARPACK_DIR)/include \
+           -I$(HDF5_DIR)/include
+FFLAGS ?= -g -O0 -check all -traceback -fpe0 -debug full -MMD -MF $(BUILD_DIR)/$*.d \
            -I$(MKL_INC) \
            -I$(BUILD_DIR) \
            -I$(ARPACK_DIR)/include \
@@ -25,7 +30,8 @@ FFLAGS ?= -O2 -g -check all -traceback -MMD -MF $(BUILD_DIR)/$*.d \
 # Libraries: MKL + ARPACK + HDF5
 LIBS = -qmkl \
        -L$(ARPACK_DIR)/lib -larpack \
-       -L$(HDF5_DIR)/lib -lhdf5_fortran -lhdf5
+       -L$(HDF5_DIR)/lib -lhdf5_fortran -lhdf5 \
+       -Wl,-rpath,$(HDF5_DIR)/lib
 
 # MKL module source files to compile
 MKL_MOD_SRC := $(MKL_INC)/mkl_spblas.f90 $(MKL_INC)/mkl_solvers_ee.f90
@@ -35,6 +41,7 @@ MKL_MOD_OBJS := $(patsubst $(MKL_INC)/%.f90,$(BUILD_DIR)/%.o,$(MKL_MOD_SRC))
 SRC := src/fortran/params.f90 \
        src/fortran/functions.f90 \
        src/fortran/io_utils.f90 \
+       src/fortran/corr_writer.f90 \
        src/fortran/basis.f90 \
        src/fortran/lattice.f90 \
        src/fortran/symmetries.f90 \
@@ -57,7 +64,7 @@ $(BUILD_DIR)/lattice.o: $(BUILD_DIR)/types.o $(BUILD_DIR)/params.o $(BUILD_DIR)/
 $(BUILD_DIR)/file_utils.o: $(BUILD_DIR)/params.o $(BUILD_DIR)/types.o $(BUILD_DIR)/symmetries.o   
 $(BUILD_DIR)/test_utils.o: $(BUILD_DIR)/file_utils.o   
 $(BUILD_DIR)/diagonalization.o: $(BUILD_DIR)/types.o $(BUILD_DIR)/functions.o $(BUILD_DIR)/params.o $(BUILD_DIR)/file_utils.o $(BUILD_DIR)/test_utils.o $(BUILD_DIR)/io_utils.o 
-$(BUILD_DIR)/observables.o: $(BUILD_DIR)/types.o $(BUILD_DIR)/functions.o $(BUILD_DIR)/file_utils.o $(BUILD_DIR)/corr_writer.o
+$(BUILD_DIR)/observables.o: $(BUILD_DIR)/types.o $(BUILD_DIR)/functions.o $(BUILD_DIR)/file_utils.o $(BUILD_DIR)/corr_writer.o $(BUILD_DIR)/symmetries.o
 
 # Executable
 EXE := $(BIN_DIR)/exe

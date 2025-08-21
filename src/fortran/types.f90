@@ -91,7 +91,8 @@ module types
         ! Output parameters    
         character(len=1000) :: dir ! Output directory
         integer :: unit ! Unit number for output files
-        character(len=512) :: outdir
+        character(len=:), allocatable :: outdir
+        ! character(len=512) :: outdir
         integer :: corr ! Flag for calculating single-operator correlation functions
         integer :: curr ! Flag for calculating current-current correlation functions
         integer :: refbonds ! Number of reference bonds for which currents are calculated

@@ -391,7 +391,7 @@ module file_utils
 
     subroutine setup_output_directory(outdir)
         implicit none
-        character(len=*), intent(inout) :: outdir
+        character(len=:), allocatable, intent(inout) :: outdir
         character(len=64) :: timestamp
         integer :: values(8)
         character(len=512) :: cmd
@@ -403,7 +403,7 @@ module file_utils
         write(timestamp, '(I4.4,I2.2,I2.2,"_",I2.2,I2.2,I2.2)') &
              values(1), values(2), values(3), values(5), values(6), values(7)
 
-        outdir = 'output/run_' // trim(timestamp) // '/'
+        outdir = trim('output/run_' // trim(timestamp) // '/')
         cmd = 'mkdir -p ' // trim(outdir)
         call system(cmd)
 
@@ -419,14 +419,14 @@ module file_utils
         character(len=512) :: cmd
         integer :: exitstat
         ! Create subdirectories for different output types
-        cmd = 'mkdir -p ' // trim(out_dir) // '/correlations ' // &
-                        trim(out_dir) // '/hamiltonians ' // &
-                        trim(out_dir) // '/lattice_data ' // &
-                        trim(out_dir) // '/logs ' // &
-                        trim(out_dir) // '/parameters ' // &
-                        trim(out_dir) // '/plots ' // &
-                        trim(out_dir) // '/spectra ' // &
-                        trim(out_dir) // '/states'
+        cmd = 'mkdir -p ' // trim(out_dir) // 'correlations ' // &
+                        trim(out_dir) // 'hamiltonians ' // &
+                        trim(out_dir) // 'lattice_data ' // &
+                        trim(out_dir) // 'logs ' // &
+                        trim(out_dir) // 'parameters ' // &
+                        trim(out_dir) // 'plots ' // &
+                        trim(out_dir) // 'spectra ' // &
+                        trim(out_dir) // 'states'
 
         call execute_command_line(trim(cmd), exitstat=exitstat)
         if(exitstat /= 0) then

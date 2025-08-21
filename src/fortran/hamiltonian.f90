@@ -46,27 +46,27 @@ module hamiltonian
         print*, 'Generating Hamiltonian ...'
         print*, ''
 
-        call loadham(type, out%unit, par%ti, geo%sites, ham%nOff, ham%nDi, ham%hamDi, ham%hamOff, ham%rcoff, ham%hamOff_dp, ham%hamOff_dc, ham%occ, exist1, exist2, exist3) ! Loads the sub-Hamiltonians from file if they exists. If not, sets corresponDing exist1, exist2, exist3 to .false. and generates the Hamiltonian.
+        ! call loadham(type, out%unit, par%ti, geo%sites, ham%nOff, ham%nDi, ham%hamDi, ham%hamOff, ham%rcoff, ham%hamOff_dp, ham%hamOff_dc, ham%occ, exist1, exist2, exist3) ! Loads the sub-Hamiltonians from file if they exists. If not, sets corresponDing exist1, exist2, exist3 to .false. and generates the Hamiltonian.
 
         if(.not.(exist1)) then ! Generates the off-diagonal part of the Hamiltonian if it does not exist yet.
             if(par%ti == 0) then ! If no translation symmetry is used, generate the Hamiltonian with the standard hopping procedure
                 call generate_offdiag_coo(par%othrds, out%unit, geo%sites, geo%nnBonds, geo%bsites, geo%dim, geo%basis_states, ham%hamOff, ham%nOff) !offdiag_coo_i
-                call save_ham_hdf5_coo(out%outdir//"/hamiltonians/ham.h5", "offdiag", ham%nOff, ham%nOff, ham%hamOff(1:,2:3), ham%hamOff(1:,1), overwrite=.false.)
+                ! call save_ham_hdf5_coo(out%outdir//"hamiltonians/ham.h5", "offdiag", ham%nOff, ham%nOff, ham%hamOff(1:,2:3), ham%hamOff(1:,1), overwrite=.false.)
             else if(par%ti == 1 .and. k1 == 0 .and. k2 == 0) then ! If translation symmetry is used and k1 = k2 = 0, generate the Hamiltonian with the hopping procedure for irreducible representations
                 if(geo%id == 1) then ! Hopping for irreducible representations in 1D 
                     call generate_offdiag_coo(par%othrds, par%tilted, geo%nHel, geo%tilt, geo%l2, geo%l1, par%ucx, par%ucy, geo%sites, geo%nnBonds, geo%dim, geo%basis_states, geo%bsites, geo%norm, geo%xtransl, geo%ytransl, par%symm, geo%id, geo%mir, geo%rot, geo%refl, geo%c6, par%t, ham%rcoff, ham%rcdi, geo%parities, geo%dplcts, ham%hamOff_dp, ham%hamDi_dp, ham%nOff, ham%nDiOff) !offdiag_coo_irrep
-                    call save_ham_hdf5_coo(out%outdir//"/hamiltonians/ham.h5", "offdiag", ham%nOff, ham%nOff, ham%rcoff, ham%hamOff_dp, overwrite=.false.)
+                    ! call save_ham_hdf5_coo(out%outdir//"hamiltonians/ham.h5", "offdiag", ham%nOff, ham%nOff, ham%rcoff, ham%hamOff_dp, overwrite=.false.)
                 else if(geo%id == 2) then ! Hopping for irreducible representations in 2D(currently not supported)
-                    call generate_offdiag_coo(par%othrds, par%tilted, geo%nHel, geo%tilt, geo%l2, geo%l1, geo%sites, geo%nnBonds, geo%dim, geo%basis_states, geo%orbsize, geo%orbits2D, geo%phases2D, geo%norm2D, geo%bsites, geo%xtransl, geo%ytransl, par%symm, geo%id, geo%mir, geo%rot, geo%refl, geo%c6, par%t, ham%rcoff, ham%rcdi, geo%parities, geo%dplcts, ham%hamOff_dc, ham%hamDi_off_dc, ham%nOff, ham%nDiOff) !offdiag_coo_irrep2d
-                    call save_ham_hdf5_coo(out%outdir//"/hamiltonians/ham.h5", "offdiag", ham%nOff, ham%nOff, ham%rcoff, ham%hamOff_dc, overwrite=.false.)
+                    call generate_offdiag_coo(par%othrds, par%tilted, geo%nHel, geo%tilt, geo%l2, geo%l1, geo%sites, geo%nnBonds, geo%dim, geo%basis_states, geo%orbsize, geo%orbits2D, geo%phases2D, geo%norm2D, geo%bsites, geo%xtransl, geo%ytransl, par%symm, geo%mir, geo%rot, geo%refl, geo%c6, par%t, ham%rcoff, ham%rcdi, geo%parities, geo%dplcts, ham%hamOff_dc, ham%hamDi_off_dc, ham%nOff, ham%nDiOff) !offdiag_coo_irrep2d
+                    
+                    ! call save_ham_hdf5_coo(out%outdir//"hamiltonians/ham.h5", "offdiag", ham%nOff, ham%nOff, ham%rcoff, ham%hamOff_dc, overwrite=.false.)
                     call generate_diag_coo(geo%sites, geo%dim, geo%bsites, geo%hexsites, geo%orbsize, geo%orbits2D, geo%phases2D, geo%norm2D, ham%hamDi_dc, ham%occ) !diag_coo_irrep2d
                 end if 
             else if(par%ti == 1 .and.((k1 .ne. 0) .or.(k2 .ne. 0))) then ! If translation symmetry is used and k1 or k2 are not zero, generate the Hamiltonian with the hopping procedure for complex entries. Currently only supported for 1D irreps. 
-                call generate_offdiag_coo(out%unit, par%tilted, geo%nHel, geo%tilt, geo%l2, geo%l1, par%ucx, par%ucy, geo%sites, geo%nnBonds, geo%dim, geo%basis_states, geo%bsites, geo%norm, geo%xtransl, geo%ytransl, par%t, k1, k2, ham%rcoff, ham%hamOff_dc, ham%nOff) !offdiag_coo_dc
-                call save_ham_hdf5_coo(out%outdir//"/hamiltonians/ham.h5", "offdiag", ham%nOff, ham%nOff, ham%rcoff, ham%hamOff_dc, overwrite=.false.)
+                call generate_offdiag_coo(out%unit, par%tilted, par%symm, geo%nHel, geo%tilt, geo%l2, geo%l1, par%ucx, par%ucy, geo%sites, geo%nnBonds, geo%dim, geo%basis_states, geo%bsites, geo%norm, geo%xtransl, geo%ytransl, geo%mir, geo%rot, geo%refl, geo%c6, par%t, k1, k2, ham%rcoff, ham%hamOff_dc, ham%nOff) !offdiag_coo_dc
+                ! call save_ham_hdf5_coo(out%outdir//"hamiltonians/ham.h5", "offdiag", ham%nOff, ham%nOff, ham%rcoff, ham%hamOff_dc, overwrite=.false.)
             end if 
-        end if
-                  
+        end if                 
         !Generates diagonal part of the Hamiltonian.
         if(geo%id == 1) then 
             call generate_diag_coo(out%unit, geo%sites, geo%nnBonds, geo%nnnBonds, geo%dim, geo%bsites, geo%hexsites, geo%basis_states, ham%hamDi, ham%occ, ham%nDi) 
@@ -81,7 +81,7 @@ module hamiltonian
                 values_real_combined(1:size(ham%hamDi,1)) = ham%hamDi(1:size(ham%hamDi,1), 1)
                 values_real_combined(size(ham%hamDi,1)+1:nnz_diag_total) = ham%hamDi_dp
             end if 
-            call save_ham_hdf5_coo(out%outdir//"/hamiltonians/ham.h5", "diag", nnz_diag_total, nnz_diag_total, rc_combined, values_real_combined, overwrite=.false.)
+            ! call save_ham_hdf5_coo(out%outdir//"hamiltonians/ham.h5", "diag", nnz_diag_total, nnz_diag_total, rc_combined, values_real_combined, overwrite=.false.)
         else if(par%ti == 1 .and. ((k1 .ne. 0) .or.(k2 .ne. 0))) then
             ! Combine row-column arrays
             nnz_diag_total = ham%nDi + size(ham%rcdi,1)
@@ -92,7 +92,7 @@ module hamiltonian
             allocate(values_complex_combined(nnz_diag_total))
             values_complex_combined(1:size(ham%hamDi,1)) = ham%hamDi(1:size(ham%hamDi,1), 1)
             values_complex_combined(size(ham%hamDi,1)+1:nnz_diag_total) = ham%hamDi_dc(1:size(ham%hamDi_dc,1), 1)
-            call save_ham_hdf5_coo(out%outdir//"/hamiltonians/ham.h5", "diag", nnz_diag_total, nnz_diag_total, rc_combined, values_complex_combined, overwrite=.false.)
+            ! call save_ham_hdf5_coo(out%outdir//"hamiltonians/ham.h5", "diag", nnz_diag_total, nnz_diag_total, rc_combined, values_complex_combined, overwrite=.false.)
         end if
 
         return
@@ -193,7 +193,7 @@ module hamiltonian
 
     end subroutine offdiag_coo_i
 
-    subroutine offdiag_coo_dc(unit, tilted, nHel, tilt, lx, ly, ucx, ucy, sites, nbonds, dim, basis_list, bsites, norm, xtransl, ytransl, t, k1, k2, rc, ham, nnz)
+    subroutine offdiag_coo_dc(unit, tilted, symm, nHel, tilt, lx, ly, ucx, ucy, sites, nbonds, dim, basis_list, bsites, norm, xtransl, ytransl, mir, rot, refl, c6, t, k1, k2, rc, ham, nnz)
 
         !----------------------------------------------------------------!
         !          Hopping procedure for complex matrix entries          !
@@ -204,17 +204,19 @@ module hamiltonian
 
         implicit none
 
-        integer, intent(in) :: unit, tilted, nHel, tilt, lx, ly, ucx, ucy, sites, nbonds, k1, k2, bsites(2, nbonds), xtransl(2, sites), ytransl(2, sites)
-        integer(kind=8), intent(in) :: dim, basis_list(dim)
-        double precision, intent(in) :: t, norm(dim)
+        integer,                       intent(in) :: unit, tilted, symm, nHel, tilt, lx, ly, ucx, ucy, sites, nbonds, k1, k2, bsites(2, nbonds), xtransl(2, sites), ytransl(2, sites), refl(6, sites), c6(sites)
+        integer(kind=8),               intent(in) :: dim, basis_list(dim)
+        double precision,              intent(in) :: t, norm(dim)
+        double precision,              intent(in) :: mir(6), rot(5)
 
-        integer(kind=8), intent(out) :: nnz
+        integer(kind=8),              intent(out) :: nnz
         integer(kind=8), allocatable, intent(out) :: rc(:,:)
-        double complex, allocatable, intent(out) :: ham(:)
+        double complex,  allocatable, intent(out) :: ham(:)
         
         ! Local variables
-        integer :: dbl = 0, parity1 = 0, parity2 = 0, l1 = 0, l2 = 0, sign = 0, l11 = 0, l22 = 0 
-        integer(kind=8) :: arrsize = 0, i = 0, j = 0, k = 0, l = 0, s = 0, loc = 0, rep = 0, mask = 0, newst = 0, n_temp = 0, cntr = 0, cntrj = 0
+        integer                      :: dbl, parity1, parity2, l1, l2, l11, l22 
+        integer(kind=8)              :: arrsize, i, j, k, l, s, loc, rep, mask, newst, n_temp, cntr, cntrj
+        double precision             :: sign
         integer(kind=8), allocatable :: rc_temp(:,:)
         double complex,  allocatable :: ham_temp(:)
 
@@ -239,12 +241,12 @@ module hamiltonian
                 else 
                     cycle 
                 end if 
-                if(tilted == 1) then 
-                    call representative(newst, sites, ucx, ucy, xtransl, ytransl, rep, l1, l2, sign) !Finds the representative of scattered state in momentum orbit and determines the number of translations 'ntrans' needed to map to representative.            
+                if(tilted == 0) then 
+                    call representative_reg(newst, sites, ucx, ucy, symm, mir, rot, xtransl, ytransl, refl, c6, rep, l1, l2, sign) !Finds the representative of scattered state in momentum orbit and determines the number of translations 'ntrans' needed to map to representative.            
                     l11 = ucx 
                     l22 = ucy
-                else if(tilted == 0) then 
-                    call representative_tilted(newst, sites, nHel, tilt, lx, ly, xtransl, ytransl, rep, l1, l2, sign)
+                else if(tilted == 1) then 
+                    call representative_tilted(newst, sites, nHel, tilt, lx, ly, symm, mir, rot, xtransl, ytransl, refl, c6, rep, l1, l2, sign)
                     l11 = ly 
                     l22 = lx
                 end if 
@@ -300,7 +302,7 @@ module hamiltonian
 
     end subroutine offdiag_coo_dc
   
-    subroutine offdiag_coo_dp(threads, tilted, nHel, tilt, lx, ly, ucx, ucy, sites, nbonds, dim, basis, bsites, norm, xtransl, ytransl, symm, id, par, rot, refl, c6, t, rc, rcdi, parities, dplcts, ham, hamDi, nnz, nDi)
+    subroutine offdiag_coo_dp(threads, tilted, nHel, tilt, lx, ly, ucx, ucy, sites, nbonds, dim, basis, bsites, norm, xtransl, ytransl, symm, id, mir, rot, refl, c6, t, rc, rcdi, parities, dplcts, ham, hamDi, nnz, nDi)
 
         !---------------------------------------------------------------------!
         !          Hopping procedure for irreducible representations          !
@@ -312,7 +314,7 @@ module hamiltonian
         implicit none
         integer(kind=8), intent(in)  :: dim, basis(dim)
         integer, intent(in)          :: threads, tilted, nHel, tilt, lx, ly, ucx, ucy, sites, nbonds, symm, bsites(2, nbonds), xtransl(2, sites), ytransl(2, sites), refl(6, sites), c6(sites)
-        double precision, intent(in) :: t, id, par(6), rot(5), norm(dim)
+        double precision, intent(in) :: t, id, mir(6), rot(5), norm(dim)
         
         integer(kind=8), intent(out)               :: nnz, nDi 
         integer        , allocatable, intent(out)  :: parities(:), dplcts(:)
@@ -320,11 +322,11 @@ module hamiltonian
         double precision, allocatable, intent(out) :: ham(:), hamDi(:)
         
         !Local variables
-        integer                       :: dbl = 0, order, info, s = 0, k = 0, l1 = 0, l2 = 0, parity = 0
-        integer(kind=8)               :: i = 0, j = 0, loc = 0, rep = 0, pos = 0, rowst = 0, newst = 0, state = 0, cntr = 0, cntrj = 0, n_temp = 0, arrsize = 0
+        integer                       :: dbl, order, info, s, k, l1, l2, parity
+        integer(kind=8)               :: i, j, loc, rep, pos, rowst, newst, state, cntr, cntrj, n_temp, arrsize
         integer(kind=8), allocatable  :: rc_temp(:,:), rcdi_temp(:), cntr_di(:,:)
         integer        , allocatable  :: parities_temp(:), dplcts_temp(:)
-        double precision              :: sign = 1.d0, signstate = 1.d0, h_add = 0.d0, signrep = 1.d0 
+        double precision              :: sign, signstate, h_add, signrep 
         double precision, allocatable :: ham_temp(:), hamDi_temp(:)
         
         if(symm == 1) then 
@@ -345,6 +347,9 @@ module hamiltonian
         h_add         = 0.d0  
         ham_temp      = 0.d0  
         hamDi_temp    = 0.d0  
+        sign          = 1.d0 
+        signstate     = 1.d0
+        signrep       = 1.d0
         rc_temp       = 0 
         rcdi_temp     = 0 
         parities_temp = 0 
@@ -366,10 +371,10 @@ module hamiltonian
                     state = basis(j)
                 else if(k <= 7) then 
                     call reflect(basis(j), basis(j), sites, refl(k - 1, 1:sites), signstate, info, state)
-                    signstate = signstate * par(k - 1)
+                    signstate = signstate * mir(k-1)
                 else if(8 <= k) then 
                     call c6n(basis(j), basis(j), sites, k - 7, c6, signstate, info, state)
-                    signstate = signstate * rot(k - 7)
+                    signstate = signstate * rot(k-7)
                 end if 
 
                 do s = 1, nbonds !Takes care of translations
@@ -383,9 +388,9 @@ module hamiltonian
                         cycle 
                     end if 
                     if(tilted == 0) then 
-                        call representative_irrep_rect(newst, sites, Lx, Ly, symm, id, par, rot, xtransl, ytransl, refl, c6, rep, l1, l2, signrep)
+                        call representative_reg(newst, sites, Lx, Ly, symm, mir, rot, xtransl, ytransl, refl, c6, rep, l1, l2, signrep)
                     else if(tilted == 1) then 
-                        call representative_irrep(newst, sites, nHel, tilt, Lx, Ly, symm, id, par, rot, xtransl, ytransl, refl, c6, rep, l1, l2, signrep)
+                        call representative_tilted(newst, sites, nHel, tilt, Lx, Ly, symm, mir, rot, xtransl, ytransl, refl, c6, rep, l1, l2, signrep)
                     end if 
                     
                     call binary_search(dim, rep, basis, loc) !Finds the location of representative in basis
@@ -440,7 +445,7 @@ module hamiltonian
         if(allocated(ham))    deallocate(ham)
         if(allocated(rcdi))   deallocate(rcdi)
         if(allocated(hamDi))  deallocate(hamDi)
-        if(allocated(parities))   deallocate(parities)
+        if(allocated(parities)) deallocate(parities)
         if(allocated(dplcts)) deallocate(dplcts)
 
         allocate(ham(nnz))
@@ -482,12 +487,12 @@ module hamiltonian
 
     end subroutine offdiag_coo_dp
 
-    subroutine offdiag_coo_dc_irrep2d(threads, tilted, nHel, tilt, lx, ly, sites, nbonds, dim, basis, orbsize, orbits, phases, norm, bsites, xtransl, ytransl, symm, id, par, rot, refl, c6, t, rc, rcdi, parities, dplcts, ham, hamDi, nnz, nDi)
+    subroutine offdiag_coo_dc_irrep2d(threads, tilted, nHel, tilt, lx, ly, sites, nbonds, dim, basis, orbsize, orbits, phases, norm, bsites, xtransl, ytransl, symm, mir, rot, refl, c6, t, rc, rcdi, parities, dplcts, ham, hamDi, nnz, nDi)
     
         !------------------------------------------------------------------------!
         !          Hopping procedure for 2D irreducible representations          !
         !------------------------------------------------------------------------!
-        ! This subroutine generates the hopping Hamiltonian for irreducible representations in 2D.
+        ! This subroutine generates the offidagonal Hamiltonian for irreducible representations in 2D.
         ! Work in progress.
 
         use params
@@ -495,7 +500,7 @@ module hamiltonian
         integer, intent(in) :: orbsize, threads, tilted, nHel, tilt, lx, ly, sites, nbonds, symm, bsites(2, nbonds), xtransl(2, sites), ytransl(2, sites), refl(6, sites), c6(sites)
         integer(kind=8), intent(in) :: dim, basis(dim)
         integer(kind=8), allocatable, intent(in) :: orbits(:,:,:)
-        double precision, intent(in) :: t, id, par(6), rot(5), norm(dim,2)
+        double precision, intent(in) :: t, mir(6), rot(5), norm(dim,2)
         double complex, allocatable, intent(in) :: phases(:,:,:)
         
         integer,         allocatable, intent(out) :: parities(:), dplcts(:)
@@ -509,7 +514,7 @@ module hamiltonian
         integer(kind=8), allocatable :: rc_temp(:,:), rcdi_temp(:), cntr_di(:,:)
         integer        , allocatable :: parities_temp(:), dplcts_temp(:)
         double precision, parameter :: tol = 1.0e-14
-        double precision :: sign = 1, signrep = 1 
+        double precision :: sign, signrep 
         double complex :: h_add, coeff, newcf 
         double complex, allocatable :: ham_temp(:), hamDi_temp(:)
 
@@ -532,7 +537,9 @@ module hamiltonian
 
         h_add         = 0.d0
         ham_temp      = 0.d0  
-        hamDi_temp    = 0.d0  
+        hamDi_temp    = 0.d0
+        sign          = 1.d0
+        signrep       = 1.d0  
         rc_temp       = 0 
         rcdi_temp     = 0 
         parities_temp = 0 
@@ -569,9 +576,9 @@ module hamiltonian
                         cycle 
                     end if 
                     if(tilted == 0) then 
-                        call representative_irrep_rect(newst, sites, Lx, Ly, symm, id, par, rot, xtransl, ytransl, refl, c6, rep, l1, l2, signrep)
+                        call representative_reg(newst, sites, Lx, Ly, symm, mir, rot, xtransl, ytransl, refl, c6, rep, l1, l2, signrep)
                     else if(tilted == 1) then 
-                        call representative_irrep(newst, sites, nHel, tilt, Lx, Ly, symm, id, par, rot, xtransl, ytransl, refl, c6, rep, l1, l2, signrep)
+                        call representative_tilted(newst, sites, nHel, tilt, Lx, Ly, symm, mir, rot, xtransl, ytransl, refl, c6, rep, l1, l2, signrep)
                     end if 
                     call binary_search(dim, rep, basis, loc) !Finds the location of representative in basis
                     if(loc <= 0) cycle !New state is compatible with momentum and symmetry 
@@ -693,7 +700,7 @@ module hamiltonian
         integer(kind=8), allocatable, intent(out) :: ham(:,:), occ(:,:)
 
         !Local variables
-        integer(kind=8) :: j = 0, m = 0, s = 0, counter_v = 0, counter_v2 = 0
+        integer(kind=8) :: j, m, s, counter_v, counter_v2
 
         if(allocated(occ))   deallocate(occ)
         if(allocated(ham))   deallocate(ham)
@@ -760,8 +767,8 @@ module hamiltonian
         double complex,  allocatable, intent(out) :: ham(:,:)
 
         integer          :: m, s, c, o, site1, site2 
-        integer(kind=8)  :: j = 0, arrsize = 0, state, rowIndx
-        double precision :: cntr_v = 0.d0, cntr_v2 = 0.d0
+        integer(kind=8)  :: j, arrsize, state, rowIndx
+        double precision :: cntr_v, cntr_v2
         
         arrsize = 2 * dim !Each representative has two basis states in 2D irrep.
         if(allocated(occ)) deallocate(occ)

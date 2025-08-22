@@ -1,5 +1,6 @@
 module test_utils 
-    ! Module for testing the functionality of the code
+    ! Module for testing and validation of computational results including spectrum verification,
+    ! matrix property checks, eigenstate normalization, and orthogonality testing
     use file_utils
     implicit none 
 
@@ -20,16 +21,17 @@ module test_utils
         ! Runs sanity checks on the spectrum of eigenvalues and real eigenstates. 
         ! Checks if the eigenstates are normalized, orthogonal, sorted in ascending order and compares the expectation value of the Hamiltonian with the eigenvalue.
         implicit none
-        integer(kind=8), intent(in) :: dim, nnz  
-        integer, intent(in) :: nev, nest
-        integer, intent(in), optional :: ndeg
-        integer(kind=8), intent(in), optional :: rc(nnz, 2)
-        double precision, intent(inout) :: energies(nev)
-        double precision, intent(inout) :: eigstate(dim, nest)
-        double precision, intent(in), optional :: mat(nnz)
-
-        integer :: i = 0 
         
+        integer(kind=8),              intent(in)           :: dim, nnz  
+        integer,                      intent(in)           :: nev, nest
+        integer,                      intent(in), optional :: ndeg
+        integer(kind=8),              intent(in), optional :: rc(nnz, 2)
+        double precision,             intent(inout)        :: energies(nev)
+        double precision,             intent(inout)        :: eigstate(dim, nest)
+        double precision,             intent(in), optional :: mat(nnz)
+
+        integer                                            :: i 
+
         call sort_states_dp(nev, nest, dim, energies, eigstate)
         call check_norm_dp(nev, nest, dim, energies, eigstate)
         call check_orthogonal(nest, dim, eigstate)
@@ -46,11 +48,12 @@ module test_utils
         ! Runs sanity checks on the spectrum of eigenvalues and complex eigenstates. 
         ! Checks if the eigenstates are normalized, orthogonal, and sorted in ascending order.
         implicit none
-        integer(kind=8), intent(in) :: dim  
-        integer, intent(in) :: nev, nest
-        logical, intent(in) :: feast
+        
+        integer(kind=8),  intent(in)    :: dim  
+        integer,          intent(in)    :: nev, nest
+        logical,          intent(in)    :: feast
         double precision, intent(inout) :: energies(nev)
-        double complex, intent(inout) :: eigstate(dim, nest)
+        double complex,   intent(inout) :: eigstate(dim, nest)
 
         call sort_states_dc(nev, nest, dim, energies, eigstate)
         call check_norm_dc(nev, nest, dim, energies, eigstate)
@@ -65,14 +68,14 @@ module test_utils
     subroutine sort_states_dp(nev, nest, dim, evals, states)
         ! Sorts the eigenvalues (and corresponding eigenstates) in ascending order, i.e., E_1 < E_2 < ... < E_nev
         implicit none 
-        integer, intent(in) :: nev, nest 
-        integer(kind=8), intent(in) :: dim 
+        
+        integer,                      intent(in)    :: nev, nest 
+        integer(kind=8),              intent(in)    :: dim 
+        double precision,             intent(inout) :: evals(nev), states(dim, nev) 
 
-        double precision, intent(inout) :: evals(nev), states(dim, nev) 
-
-        integer :: i = 0, j = 0, cntr = 0 
-        double precision :: temp = 0 
-        double precision, allocatable :: temp_vec(:)
+        integer                                     :: i, j, cntr
+        double precision                            :: temp
+        double precision, allocatable               :: temp_vec(:)
 
         cntr = 0
         if(allocated(temp_vec)) deallocate(temp_vec)
@@ -102,14 +105,14 @@ module test_utils
         ! Sorts the eigenvalues (and corresponding eigenstates) in ascending order, i.e., E_1 < E_2 < ... < E_nev
         
         implicit none 
-        integer, intent(in) :: nev, nest 
-        integer(kind=8), intent(in) :: dim 
-        double precision, intent(inout) :: evals(nev)
-        double complex, intent(inout) :: states(dim, nev) 
+        integer,                      intent(in)    :: nev, nest 
+        integer(kind=8),              intent(in)    :: dim 
+        double precision,             intent(inout) :: evals(nev)
+        double complex,               intent(inout) :: states(dim, nev) 
 
-        integer :: i = 0, j = 0, info = 0 
-        double complex :: temp = 0 
-        double complex, allocatable :: temp_vec(:)
+        integer                                     :: i, j, info
+        double complex                              :: temp
+        double complex, allocatable                 :: temp_vec(:)
 
         
         if(allocated(temp_vec)) deallocate(temp_vec)
@@ -140,14 +143,15 @@ module test_utils
         ! and then calculates the dot product with the eigenstate vector
         
         implicit none 
-        integer(kind=8), intent(in) :: dim, nnz  
-        integer(kind=8), intent(in) :: rc(nnz, 2)
+        
+        integer(kind=8),  intent(in) :: dim, nnz  
+        integer(kind=8),  intent(in) :: rc(nnz, 2)
         double precision, intent(in) :: eval
         double precision, intent(in) :: evec(dim)
         double precision, intent(in) :: mat(nnz)
         
-        integer(kind=8)  :: ia(dim+1), ja(nnz)
-        double precision :: exv, val(nnz), ax(dim)
+        integer(kind=8)               :: ia(dim+1), ja(nnz)
+        double precision              :: exv, val(nnz), ax(dim)
 
         ia = 0 
         ja = 0 
@@ -170,14 +174,14 @@ module test_utils
         ! Checks if the eigenstates are normalized, i.e., ||psi_i||^2 = 1 for i = 1, ..., nev
         
         implicit none 
-        integer, intent(in) :: nev, nest 
-        integer(kind=8), intent(in) :: dim 
-
+        
+        integer,          intent(in) :: nev, nest 
+        integer(kind=8),  intent(in) :: dim 
         double precision, intent(in) :: evals(nev), states(dim, nest) 
 
-        integer :: i = 0 
-        double precision :: norm = 0 
-        
+        integer                      :: i
+        double precision             :: norm
+
         do i = 1, nev
             write(* ,"(x, i0, '.Eigenvalue = ',f18.13)") i, dble(evals(i))
             if(i .le. nest) then 
@@ -198,15 +202,16 @@ module test_utils
         ! Checks if the eigenstates are normalized, i.e., ||psi_i||^2 = 1 for i = 1, ..., nev
 
         implicit none 
-        integer, intent(in) :: nev, nest 
-        integer(kind=8), intent(in) :: dim 
-        double precision, intent(in) :: evals(nev)
-        double complex, intent(in) :: states(dim, nest) 
-
-        integer :: i = 0 
-        double precision :: norm = 0 
-        double complex :: psi(dim)
         
+        integer,          intent(in) :: nev, nest 
+        integer(kind=8),  intent(in) :: dim 
+        double precision, intent(in) :: evals(nev)
+        double complex,   intent(in) :: states(dim, nest) 
+
+        integer                      :: i
+        double precision             :: norm
+        double complex               :: psi(dim)
+
         psi = 0.d0  
 
         do i = 1, nev
@@ -229,13 +234,13 @@ module test_utils
     subroutine check_orthogonal(nest, dim, states)
         ! Checks if the eigenstates are orthogonal, i.e., <psi_i|psi_j> = 0 for i != j
         implicit none 
-        integer, intent(in) :: nest 
-        integer(kind=8), intent(in) :: dim 
-
+        
+        integer,          intent(in) :: nest 
+        integer(kind=8),  intent(in) :: dim 
         double precision, intent(in) :: states(dim, nest) 
 
-        integer :: i = 0, j = 0, info = 0
-        
+        integer                      :: i, j, info
+
         
         do i = 1, nest 
             do j = 1, nest 
@@ -260,15 +265,15 @@ module test_utils
     subroutine check_orthogonal_dc(nest, dim, states)
         ! Checks if the eigenstates are orthogonal, i.e., <psi_i|psi_j> = 0 for i != j
         implicit none 
-        integer, intent(in) :: nest 
-        integer(kind=8), intent(in) :: dim 
+        
+        integer,          intent(in) :: nest 
+        integer(kind=8),  intent(in) :: dim 
+        double complex,   intent(in) :: states(dim, nest) 
 
-        double complex, intent(in) :: states(dim, nest) 
-
-        integer :: i = 0, j = 0, info = 0
-        integer(kind=8) :: k = 0
-        double complex :: res = 0.d0 
-        double complex, allocatable :: vec1(:), vec2(:)
+        integer                      :: i, j, info
+        integer(kind=8)              :: k
+        double complex               :: res
+        double complex, allocatable  :: vec1(:), vec2(:)
 
         if(allocated(vec1)) deallocate(vec1)
         if(allocated(vec2)) deallocate(vec2)
@@ -301,18 +306,18 @@ module test_utils
     end subroutine check_orthogonal_dc
 
     subroutine check_symmetry(symmetric, dim, nz, rc, ham)
-
+        ! Verifies that a real matrix is symmetric by comparing M(i,j) with M(j,i)
+        
         implicit none
 
-        integer(kind=8),  intent(in) :: dim
-        integer(kind=8),  intent(in) :: nz 
-        integer(kind=8),  intent(in) :: rc(nz,2)
-        double precision, intent(in) :: ham(nz)
+        integer(kind=8),  intent(in)  :: dim
+        integer(kind=8),  intent(in)  :: nz 
+        integer(kind=8),  intent(in)  :: rc(nz,2)
+        double precision, intent(in)  :: ham(nz)
+        logical,          intent(out) :: symmetric
         
-        logical, intent(out) :: symmetric
-        
-        integer(kind=8)  :: i = 0, j = 0
-        double precision :: eps = 10.**(-10)
+        integer(kind=8)               :: i, j
+        double precision              :: eps = 10.**(-10)
         double precision, allocatable :: mat(:,:)
         
         if(allocated(mat))    deallocate(mat)
@@ -346,18 +351,19 @@ module test_utils
     end subroutine check_symmetry
 
     subroutine check_hermiticity(hermitian, irrep, dim, nz, rc, ham)
-
+        ! Verifies that a complex matrix is Hermitian by comparing M*(i,j) with M(j,i)
+        
         implicit none
 
-        integer(kind=8),             intent(in) :: dim, nz
-        integer(kind=8),             intent(in) :: rc(nz,2)
-        double complex, allocatable, intent(in) :: ham(:) 
-        character,                   intent(in) :: irrep*2
-        logical,                    intent(out) :: hermitian
+        integer(kind=8),              intent(in)  :: dim, nz
+        integer(kind=8),              intent(in)  :: rc(nz,2)
+        double complex, allocatable,  intent(in)  :: ham(:) 
+        character,                    intent(in)  :: irrep*2
+        logical,                      intent(out) :: hermitian
         
-        integer(kind=8)             :: i, j, mdim
-        double precision            :: eps = 10.**(-10)
-        double complex, allocatable :: mat(:,:)
+        integer(kind=8)                           :: i, j, mdim
+        double precision                          :: eps = 10.**(-10)
+        double complex, allocatable               :: mat(:,:)
 
         if(irrep(1:1) .ne. "E") then 
             mdim = dim 
@@ -411,15 +417,16 @@ module test_utils
     end subroutine check_hermiticity
 
     subroutine check_symmetry_dense(sym, dim, mat)
-
+        ! Checks symmetry property for dense matrix format
+        
         implicit none
 
-        integer(kind=8),  intent(in) :: dim
-        double precision, intent(in) :: mat(dim, dim)
-        double precision :: eps = 0.000001 
-        logical, intent(out) :: sym
+        integer(kind=8),  intent(in)  :: dim
+        double precision, intent(in)  :: mat(dim, dim)
+        logical,          intent(out) :: sym
 
-        integer(kind=8) :: i, j
+        double precision              :: eps = 0.000001 
+        integer(kind=8)               :: i, j
 
 
         sym=.true.
@@ -443,4 +450,4 @@ module test_utils
 
     end subroutine check_symmetry_dense
 
-end module test_utils 
+end module test_utils

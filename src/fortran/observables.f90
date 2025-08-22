@@ -15,28 +15,23 @@ module observables
         module procedure current_dc
     end interface current_cf
 
-    interface representative
-        module procedure representative_reg
-        module procedure representative_tilted
-    end interface representative
-
     contains 
     
     subroutine current_correlations(par, geo, diag, out, st, thr)
         implicit none 
-        type(sim_params), intent(in) :: par
-        type(geometry), intent(in) :: geo
-        type(diag_params), intent(in) :: diag
-        type(output), intent(in) :: out
-        type(system_state), intent(in) :: st
-        type(thread_params), intent(in) :: thr
+        type(sim_params),             intent(in) :: par
+        type(geometry),               intent(in) :: geo
+        type(diag_params),            intent(in) :: diag
+        type(output),                 intent(in) :: out
+        type(system_state),           intent(in) :: st
+        type(thread_params),          intent(in) :: thr
 
-        integer                       :: refbond, case, nbonds, numthrds, thread, i, j, nrefb, l11, l22
-        integer,          allocatable :: site_coords(:,:), lattice(:,:)
-        double precision              :: current
-        double precision, allocatable :: bondcurrent(:)
-        character                     :: sl*1, fname1*512, fname2*512 
-        character(len=:), allocatable :: dir
+        integer                                   :: refbond, case, nbonds, numthrds, thread, i, j, nrefb, l11, l22
+        integer,          allocatable             :: site_coords(:,:), lattice(:,:)
+        double precision                          :: current
+        double precision, allocatable             :: bondcurrent(:)
+        character                                 :: sl*1, fname1*512, fname2*512 
+        character(len=:), allocatable             :: dir
         
         !$omp threadprivate(par%refbond, j, nrefb, current, bondcurrent, sl)
 
@@ -106,24 +101,24 @@ module observables
 
     subroutine current_reg_dp(t, dim, sites, Lx, Ly, ti, symm, mir, rot, basis, bsites, xtransl, ytransl, refl, c6, nbonds, refbond, psi, nnnVec, norm, bcurrent, current)
         implicit none
-        integer,                       intent(in)  :: nbonds, refbond, sites, Lx, Ly, ti, symm
-        integer, allocatable,          intent(in)  :: bsites(:,:), xtransl(:,:), ytransl(:,:), refl(:,:), c6(:)
-        integer(kind=8),               intent(in)  :: dim, basis(dim)
-        double precision,              intent(in)  :: t
-        double precision,              intent(in)  :: mir(6), rot(5)
-        double precision,              intent(in)  :: psi(:) 
-        double precision, allocatable, intent(in)  :: nnnVec(:, :), norm(:) 
-        double precision,              intent(out) :: current
-        double precision, allocatable, intent(out) :: bcurrent(:)
+        integer,                      intent(in)  :: nbonds, refbond, sites, Lx, Ly, ti, symm
+        integer,          allocatable, intent(in) :: bsites(:,:), xtransl(:,:), ytransl(:,:), refl(:,:), c6(:)
+        integer(kind=8),              intent(in)  :: dim, basis(dim)
+        double precision,             intent(in)  :: t
+        double precision,             intent(in)  :: mir(6), rot(5)
+        double precision,             intent(in)  :: psi(:) 
+        double precision, allocatable, intent(in) :: nnnVec(:, :), norm(:) 
+        double precision,             intent(out) :: current
+        double precision, allocatable, intent(out):: bcurrent(:)
 
-        integer(kind=8) :: loc, newst, rep, state
-        integer :: order, x, y, info, i, j, k, l1, l2, nd1, nd2
-        integer :: site1, site2, refsite1, refsite2, phase, parity
-        double precision :: dist
-        double precision :: sign, signrep, signstate, signDir
-        double precision, dimension(2)   :: vec, refvec
-        double precision, dimension(2,3) :: vecs
-        double precision, allocatable :: psiprime(:), evals(:), gs(:)
+        integer(kind=8)                           :: loc, newst, rep, state
+        integer                                   :: order, x, y, info, i, j, k, l1, l2, nd1, nd2
+        integer                                   :: site1, site2, refsite1, refsite2, phase, parity
+        double precision                          :: dist
+        double precision                          :: sign, signrep, signstate, signDir
+        double precision, dimension(2)            :: vec, refvec
+        double precision, dimension(2,3)          :: vecs
+        double precision, allocatable             :: psiprime(:), evals(:), gs(:)
 
         !$omp threadprivate(loc, newst, i, j, forward, backwards, signf, signb, sublattice_current_temp, bcurrent, psiprime, psiprimeij, psiprimeprime)
 
@@ -201,7 +196,7 @@ module observables
                             else 
                                 cycle 
                             end if
-                            if(ti == 1) call representative_reg(newst, sites, Lx, Ly, symm, mir, rot, xtransl, ytransl, refl, c6, rep, l1, l2, signrep)
+                            if(ti == 1) call representative_rect(newst, sites, Lx, Ly, symm, mir, rot, xtransl, ytransl, refl, c6, rep, l1, l2, signrep)
                             if(ti == 0) rep = newst
                             call binary_search(dim, rep, basis, loc) 
                             if(loc <= 0) cycle   
@@ -226,24 +221,24 @@ module observables
         ! Calculates current-current structure factor (current) and local current current correlations (bondcurrent) on the sublattice for a given reference bond.
         ! This subroutine is used for the tilted case.
         implicit none
-        integer,                       intent(in)  :: nHel, tilt, nbonds, refbond, sites, Lx, Ly, ti, symm
-        integer, allocatable,          intent(in)  :: bsites(:,:), xtransl(:,:), ytransl(:,:), refl(:,:), c6(:)
-        integer(kind=8),               intent(in)  :: dim, basis(dim)
-        double precision,              intent(in)  :: t    
-        double precision,              intent(in)  :: psi(:) 
-        double precision, allocatable, intent(in)  :: nnnVec(:, :), norm(:) 
-        double precision,              intent(in)  :: mir(6), rot(5) 
-        double precision,              intent(out) :: current
-        double precision, allocatable, intent(out) :: bcurrent(:)
+        integer,                      intent(in)  :: nHel, tilt, nbonds, refbond, sites, Lx, Ly, ti, symm
+        integer,          allocatable, intent(in) :: bsites(:,:), xtransl(:,:), ytransl(:,:), refl(:,:), c6(:)
+        integer(kind=8),              intent(in)  :: dim, basis(dim)
+        double precision,             intent(in)  :: t    
+        double precision,             intent(in)  :: psi(:) 
+        double precision, allocatable, intent(in) :: nnnVec(:, :), norm(:) 
+        double precision,             intent(in)  :: mir(6), rot(5) 
+        double precision,             intent(out) :: current
+        double precision, allocatable, intent(out):: bcurrent(:)
         
-        integer(kind=8)                  :: loc, newst, rep, state
-        integer                          :: x, y, info, i, j, k, l1, l2
-        integer                          :: order, site1, site2, refsite1, refsite2, phase, parity
-        double precision                 :: dist
-        double precision                 :: sign, signrep, signstate, signDir 
-        double precision, dimension(2)   :: vec, refvec
-        double precision, dimension(2,3) :: vecs
-        double precision, allocatable :: psiprime(:)
+        integer(kind=8)                           :: loc, newst, rep, state
+        integer                                   :: x, y, info, i, j, k, l1, l2
+        integer                                   :: order, site1, site2, refsite1, refsite2, phase, parity
+        double precision                          :: dist
+        double precision                          :: sign, signrep, signstate, signDir 
+        double precision, dimension(2)            :: vec, refvec
+        double precision, dimension(2,3)          :: vecs
+        double precision, allocatable             :: psiprime(:)
 
         !$omp threadprivate(loc, newst, i, j, forward, backwards, signf, signb, sublattice_current_temp, bcurrent, psiprime, psiprimeij, psiprimeprime)
 
@@ -359,31 +354,31 @@ module observables
         ! Based on complex eigenstates, this subroutine calculates current-current structure factor (current) and local current current correlations (bondcurrent) on the sublattice for a given reference bond.
         ! This subroutine is used for both regular and tilted clusters.
         implicit none
-        integer,                       intent(in)  :: tilted, nHel, tilt, k1, k2, nbonds, refbond, sites, Lx, Ly, ti, symm
-        integer(kind=8),               intent(in)  :: dim
-        integer(kind=8),               intent(in)  :: basis(dim)
-        integer, allocatable,          intent(in)  :: bsites(:,:)
-        integer, allocatable,          intent(in)  :: xy(:,:)
-        integer, allocatable,          intent(in)  :: xtransl(:,:), ytransl(:,:)
-        integer, allocatable,          intent(in)  :: refl(:,:), c6(:)
-        double precision,              intent(in)  :: t 
-        double precision, allocatable, intent(in)  :: nnnVec(:,:)
-        double precision,              intent(in)  :: mir(6), rot(5)
-        double complex,                intent(in)  :: psi(dim)
-        double precision, allocatable, intent(in)  :: norm(:)
-        double precision,              intent(out) :: current
-        double precision, allocatable, intent(out) :: bondcurrent(:)
+        integer,                      intent(in)  :: tilted, nHel, tilt, k1, k2, nbonds, refbond, sites, Lx, Ly, ti, symm
+        integer(kind=8),              intent(in)  :: dim
+        integer(kind=8),              intent(in)  :: basis(dim)
+        integer,          allocatable, intent(in) :: bsites(:,:)
+        integer,          allocatable, intent(in) :: xy(:,:)
+        integer,          allocatable, intent(in) :: xtransl(:,:), ytransl(:,:)
+        integer,          allocatable, intent(in) :: refl(:,:), c6(:)
+        double precision,             intent(in)  :: t 
+        double precision, allocatable, intent(in) :: nnnVec(:,:)
+        double precision,             intent(in)  :: mir(6), rot(5)
+        double complex,               intent(in)  :: psi(dim)
+        double precision, allocatable, intent(in) :: norm(:)
+        double precision,             intent(out) :: current
+        double precision, allocatable, intent(out):: bondcurrent(:)
         
-        integer(kind=8)                  :: loc, newst, rep, cntr
-        integer                          :: site1, site2, phase 
-        integer                          :: x, y, i, j, l1, l2, l, l11, l22 
-        integer                          :: refsite1, refsite2, parity1, parity2, parity3, parity4
-        double precision                 :: dist
-        double precision                 :: sign, signt 
-        double precision, dimension(2)   :: vec, refvec
-        double precision, dimension(2,3) :: vecs
-        double complex, allocatable      :: psiprime(:)
-        character*250                    :: name, name2 
+        integer(kind=8)                           :: loc, newst, rep, cntr
+        integer                                   :: site1, site2, phase 
+        integer                                   :: x, y, i, j, l1, l2, l, l11, l22 
+        integer                                   :: refsite1, refsite2, parity1, parity2, parity3, parity4
+        double precision                          :: dist
+        double precision                          :: sign, signt 
+        double precision, dimension(2)            :: vec, refvec
+        double precision, dimension(2,3)          :: vecs
+        double complex,   allocatable             :: psiprime(:)
+        character*250                             :: name, name2 
 
         !$omp threadprivate(loc, newst, i, j, forward, backwards, signf, signb, sublattice_current_temp, bondcurrent, psiprime, psiprimeij, psiprimeprime)
 
@@ -428,7 +423,7 @@ module observables
                                     l11 = Ly
                                     l22 = Lx
                                 else if(tilted == 0) then 
-                                    call representative_reg(newst, sites, Lx, Ly, symm, mir, rot, xtransl, ytransl, refl, c6, rep, l1, l2, signt) !Finds the representative of scattered state in momentum orbit and determines the number of translations 'ntrans' needed to map to representative.            
+                                    call representative_rect(newst, sites, Lx, Ly, symm, mir, rot, xtransl, ytransl, refl, c6, rep, l1, l2, signt) !Finds the representative of scattered state in momentum orbit and determines the number of translations 'ntrans' needed to map to representative.            
                                     l11 = Lx
                                     l22 = Ly
                                 end if
@@ -449,7 +444,7 @@ module observables
                                     l11 = Ly
                                     l22 = Lx
                                 else if(tilted == 0) then 
-                                    call representative_reg(newst, sites, Lx, Ly, symm, mir, rot, xtransl, ytransl, refl, c6, rep, l1, l2, signt) !Finds the representative of scattered state in momentum orbit and determines the number of translations 'ntrans' needed to map to representative.                      
+                                    call representative_rect(newst, sites, Lx, Ly, symm, mir, rot, xtransl, ytransl, refl, c6, rep, l1, l2, signt) !Finds the representative of scattered state in momentum orbit and determines the number of translations 'ntrans' needed to map to representative.                      
                                     l11 = Lx
                                     l22 = Ly
                                 end if
@@ -475,7 +470,7 @@ module observables
                                     l11 = Ly
                                     l22 = Lx
                                 else if(tilted == 0) then 
-                                    call representative_reg(newst, sites, Lx, Ly, symm, mir, rot, xtransl, ytransl, refl, c6, rep, l1, l2, signt) !Finds the representative of scattered state in momentum orbit and determines the number of translations 'ntrans' needed to map to representative.                   
+                                    call representative_rect(newst, sites, Lx, Ly, symm, mir, rot, xtransl, ytransl, refl, c6, rep, l1, l2, signt) !Finds the representative of scattered state in momentum orbit and determines the number of translations 'ntrans' needed to map to representative.                   
                                     l11 = Lx
                                     l22 = Ly
                                 end if
@@ -496,7 +491,7 @@ module observables
                                     l11 = Ly
                                     l22 = Lx
                                 else if(tilted == 0) then 
-                                    call representative_reg(newst, sites, Lx, Ly, symm, mir, rot, xtransl, ytransl, refl, c6, rep, l1, l2, signt) !Finds the representative of scattered state in momentum orbit and determines the number of translations 'ntrans' needed to map to representative.   
+                                    call representative_rect(newst, sites, Lx, Ly, symm, mir, rot, xtransl, ytransl, refl, c6, rep, l1, l2, signt) !Finds the representative of scattered state in momentum orbit and determines the number of translations 'ntrans' needed to map to representative.   
                                     l11 = Lx
                                     l22 = Ly
                                 end if

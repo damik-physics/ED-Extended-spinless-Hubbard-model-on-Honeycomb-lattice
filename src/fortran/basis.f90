@@ -1,5 +1,6 @@
 module basis 
-    ! Module for defining the basis for the extended Hubbard model on the honeycomb lattice.
+    ! Module for constructing and managing many-body basis states including symmetry operations,
+    ! momentum basis construction, and irreducible representation handling for the Hubbard model
     use types
     use params
     use functions
@@ -10,15 +11,16 @@ module basis
     contains 
 
     subroutine make_basis(par, geo, st)
+        ! Main basis construction routine that generates all many-body states and applies symmetry constraints
         
         implicit none
-        type(sim_params), intent(inout) :: par
-        type(geometry), intent(inout) :: geo
-        type(system_state), intent(inout) :: st
+        type(sim_params),     intent(inout) :: par
+        type(geometry),       intent(inout) :: geo
+        type(system_state),   intent(inout) :: st
             
-        integer :: a(geo%sites), temp = 0, I_in = 0, I_tail = 0, i, l
-        integer(kind=8) :: symdim, amask, bmask, j
-        integer(kind=8), allocatable :: momBasis(:)    
+        integer                             :: a(geo%sites), temp, I_in, I_tail, i, l
+        integer(kind=8)                     :: symdim, amask, bmask, j
+        integer(kind=8), allocatable        :: momBasis(:)    
 
         geo%dim = int(fact(geo%sites) /(fact(geo%particles) * fact(max(1,geo%sites-geo%particles))),8) !Number of basis states
 
@@ -135,22 +137,22 @@ module basis
 
     end subroutine make_basis
 
-    !Rotations, reflections and translations
     subroutine symm_basis(par, geo, st)
+        ! Constructs symmetry-adapted basis by finding representative states under group operations
         
         implicit none
 
-        type(sim_params), intent(inout) :: par
-        type(geometry), intent(inout) :: geo
+        type(sim_params),   intent(inout) :: par
+        type(geometry),     intent(inout) :: geo
         type(system_state), intent(inout) :: st 
         
-        integer :: r = 0, period = 0, temp(geo%sites), kx, ky, maxorb
-        integer(kind=8) :: j = 0, cntr = 0, cntr2 = 0, symdim = 0 
-        integer(kind=8), allocatable :: momBasis_temp(:), period_temp(:), orbits2D_temp(:,:,:), orbarr(:,:)
-        double precision, allocatable :: norm_temp(:), norm2D_temp(:,:)
-        double precision :: normalization = 0.d0, normalization2D(2) = 0.d0
-        double complex, allocatable :: phases2D_temp(:,:,:)
-        
+        integer                           :: r, period, temp(geo%sites), kx, ky, maxorb
+        integer(kind=8)                   :: j, cntr, cntr2, symdim 
+        integer(kind=8), allocatable      :: momBasis_temp(:), period_temp(:), orbits2D_temp(:,:,:), orbarr(:,:)
+        double precision, allocatable     :: norm_temp(:), norm2D_temp(:,:)
+        double precision                  :: normalization, normalization2D(2)
+        double complex, allocatable       :: phases2D_temp(:,:,:)
+
         if(par%tilted == 1) then 
             kx = st%k2
             ky = st%k1 
@@ -270,23 +272,24 @@ module basis
 
     !Checkstate for tilted lattices: For rotations, reflections and translations(single sum of phases for all orbits.)
     subroutine checkstate(par, geo, st, state, period, norm_sym)
+        ! Checks if a state is compatible with momentum and point group symmetry for tilted lattices
         implicit none
 
-        type(sim_params), intent(inout) :: par
-        type(geometry),   intent(inout) :: geo
-        type(system_state),      intent(inout) :: st
-        integer(kind=8),  intent(in) :: state
-        integer, intent(out) :: period ! The of the state within the symmetry orbit  
-        double precision, intent(out) :: norm_sym ! Norm of the symmetrized state
+        type(sim_params),   intent(inout) :: par
+        type(geometry),     intent(inout) :: geo
+        type(system_state), intent(inout) :: st
+        integer(kind=8),    intent(in)    :: state
+        integer,            intent(out)   :: period
+        double precision,   intent(out)   :: norm_sym
 
-        integer(kind=8) :: sr = 0, s0 = 0, orbit = 1
-        integer :: ntot = 0, info = 0
-        integer :: i = 0, n = 0, flag = 0, rt = 0
-        integer(kind=8), allocatable :: orbits(:)
-        double precision :: sign, kx(2), ky(2), k(2)
-        double precision :: a1(2), a2(2)
-        double precision, parameter :: tolerance = 1.0e-8
-        double complex :: phase
+        integer(kind=8)                   :: sr, s0, orbit = 1
+        integer                           :: ntot, info
+        integer                           :: i, n, flag, rt
+        integer(kind=8), allocatable      :: orbits(:)
+        double precision                  :: sign, kx(2), ky(2), k(2)
+        double precision                  :: a1(2), a2(2)
+        double precision, parameter       :: tolerance = 1.0e-8
+        double complex                    :: phase
 
         
         ntot = popcnt(state) !Number of geo%particles 
@@ -355,26 +358,26 @@ module basis
     end subroutine checkstate
 
     subroutine checkstate_rect(par, geo, st, state, period, norm_sym)
-
+        ! Checks if a state is compatible with momentum and point group symmetry for rectangular lattices
+        
         implicit none
     
-        ! Given momentum
-        type(sim_params), intent(inout) :: par
-        type(geometry), intent(inout) :: geo
+        type(sim_params),   intent(inout) :: par
+        type(geometry),     intent(inout) :: geo
         type(system_state), intent(inout) :: st
-        integer(kind=8), intent(in) :: state
-        integer, intent(out) :: period
-        double precision, intent(out) :: norm_sym
+        integer(kind=8),    intent(in)    :: state
+        integer,            intent(out)   :: period
+        double precision,   intent(out)   :: norm_sym
         
-        integer(kind=8) :: sr = 0, s0 = 0, orbit = 1
-        integer :: ntot = 0, info = 0
-        integer :: i = 0, n = 0, flag = 0, rt = 0
-        integer(kind=8), allocatable :: orbits(:)
-        double precision :: sign = 1.d0, kx(2), ky(2), k(2)
-        double precision :: a1(2), a2(2)
-        double precision, parameter :: tolerance = 1.0e-8
-        double complex :: phase = 0.d0
- 
+        integer(kind=8)                   :: sr, s0, orbit = 1
+        integer                           :: ntot, info
+        integer                           :: i, n, flag, rt
+        integer(kind=8), allocatable      :: orbits(:)
+        double precision                  :: sign, kx(2), ky(2), k(2)
+        double precision                  :: a1(2), a2(2)
+        double precision, parameter       :: tolerance = 1.0e-8
+        double complex                    :: phase
+
         ntot = popcnt(state)
         ! a1 =(/sqrt(3.d0), 0.d0/)
         ! a2 = 0.5*(/-1*sqrt(3.d0), 3.d0/)
@@ -436,27 +439,28 @@ module basis
     end subroutine checkstate_rect                   
 
     subroutine checkstate2D(par, geo, st, state, period, orbits, norm, phases)
+        ! Checks state compatibility for 2D irreducible representations with complex phases
         
         implicit none
 
-        type(sim_params), intent(inout) :: par
-        type(geometry), intent(inout) :: geo
+        type(sim_params),   intent(inout) :: par
+        type(geometry),     intent(inout) :: geo
         type(system_state), intent(inout) :: st
-        integer(kind=8), intent(in) :: state
-        integer, intent(out) :: period
-        integer(kind=8), intent(out) :: orbits(geo%orbsize,2)
-        double precision, intent(out) :: norm(2)
-        double complex, intent(out) :: phases(1:geo%orbsize, 2)
+        integer(kind=8),    intent(in)    :: state
+        integer,            intent(out)   :: period
+        integer(kind=8),    intent(out)   :: orbits(geo%orbsize,2)
+        double precision,   intent(out)   :: norm(2)
+        double complex,     intent(out)   :: phases(1:geo%orbsize, 2)
 
-        integer(kind=8) :: sr = 0, s0 = 0
-        integer :: rep, ntot, info, layers, flag
-        integer :: orbit = 1, i, n, rt, c
-        double precision :: sign = 1.d0, kx(2), ky(2), k(2)
-        double precision :: a1(2), a2(2), dcntr
-        double precision, parameter :: tolerance = 1.0e-8
+        integer(kind=8)                   :: sr, s0
+        integer                           :: rep, ntot, info, layers, flag
+        integer                           :: orbit = 1, i, n, rt, c
+        double precision                  :: sign, kx(2), ky(2), k(2)
+        double precision                  :: a1(2), a2(2), dcntr
+        double precision, parameter       :: tolerance = 1.0e-8
         
-        double precision :: sigma(2,2), rho(2,2), reflection(2,2), rotation(2,2), identity(2,2) 
-        double complex :: phase = 0.d0 
+        double precision                  :: sigma(2,2), rho(2,2), reflection(2,2), rotation(2,2), identity(2,2) 
+        double complex                    :: phase
 
         if(geo%rot(1) == 1)  rep = 1 !IRREP E1
         if(geo%rot(1) == -1) rep = 2 !IRREP E2
@@ -592,3 +596,4 @@ module basis
     end subroutine checkstate2D
 
 end module basis
+

@@ -1,8 +1,11 @@
 module file_utils
+    ! Module for file operations and utility functions including preprocessing, matrix conversions,
+    ! sparse matrix-vector multiplication, binary search, timing, and general file I/O operations
     use params
     use types
     use symmetries
     implicit none
+    
     interface coo_to_csr
         module procedure coocsr_dp_i4, coocsr_dp_i8, coocsr_dc_i4, coocsr_dc_i8
     end interface coo_to_csr
@@ -13,16 +16,16 @@ module file_utils
 
     contains
 
-
     subroutine preprocess(par, geo, thrd, out, st)
-        ! Preprocessing routine to set up necessary parameters and variables
+        ! Main preprocessing routine that initializes simulation parameters, creates output directories,
+        ! sets up threading parameters, and prepares the computational environment
                 
         implicit none
-        type(sim_params), intent(inout) :: par
-        type(geometry), intent(inout) :: geo
+        type(sim_params),    intent(inout) :: par
+        type(geometry),      intent(inout) :: geo
         type(thread_params), intent(inout) :: thrd
-        type(output), intent(inout) :: out
-        type(system_state), intent(inout) :: st
+        type(output),        intent(inout) :: out
+        type(system_state),  intent(inout) :: st
 
         call read_input(par)
         call setup_output_directory(out%outdir)
@@ -42,20 +45,17 @@ module file_utils
     end subroutine preprocess
 
     subroutine setvars(par, geo, thrd)
-
-        !------------------------------------------!
-        !            Set initial variables         !
-        !------------------------------------------!
-
+        ! Sets basic simulation variables including lattice size based on cluster type
+        ! and particle number based on filling fraction
         implicit none
 
-        type(sim_params) :: par
-        type(geometry) :: geo
+        type(sim_params)    :: par
+        type(geometry)      :: geo
         type(thread_params) :: thrd
-        character*10:: clusterl
-        integer :: threads
+        character*10        :: clusterl
+        integer             :: threads
 
-        !!$ call omp_set_num_threads(thrd%othrds)
+        !$ call omp_set_num_threads(thrd%othrds)
         !call mkl_set_num_threads(thrd%mthrds)
 
         if(par%tilted == 0) then 
@@ -83,39 +83,36 @@ module file_utils
     end subroutine setvars
 
     subroutine tune_lanczos_parameters(unit, thresh, exact, nevext, nestext, ncv0, dim, full, nev, ncv, nest)
-
-        !-------------------------------------------------------------------------!
-        !            Calculate number of eigenvalues and Lanczos vectors          !
-        !-------------------------------------------------------------------------!
-
+        ! Automatically tunes Lanczos diagonalization parameters based on matrix dimension
+        ! and chooses between sparse and dense diagonalization methods
         implicit none
-        integer, intent(in) :: unit, thresh, exact, nevext, nestext, ncv0
-        integer(kind=8), intent(in) :: dim
-        integer, intent(out) :: full, nev, ncv, nest
-        character*512 :: filename
+        integer,          intent(in)  :: unit, thresh, exact, nevext, nestext, ncv0
+        integer(kind=8),  intent(in)  :: dim
+        integer,          intent(out) :: full, nev, ncv, nest
+        character*512                 :: filename
 
         if(exact == 0) then
             if(dim < thresh) then
                 full = 1
-                nev = dim
-                ncv = dim
+                nev  = dim
+                ncv  = dim
                 nest = dim
             else
                 full = 0
                 if(dim == 1) then
-                    nev = 1
-                    ncv = 1
+                    nev  = 1
+                    ncv  = 1
                     nest = 1
                 else
-                    ncv = min(ncv0, dim - 1) !nev+1<=ncv<=dim and ncv maximal
-                    nev = min(nevext, ncv - 3)
+                    ncv  = min(ncv0, dim - 1) !nev+1<=ncv<=dim and ncv maximal
+                    nev  = min(nevext, ncv - 3)
                     nest = min(nev, nestext)
                 end if
             end if
         else if(exact == 1) then
             full = 1
-            nev = dim
-            ncv = dim
+            nev  = dim
+            ncv  = dim
             nest = min(dim, nestext)
         end if
 
@@ -123,16 +120,11 @@ module file_utils
     end subroutine tune_lanczos_parameters
 
     subroutine stepunits(ndu, ndv, ndv2, units)
-
-        !-------------------------------!
-        !            Step units         !
-        !-------------------------------!
-
-        !Creates array with units for parallel I/O. Each entry is a different unit number.
+        ! Assigns unique unit numbers for file I/O operations in nested parameter loops
         implicit none
-        integer, intent(in) :: ndu, ndv, ndv2
-        integer, allocatable, intent(out) ::  units(:,:,:,:)
-        integer :: i, j, k, l, q
+        integer,              intent(in)  :: ndu, ndv, ndv2
+        integer, allocatable, intent(out) :: units(:,:,:,:)
+        integer                           :: i, j, k, l, q
 
         if(allocated(units)) deallocate(units)
         allocate(units(ndv2,ndv,ndu,2))
@@ -151,16 +143,12 @@ module file_utils
     end subroutine stepunits
 
     subroutine threadunits(ndv, ndv2, units)
-
-        !---------------------------------!
-        !            Thread units         !
-        !---------------------------------!
-
+        ! Assigns unit numbers for parallel file operations across different thread configurations
         implicit none
-        integer, intent(in) :: ndv, ndv2
+        integer,              intent(in)  :: ndv, ndv2
         integer, allocatable, intent(out) :: units(:, :)
-        integer :: i, j, h
-        integer :: n_threads_tot
+        integer                           :: i, j, h
+        integer                           :: n_threads_tot
 
         n_threads_tot = 1
 
@@ -182,9 +170,12 @@ module file_utils
     end subroutine threadunits
 
     subroutine set_thrds(par, th)
+        ! Calculates optimal thread distribution across different parallelization levels
+        ! (V2, V1, disorder, and computational threads)
         implicit none 
-        type(sim_params), intent(inout) :: par
+        type(sim_params),    intent(inout) :: par
         type(thread_params), intent(inout) :: th
+
         ! Assign thread counts from th to local variables(assuming these are module variables)
         th%v2_thrds = max(min(th%ndv2, par%othrds), 1)
         th%v1_thrds = max(min(th%ndv1, int((par%othrds - th%v2_thrds) / th%v2_thrds)), 1) 
@@ -202,24 +193,22 @@ module file_utils
     end subroutine set_thrds
     
     subroutine read_input(params)
-
+        ! Reads simulation parameters from input.nml namelist file and initializes
+        ! derived type components with default or user-specified values
         implicit none
         
         type(sim_params), intent(out) :: params
 
-        ! local copies for reading from namelist
-        integer :: ucx, ucy, tilted, ti, k0, symm, p1, p2, p3
-        integer :: otf,corr, curr, refbonds
-        integer :: states, deg, feast, arpack, mkl, exact, degflag, dimthresh, nevext, nst, ncv0, nev0, nevmax, othrds, mthrds, nDis, g_fact
-        double precision :: t, dis, mass, filling, dv1, v1min, v1max, dv2, v2min, v2max
-        logical :: rvec
-        character(len=1) :: bc
-        character(len=2) :: irrep
-        character(len=3) :: cluster
+        integer                       :: ucx, ucy, tilted, ti, k0, symm, p1, p2, p3
+        integer                       :: otf,corr, curr, refbonds
+        integer                       :: states, deg, feast, arpack, mkl, exact, degflag, dimthresh, nevext, nst, ncv0, nev0, nevmax, othrds, mthrds, nDis, g_fact
+        double precision              :: t, dis, mass, filling, dv1, v1min, v1max, dv2, v2min, v2max
+        logical                       :: rvec
+        character(len=1)              :: bc
+        character(len=2)              :: irrep
+        character(len=3)              :: cluster
+        integer                       :: ios
 
-        integer :: ios
-
- 
         ! Set defaults first
         call init_params(params) ! Initializes all components of derived type sim_params to default values
         ! Now transfer default values to local variables 
@@ -335,7 +324,7 @@ module file_utils
     end subroutine read_input
 
     subroutine init_params(params)
-        ! Initialize simulation input parameters with default values 
+        ! Initializes all simulation parameters to their default values
         implicit none
         type(sim_params), intent(inout) :: params
         
@@ -390,11 +379,12 @@ module file_utils
     end subroutine init_params   
 
     subroutine setup_output_directory(outdir)
+        ! Creates timestamped output directory and copies input file for record-keeping
         implicit none
         character(len=:), allocatable, intent(inout) :: outdir
-        character(len=64) :: timestamp
-        integer :: values(8)
-        character(len=512) :: cmd
+        character(len=64)                             :: timestamp
+        integer                                       :: values(8)
+        character(len=512)                            :: cmd
 
         ! Create a timestamp for the output directory
         ! This will create a directory named 'run_YYYYMMDD_HHMMSS'
@@ -416,8 +406,9 @@ module file_utils
     subroutine create_output_subdirs(out_dir)
         implicit none
         character(len=*), intent(in) :: out_dir
-        character(len=512) :: cmd
-        integer :: exitstat
+        character(len=512)            :: cmd
+        integer                       :: exitstat
+
         ! Create subdirectories for different output types
         cmd = 'mkdir -p ' // trim(out_dir) // 'correlations ' // &
                         trim(out_dir) // 'hamiltonians ' // &
@@ -436,10 +427,11 @@ module file_utils
     end subroutine create_output_subdirs
 
     subroutine write_parameters_json(dir, par)
+        ! Writes all simulation parameters to a JSON file for analysis and reproducibility
         implicit none
-        character(len=*), intent(in) :: dir
-        type(sim_params), intent(in) :: par
-        integer :: unit
+        character(len=*),     intent(in) :: dir
+        type(sim_params),     intent(in) :: par
+        integer                          :: unit
 
         ! Open the JSON file in the specified directory
         open(newunit=unit, file=trim(dir)//'/parameters/parameters.json', status='replace', action='write')
@@ -502,51 +494,17 @@ module file_utils
         close(unit)
     end subroutine write_parameters_json
 
-
-    ! subroutine append_energy_csv(dir, v1, v2, energies, first_write)
-        ! implicit none
-        ! character(len=*), intent(in) :: dir
-        ! real(8), intent(in) :: v1, v2
-        ! real(8), intent(in) :: energies(:)
-        ! logical, intent(inout) :: first_write
-
-        ! character(len=:), allocatable :: filepath
-        ! integer :: unit, i
-
-        ! filepath = trim(dir) // "/energy.csv"
-        ! if (first_write) then
-        !     open(newunit=unit, file=filepath, status="replace", action="write")
-        !     write(unit,'(a)', advance='no') 'v1,v2'
-        !     do i=1, size(energies)
-        !         write(unit,'(a,i0)', advance='no') ',', i-1
-        !     end do
-        !     write(unit,*)
-        !     close(unit)
-        !     first_write = .false.
-        ! end if
-
-        ! open(newunit=unit, file=filepath, status="old", position="append", action="write")
-        ! write(unit,'(f12.6,1x,f12.6)', advance='no') v1, v2
-        ! do i=1, size(energies)
-        !     write(unit,'(",",f20.12)', advance='no') energies(i)
-        ! end do
-        ! write(unit,*)
-        ! close(unit)
-    ! end subroutine append_energy_csv
-
-    !-----------------------------
-    ! Append eigenvalues to CSV
-    !-----------------------------
     subroutine append_energy_csv(dir, ti, ndis, k1, k2, conf, v1, v2, energies, first_call)
+        ! Appends eigenvalue data to CSV file with appropriate headers based on simulation type
         implicit none
-        character(len=*), intent(in) :: dir
-        integer, intent(in) :: ti, ndis, k1, k2, conf
-        real(8), intent(in) :: v1, v2
-        real(8), dimension(:), intent(in) :: energies
-        logical, intent(inout) :: first_call
+        character(len=*),             intent(in)    :: dir
+        integer,                      intent(in)    :: ti, ndis, k1, k2, conf
+        real(8),                      intent(in)    :: v1, v2
+        real(8), dimension(:),        intent(in)    :: energies
+        logical,                      intent(inout) :: first_call
 
-        character(len=:), allocatable :: filepath
-        integer :: unit, i
+        character(len=:), allocatable                :: filepath
+        integer                                      :: unit, i
         filepath = trim(dir) // "spectra/energy.csv"
 
         open(newunit=unit, file=filepath, status='unknown', position='append', action='write')
@@ -581,20 +539,17 @@ module file_utils
             end function itoa
     end subroutine append_energy_csv
 
-
-    !-----------------------------
-    ! Append eigenstates to CSV
-    !-----------------------------
     subroutine append_states_csv_dp(dir, ti, ndis, k1, k2, conf, v1, v2, states)
+        ! Appends real eigenstate data to CSV file in row-wise format
         implicit none
-        character(len=*), intent(in) :: dir
-        integer, intent(in), optional :: ti, ndis, k1, k2, conf
-        double precision, intent(in) :: v1, v2
-        double precision, intent(in) :: states(:,:)   ! rows: eigenstates, cols: components, i.e. states(dim, n_states)
+        character(len=*),             intent(in), optional :: dir
+        integer,                      intent(in), optional :: ti, ndis, k1, k2, conf
+        double precision,             intent(in)           :: v1, v2
+        double precision,             intent(in)           :: states(:,:)
        
-        character(len=512) :: fname
-        integer :: i, j, ios
-        logical :: file_exists
+        character(len=512)                                 :: fname
+        integer                                            :: i, j, ios
+        logical                                            :: file_exists
         fname = trim(dir)//'states/states.csv'
         inquire(file=fname, exist=file_exists)
 
@@ -628,16 +583,16 @@ module file_utils
     end subroutine append_states_csv_dp
 
     subroutine append_states_csv_dc(dir, ti, ndis, k1, k2, conf, v1, v2, states)
+        ! Appends complex eigenstate data to CSV file in row-wise format
         implicit none
-        character(len=*), intent(in)           :: dir
-        integer,          intent(in), optional :: ti, ndis, k1, k2, conf
-        double precision, intent(in)           :: v1, v2
-        double complex,   intent(in)           :: states(:,:)   ! rows: eigenstates, cols: components
-        
+        character(len=*),             intent(in), optional :: dir
+        integer,                      intent(in), optional :: ti, ndis, k1, k2, conf
+        double precision,             intent(in)           :: v1, v2
+        double complex,               intent(in)           :: states(:,:)
 
-        character(len=512) :: fname
-        integer :: i, j, ios
-        logical :: file_exists
+        character(len=512)                                 :: fname
+        integer                                            :: i, j, ios
+        logical                                            :: file_exists
         fname = trim(dir)//'states/states.csv'
         inquire(file=fname, exist=file_exists)
 
@@ -671,17 +626,16 @@ module file_utils
     end subroutine append_states_csv_dc
     
     subroutine cleanup(inner, geo, ham, diag)
-        
+        ! Deallocates dynamically allocated arrays to free memory
+        ! inner=.true. deallocates inner loop arrays, inner=.false. deallocates outer loop arrays
         implicit none
 
-        type(geometry), intent(inout) :: geo ! Geometry parameters
-        type(hamiltonian_params), intent(inout) :: ham ! Hamiltonian parameters
-        type(diag_params), intent(inout) :: diag ! Diagonalization parameters
+        type(geometry),         intent(inout) :: geo
+        type(hamiltonian_params), intent(inout) :: ham
+        type(diag_params),      intent(inout) :: diag
+        logical,                intent(in)    :: inner
 
-
-        logical, intent(in) :: inner ! If true, deallocate arrays used within parameter-loops, otherwise deallocate arrays outside of parameter-loops.
-        ! This subroutine deallocates all dynamically allocated arrays used in the program.
-
+        ! Deallocate all dynamically allocated arrays used in the program.
         if(inner) then ! Deallocate all dynamically allocated arrays of inner loops
             if(allocated(geo%dplcts))      deallocate(geo%dplcts)
             if(allocated(geo%norm))        deallocate(geo%norm)
@@ -725,15 +679,17 @@ module file_utils
     end subroutine cleanup
 
     subroutine timing(dir, start_end)
+        ! Records and reports CPU timing information for performance monitoring
+        ! start_end=0 starts timer, start_end=1 stops timer and writes results
         implicit none
 
-        integer, intent(in) :: start_end ! 0 = start, 1 = end
-        character(len=*), intent(in) :: dir ! Directory for output
-        character(8), save  :: datei, datef
-        character(10), save :: timei, timef
-        integer, save :: values_i(8), values_f(8)
-        real, save :: start, finish
-        character :: file*512
+        integer,          intent(in) :: start_end
+        character(len=*), intent(in) :: dir
+        character(8),     save       :: datei, datef
+        character(10),    save       :: timei, timef
+        integer,          save       :: values_i(8), values_f(8)
+        real,             save       :: start, finish
+        character                    :: file*512
 
 
         if(start_end == 0) then
@@ -777,17 +733,12 @@ module file_utils
         end if
     end subroutine timing
 
-
-
     subroutine nsteps(min, max, delta, steps)
-        !---------------------------------------------------!
-        !            Number of discretization steps         !
-        !---------------------------------------------------!
-        
+        ! Calculates the number of steps in a parameter range given min, max, and step size
         implicit none
         
-        double precision, intent(in) :: min, max, delta
-        integer, intent(out) :: steps
+        double precision, intent(in)  :: min, max, delta
+        integer,          intent(out) :: steps
 
         if(delta <= 1.d0) then
             steps = int(abs(max-min)/delta + delta/2) + 1
@@ -799,14 +750,14 @@ module file_utils
     end subroutine nsteps
     
     subroutine binary_search(dim, s, basis, loc)
-        ! Looks for the state s in the basis and returns its location in loc.
+        ! Performs binary search to find the location of state s in the sorted basis array
         implicit none
 
-        integer(kind=8), intent(in) :: dim, basis(dim)
-        integer(kind=8), intent(in) :: s
+        integer(kind=8), intent(in)  :: dim, basis(dim)
+        integer(kind=8), intent(in)  :: s
         integer(kind=8), intent(out) :: loc
 
-        integer(kind=8) :: left, right, mean
+        integer(kind=8)              :: left, right, mean
 
         left = 1
         right = dim
@@ -826,22 +777,21 @@ module file_utils
 
     end subroutine binary_search
 
-    !-----------------------------------------------------!
-    !            COO to CSR for real sparse matrix        !
-    !-----------------------------------------------------!
-
     subroutine coocsr_dp_i4(nrow,nnz,a,ir,jc,ao,jao,iao)
+        ! Converts double precision sparse matrix from COO to CSR format using 4-byte integers
+        implicit none
 
-        integer(kind=8),  intent(in) :: nrow
-        integer(kind=8),  intent(in) :: nnz
-        double precision, intent(in) :: a(*)
-        integer,          intent(in) :: ir(*), jc(*)
+        integer(kind=8),  intent(in)  :: nrow
+        integer(kind=8),  intent(in)  :: nnz
+        double precision, intent(in)  :: a(*)
+        integer,          intent(in)  :: ir(*), jc(*)
         
         double precision, intent(out) :: ao(*)
         integer,          intent(out) :: jao(*), iao(*)
 
-        double precision :: x = 0 
-        integer(kind=8)  :: k = 0, i = 0, j = 0, k0 = 0, iad = 0
+        double precision              :: x
+        integer(kind=8)               :: k, i, j, k0
+        integer                       :: iad
 
         !$omp threadprivate(x, k, i, j, k0, iad)
 
@@ -911,17 +861,19 @@ module file_utils
     end subroutine coocsr_dp_i4
 
     subroutine coocsr_dp_i8(nrow,nnz,a,ir,jc,ao,jao,iao)
+        ! Converts double precision sparse matrix from COO to CSR format using 8-byte integers
+        implicit none
 
-        integer(kind=8), intent(in)   :: nrow
-        integer(kind=8), intent(in)   :: nnz
+        integer(kind=8),  intent(in)  :: nrow
+        integer(kind=8),  intent(in)  :: nnz
         double precision, intent(in)  :: a(*)
-        integer(kind=8), intent(in)   :: ir(*), jc(*)
+        integer(kind=8),  intent(in)  :: ir(*), jc(*)
         
         double precision, intent(out) :: ao(*)
-        integer(kind=8), intent(out)  :: jao(*), iao(*)
+        integer(kind=8),  intent(out) :: jao(*), iao(*)
 
-        double precision :: x = 0 
-        integer(kind=8)  :: k = 0, i = 0, j = 0, k0 = 0, iad = 0
+        double precision              :: x
+        integer(kind=8)               :: k, i, j, k0, iad
 
         !$omp threadprivate(x, k, i, j, k0, iad)
 
@@ -989,12 +941,9 @@ module file_utils
         return
 
     end subroutine coocsr_dp_i8
-
-    !--------------------------------------------------------!
-    !            COO to CSR for complex sparse matrix        !
-    !--------------------------------------------------------!
             
     subroutine coocsr_dc_i4(nrow,nnz,a,ir,jc,ao,jao,iao)
+        ! Converts double complex sparse matrix from COO to CSR format using 4-byte integers
         implicit none
 
         integer(kind=8), intent(in)  :: nrow
@@ -1005,8 +954,9 @@ module file_utils
         integer,         intent(out) :: jao(*),iao(*)
         double complex,  intent(out) :: ao(*)
         
-        double complex :: x = 0 
-        integer(kind=8) :: k = 0, k0 = 0, i = 0, j = 0, iad = 0
+        double complex               :: x
+        integer(kind=8)              :: k, k0, i, j
+        integer                      :: iad
 
         !$omp threadprivate(x, k, k0, i, j, iad)
 
@@ -1044,6 +994,7 @@ module file_utils
     end subroutine coocsr_dc_i4
 
     subroutine coocsr_dc_i8(nrow,nnz,a,ir,jc,ao,jao,iao)
+        ! Converts double complex sparse matrix from COO to CSR format using 8-byte integers
         implicit none
 
         integer(kind=8), intent(in)  :: nrow
@@ -1054,8 +1005,8 @@ module file_utils
         double complex,  intent(out) :: ao(*)
         integer(kind=8), intent(out) :: jao(*),iao(*)
         
-        double complex :: x = 0 
-        integer(kind=8) :: k = 0, k0 = 0, i = 0, j = 0, iad = 0
+        double complex               :: x
+        integer(kind=8)              :: k, k0, i, j, iad
 
         !$omp threadprivate(x, k, k0, i, j, iad)
 
@@ -1092,13 +1043,8 @@ module file_utils
 
     end subroutine coocsr_dc_i8
 
-    !-----------------------------------!
-    !   Sparse Matrix-Vector Product    !
-    !            Spmmv: y = A*x         !
-    !-----------------------------------!
-
     subroutine amux_dp(threads, n, x, y, a, ja, ia) 
-
+        ! Performs sparse matrix-vector multiplication y = A*x for double precision matrices in CSR format
         implicit none
 
         integer,          intent(in)  :: threads
@@ -1107,6 +1053,9 @@ module file_utils
         double precision, intent(in)  :: x(n), a(*)
         double precision, intent(out) :: y(n)
         
+        double precision              :: t
+        integer(kind=8)               :: i, k
+
         !-----------------------------------------------------------------------
         !         A times a vector
         !-----------------------------------------------------------------------
@@ -1128,10 +1077,6 @@ module file_utils
         !-----------------------------------------------------------------------
         ! local variables
         !
-
-        double precision :: t = 0 
-        integer :: i = 0, k = 0
-        integer :: cntr = 0  
         !-----------------------------------------------------------------------
 
         !$omp parallel do private(i, k, t) num_threads(threads)
@@ -1158,43 +1103,21 @@ module file_utils
     end subroutine amux_dp 
 
     subroutine amux_dp_otf(threads, dim, sites, nbonds, nnnbonds, t1, v1, v2, basis, bsites, hexsites, x, y) 
-
+        ! Performs matrix-vector multiplication on-the-fly without storing the full Hamiltonian matrix
+        ! Generates Hamiltonian elements during the multiplication for memory efficiency
         implicit none
 
-        integer(kind=8),  intent(in) :: dim
-        integer(kind=8),  intent(in) :: basis(dim)
-        integer,          intent(in) :: threads, sites, nbonds, nnnbonds
-        integer,          intent(in) :: bsites(2, nbonds), hexsites(2, nnnbonds)
-        double precision, intent(in) :: t1, v1, v2
-        double precision, intent(in) :: x(dim)
-
+        integer(kind=8),  intent(in)  :: dim
+        integer(kind=8),  intent(in)  :: basis(dim)
+        integer,          intent(in)  :: threads, sites, nbonds, nnnbonds
+        integer,          intent(in)  :: bsites(2, nbonds), hexsites(2, nnnbonds)
+        double precision, intent(in)  :: t1, v1, v2
+        double precision, intent(in)  :: x(dim)
         double precision, intent(out) :: y(dim)
         
-        !-----------------------------------------------------------------------
-        !         A times a vector
-        !-----------------------------------------------------------------------
-        ! multiplies a matrix by a vector using the dot product form
-        ! Matrix A is stored in compressed sparse row storage.
-        !
-        ! on entry:
-        !----------
-        ! n     = row dimension of A
-        ! x     = real array of length equal to the column dimension of
-        !         the A matrix.
-        ! a, ja,
-        !    ia = input matrix in compressed sparse row format.
-        !
-        ! on return:
-        !-----------
-        ! y     = real array of length n, containing the product y=Ax
-        !
-        !-----------------------------------------------------------------------
-        ! local variables
-        !
-
-        double precision :: a = 0.d0, t = 0.d0  
-        integer(kind=8) :: i = 0, newst = 0, loc = 0
-        integer :: s = 0, parity1 = 0, parity2 = 0
+        double precision              :: a, t
+        integer(kind=8)               :: i, newst, loc
+        integer                       :: s, parity1, parity2
 
         !-----------------------------------------------------------------------
         
@@ -1208,7 +1131,7 @@ module file_utils
             !
             a = 0.0d0
             t = 0.0d0
-            !!$ id = omp_get_thread_num()
+            !$ id = omp_get_thread_num()
             
             do s = 1, nbonds  
                 if(btest(basis(i), bsites(1, s) - 1) .and. .not. btest(basis(i), bsites(2, s) - 1)) then 
@@ -1254,14 +1177,18 @@ module file_utils
 
     end subroutine amux_dp_otf 
         
-    subroutine amux_dc(threads, n, x, y, a, ja, ia)       
+    subroutine amux_dc(threads, n, x, y, a, ja, ia)
+        ! Performs sparse matrix-vector multiplication y = A*x for double complex matrices in CSR format
         implicit none
-        integer,         intent(in) :: threads
-        integer(kind=8), intent(in) :: n, ja(*), ia(*)
-        double complex,  intent(in) :: x(*), a(*)
-
-        double complex, intent(out) :: y(*)
+        
+        integer,         intent(in)  :: threads
+        integer(kind=8), intent(in)  :: n, ja(*), ia(*)
+        double complex,  intent(in)  :: x(*), a(*)
+        double complex,  intent(out) :: y(*)
                 
+        double complex               :: t
+        integer(kind=8)              :: i, k
+
         !-----------------------------------------------------------------------
         !         A times a vector
         !-----------------------------------------------------------------------
@@ -1283,11 +1210,8 @@ module file_utils
         !-----------------------------------------------------------------------
         ! local variables
         !
-        double complex :: t
-        integer :: i, k
-        !-----------------------------------------------------------------------
-        
-        
+
+
         !$omp parallel do private(k,t,i) num_threads(threads)
         do i = 1, n
         !
@@ -1309,7 +1233,5 @@ module file_utils
         return
 
     end subroutine amux_dc
-
-
 
 end module file_utils

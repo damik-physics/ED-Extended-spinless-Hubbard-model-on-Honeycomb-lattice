@@ -1,4 +1,6 @@
 module lattice
+    ! Module for constructing honeycomb lattice geometries including rectangular and tilted clusters,
+    ! defining nearest-neighbor and next-nearest-neighbor bonds, coordinate systems, and momentum discretization
     use types
     use functions 
     use params
@@ -8,16 +10,17 @@ module lattice
 
     contains 
     subroutine define_lattice(dir, par, geo, out)
+        ! Main lattice setup routine that calls appropriate constructors for rectangular or tilted geometries
    
         implicit none
     
         character(len=*), intent(inout) :: dir
         type(sim_params), intent(inout) :: par
-        type(geometry), intent(inout) :: geo
-        type(output), intent(inout) :: out
+        type(geometry),   intent(inout) :: geo
+        type(output),     intent(inout) :: out
 
-        integer :: i
-        character :: name*512
+        integer                         :: i
+        character                       :: name*512
 
         if(par%tilted == 0) then ! Define a rectangular honeycomb lattice
 
@@ -136,13 +139,14 @@ module lattice
     end subroutine define_lattice
 
     subroutine build_cluster(geo)
+        ! Constructs tilted honeycomb clusters with specified helix structure and bond connectivity
     
         implicit none 
         type(geometry), intent(inout) :: geo
 
-        integer :: nBondsA, nBondsB, site1, site2, sites, nS
-        integer :: cntr, xcntr, ycntr
-        integer :: h, i
+        integer                       :: nBondsA, nBondsB, site1, site2, sites, nS
+        integer                       :: cntr, xcntr, ycntr
+        integer                       :: h, i
 
          
         if(allocated(geo%nnnVec)) deallocate(geo%nnnVec)
@@ -289,12 +293,13 @@ module lattice
     end subroutine build_cluster
 
     subroutine reflection(par, geo)
+        ! Sets up reflection symmetry operations for the lattice sites
         implicit none 
         type(sim_params), intent(inout) :: par
-        type(geometry), intent(inout) :: geo
+        type(geometry),   intent(inout) :: geo
         
-        integer :: sites = 0 
-        integer :: i = 0, j = 0, xr = 0, yr = 0 
+        integer              :: sites
+        integer              :: i, j, xr, yr 
         integer, allocatable :: uccoord(:,:)
 
         sites = 2 * par%ucx * par%ucy 
@@ -333,15 +338,16 @@ module lattice
     end subroutine reflection
 
     subroutine coordinates(dir, par, geo, out)
+        ! Saves lattice site coordinates to files for visualization and analysis
         implicit none 
-        character(len=*), intent(in) :: dir
+        character(len=*), intent(in)    :: dir
         type(sim_params), intent(inout) :: par
-        type(geometry), intent(inout) :: geo
-        type(output), intent(inout) :: out
+        type(geometry),   intent(inout) :: geo
+        type(output),     intent(inout) :: out
 
-        integer   :: j = 0 
-        character :: filename*256
-        character :: par_char*256
+        integer                         :: j
+        character                       :: filename*256
+        character                       :: par_char*256
 
         out%unit = 10
         write(par_char,"('L=',i0,'ucx=',i0,'ucy=',i0,'BC=',a,'_pat=',a2'.dat')") 2 *par%ucx*par%ucy,par%ucx,par%ucy, par%bc, pattern
@@ -350,9 +356,8 @@ module lattice
         if(allocated(geo%xyB)) deallocate(geo%xyB)
         allocate(geo%xyA(4, geo%cntrA))
         allocate(geo%xyB(4, geo%cntrB))
-        filename = dir//"A_coordinates_"//par_char
-        filename = trim(filename)
-        open(out%unit,file = filename)
+        filename = trim(dir)//"lattice_data/A_coordinates_"//trim(par_char)
+        open(out%unit,file = trim(filename))
         do j = 1, geo%cntrA             
             geo%xyA(1,j) = geo%xy(1,geo%alattice(4,j))
             geo%xyA(2,j) = geo%xy(2,geo%alattice(4,j))
@@ -362,9 +367,8 @@ module lattice
         end do   
         close(out%unit)
 
-        filename = dir//"B_coordinates_"//par_char
-        filename = trim(filename)
-        open(out%unit,file = filename)
+        filename = trim(dir)//"lattice_data/B_coordinates_"//trim(par_char)
+        open(out%unit,file = trim(filename))
         do j = 1, geo%cntrB             
             geo%xyB(1,j) = geo%xy(1,geo%blattice(4,j))
             geo%xyB(2,j) = geo%xy(2,geo%blattice(4,j))
@@ -379,20 +383,21 @@ module lattice
     end subroutine coordinates
 
     subroutine honeycomb(dir, par, geo)
-
+        ! Constructs rectangular honeycomb lattice with nearest-neighbor bonds
+        
         implicit none
-        character(len=*), intent(in) :: dir
-        type(sim_params), intent(in) :: par ! Simulation parameters
-        type(geometry), intent(inout) :: geo ! geometry parameters
+        character(len=*),     intent(in)    :: dir
+        type(sim_params),     intent(in)    :: par
+        type(geometry),       intent(inout) :: geo
 
-        integer, allocatable :: bsites_temp(:,:)
-        integer :: nn, nx, ny       
-        integer :: y0
-        integer :: xcounter, ycounter
-        integer :: nbx, nby
-        integer :: s, x1, x2, y1, y2
-        integer, allocatable :: xy(:,:)    
-        character :: name*512
+        integer, allocatable                :: bsites_temp(:,:)
+        integer                             :: nn, nx, ny       
+        integer                             :: y0
+        integer                             :: xcounter, ycounter
+        integer                             :: nbx, nby
+        integer                             :: s, x1, x2, y1, y2
+        integer, allocatable                :: xy(:,:)    
+        character                           :: name*512
 
         !d1 =(0,1)
         !d2 =(-Sqrt[3]/2,-1/2)
@@ -458,18 +463,16 @@ module lattice
 
         deallocate(bsites_temp)
         write(name,"('L=',i0,'ucx=',i0,'ucy=',i0,'pat=',a2,'BC=',a,'.dat')") geo%sites,par%ucx,par%ucy,pattern, par%bc
-        name = trim(name)
-        name=dir//"NN_lattice_"//name
-        open(unit=31, file=name)
+        name = trim(dir)//"lattice_data/NN_lattice_"//trim(name)
+        open(unit=31, file=trim(name))
         do s = 1, geo%nnnBonds
             write(31,*) geo%bsites(1,s), geo%bsites(2,s)
         end do
         close(31)
 
         write(name,"('L=',i0,'ucx=',i0,'ucy=',i0,'pat=',a2,'BC=',a,'.dat')") nn,par%ucx,par%ucy,pattern, par%bc
-        name = trim(name)
-        name=dir//"NN_xy_"//name
-        open(unit=32, file=name)
+        name = trim(dir)//"lattice_data/NN_xy_"//trim(name)
+        open(unit=32, file=trim(name))
         do s = 1, geo%nnnBonds
             write(32,*) geo%xy(1,s), geo%xy(2,s), geo%xy(3,s), geo%xy(4,s)
         end do
@@ -478,23 +481,24 @@ module lattice
     end subroutine honeycomb
 
     subroutine honeycomb_nnn(dir, par, geo)
-
+        ! Constructs honeycomb lattice with next-nearest-neighbor bonds and sublattice structure
+        
         implicit none
 
-        character(len=*), intent(in) :: dir!, bc, pattern
-        type(sim_params), intent(inout) :: par
-        type(geometry), intent(inout) :: geo
-        integer :: nn, nx, ny
-        integer :: y0
-        integer :: xcounter, ycounter, ytcounter
-        integer :: nbx, nby
-        integer :: s, x1, x2, y1, y2
-        integer, allocatable :: alatt(:,:)
-        integer, allocatable :: blatt(:,:)
-        integer, allocatable :: cntrAsites(:)
-        integer, allocatable :: cntrBsites(:)
+        character(len=*),     intent(in)    :: dir
+        type(sim_params),     intent(inout) :: par
+        type(geometry),       intent(inout) :: geo
+        integer                             :: nn, nx, ny
+        integer                             :: y0
+        integer                             :: xcounter, ycounter, ytcounter
+        integer                             :: nbx, nby
+        integer                             :: s, x1, x2, y1, y2
+        integer, allocatable                :: alatt(:,:)
+        integer, allocatable                :: blatt(:,:)
+        integer, allocatable                :: cntrAsites(:)
+        integer, allocatable                :: cntrBsites(:)
         
-        character :: name*512
+        character                           :: name*512
 
         !Definition of lattice vectors: 
         ! v1 = {sqrt(3), 0}
@@ -688,9 +692,9 @@ module lattice
                         geo%cntrA = geo%cntrA + 1
                         alatt(1, geo%cntrA) = geo%hexsites(1,nbx + ycounter)
                         alatt(2, geo%cntrA) = geo%hexsites(2,nbx + ycounter)      
-                        alatt(3, geo%cntrA) = 1 !QAH phase        
-                        alatt(4, geo%cntrA) = nbx + ycounter !Bond number     
-                        alatt(5, geo%cntrA) = 2 !Lattice vector        
+                        alatt(3, geo%cntrA) = 1 !QAH phase           
+                        alatt(4, geo%cntrA) = nbx + ycounter !Bond number    
+                        alatt(5, geo%cntrA) = 2 !Lattice vector                
                         geo%phases(nbx + ycounter) = 1     
                         cntrAsites(geo%hexsites(1,nbx + ycounter)) = cntrAsites(geo%hexsites(1,nbx + ycounter)) + 1
                         geo%BsitesBonds(cntrAsites(geo%hexsites(1,nbx + ycounter)),geo%hexsites(1,nbx + ycounter)) = geo%cntrA
@@ -788,8 +792,8 @@ module lattice
         deallocate(alatt)
         deallocate(blatt)
         write(name,"('L=',i0,'ucx=',i0,'ucy=',i0,'pat=',a2,'par%BC=',a,'.dat')") nn, par%ucx, par%ucy, pattern, par%bc
-        name = trim(dir)//"A_lattice_"//trim(name)
-        open(unit=32, file=name)
+        name = trim(dir)//"lattice_data/A_lattice_"//trim(name)
+        open(unit=32, file=trim(name))
         do s = 1, geo%cntrA
             write(32,'(i0,x,i0,x,i0,x,i0,x,i0)') geo%alattice(1,s), geo%alattice(2,s), geo%alattice(3,s), geo%alattice(4,s), geo%alattice(5,s)
         end do
@@ -797,9 +801,8 @@ module lattice
 
 
         write(name,"('L=',i0,'ucx=',i0,'ucy=',i0,'pat=',a2,'par%BC=',a,'.dat')") nn, par%ucx, par%ucy, pattern, par%bc
-        name = trim(name)
-        name=dir//"B_lattice_"//name
-        open(unit=32, file=name)
+        name = trim(dir)//"lattice_data/B_lattice_"//trim(name)
+        open(unit=32, file=trim(name))
         do s = 1,geo%cntrB
             write(32,'(i0,x,i0,x,i0,x,i0,x,i0)') geo%blattice(1,s), geo%blattice(2,s), geo%blattice(3,s), geo%blattice(4,s), geo%blattice(5,s)
         end do
@@ -809,9 +812,8 @@ module lattice
 
 
         write(name,"('L=',i0,'ucx=',i0,'ucy=',i0,'pat=',a2,'par%BC=',a,'.dat')") nn, par%ucx, par%ucy, pattern, par%bc
-        name = trim(name)
-        name = dir//"NNN_lattice_"//name
-        open(unit=32, file=name)
+        name = trim(dir)//"lattice_data/NNN_lattice_"//trim(name)
+        open(unit=32, file=trim(name))
         do s = 1, geo%nnBonds
             write(32,*) geo%hexsites(1,s), geo%hexsites(2,s)      
         end do
@@ -820,24 +822,23 @@ module lattice
 
         write(name,"('L=',i0,'ucx=',i0,'ucy=',i0,'pat=',a2,'par%BC=',a,'.dat')") nn, par%ucx, par%ucy,pattern, par%bc
         name = trim(name)
-        name=dir//"NNN_xy_"//name
-        open(unit=32, file=name)
+        name = trim(dir)//"lattice_data/NNN_xy_"//trim(name)
+        open(unit=32, file=trim(name))
         do s = 1, geo%nnBonds
             write(32,'(4(i0,x))') geo%xy(1,s), geo%xy(2,s), geo%xy(3,s), geo%xy(4,s)
         end do
         close(32)
 
-
     end subroutine honeycomb_nnn
 
     subroutine discretize_momenta(par, geo, out)
+        ! Sets up discrete momentum grid based on lattice size and boundary conditions
  
-
         implicit none 
         
         type(sim_params), intent(inout) :: par
-        type(geometry), intent(inout) :: geo
-        type(output), intent(inout) :: out
+        type(geometry),   intent(inout) :: geo
+        type(output),     intent(inout) :: out
 
         if(par%ti == 0 .or. par%symm == 1 .or. par%k0 == 1) then 
             geo%k1_max = 0
@@ -865,4 +866,4 @@ module lattice
         
     end subroutine discretize_momenta
 
-end module lattice 
+end module lattice

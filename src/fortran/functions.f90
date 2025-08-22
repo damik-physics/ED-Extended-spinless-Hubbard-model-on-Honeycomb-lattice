@@ -1,32 +1,32 @@
 module functions
-
+    ! Module containing utility functions for bit manipulation, string processing,
+    ! combinatorics, and mathematical operations used throughout the simulation
     implicit none
     
     contains 
     
     function hopping(state, from, to) result(new_state)
-        ! Declarations
+        ! Performs fermion hopping operation by moving particle from 'from' site to 'to' site
         implicit none
-        ! Argument declarations
-        integer(kind=8), intent(in)  :: state
-        integer, intent(in)  :: from ! Site to hop from
-        integer, intent(in)  :: to   ! Site to hop to
-        integer(kind=8) :: new_state ! New state after hopping
+        integer(kind=8), intent(in) :: state
+        integer,         intent(in) :: from
+        integer,         intent(in) :: to
+        integer(kind=8)             :: new_state
 
         ! First create particle at the 'to' site, then remove it from the 'from' site 
         new_state = ibclr(ibset(state, to-1), from-1)
 
     end function hopping
 
-
-    function trim_name(file_name) result(trimmed_name) !Function to remove blank spaces from file names
-
+    function trim_name(file_name) result(trimmed_name)
+        ! Removes all blank spaces from a file name string
+        
         implicit none
 
         character(len=*), intent(in) :: file_name
 
-        integer       :: ls1, ls2, i
-        character*512 :: trimmed_name ! Declare a character variable to hold the trimmed name
+        integer                      :: ls1, ls2, i
+        character*512                :: trimmed_name ! Declare a character variable to hold the trimmed name
         
         trimmed_name = ''
         ls1 = len_trim(file_name) ! Get the length of the input file name
@@ -52,11 +52,11 @@ module functions
 
         implicit none
 
-        integer, intent(in)          :: sites, particles
+        integer,          intent(in) :: sites, particles
         double precision, intent(in) :: magnetization
         
-        integer :: particles_up, particles_dn ! Number of particles with spin up and down
-        integer(kind=8) :: combinations ! Number of combinations
+        integer                      :: particles_up, particles_dn ! Number of particles with spin up and down
+        integer(kind=8)              :: combinations ! Number of combinations
 
         particles_up = int((particles + 2 * magnetization) / 2)
         particles_dn = particles - particles_up
@@ -69,17 +69,14 @@ module functions
 
     end function combs
 
-    function fact(n) result(res) !Calculates the factorial n!
-
-        !----------------------------------!
-        !            Factorial: n!         !
-        !----------------------------------!
-
+    function fact(n) result(res)
+        ! Calculates factorial of integer n with error checking for negative inputs
+        
         implicit none
 
         integer, intent(in) :: n
         
-        integer(kind=8) :: i, res
+        integer(kind=8)     :: i, res
 
         if(n < 0) error stop 'Factorial is singular for negative integers'
 
@@ -94,27 +91,25 @@ module functions
 
     end function fact
 
-    function binomial(n, k) result(res) !Calculates the binomial coefficient C(n, k) = n! /(k! *(n-k)!)
-
-        !---------------------------------------!
-        !            Binomial coefficients      !
-        !---------------------------------------!
-
+    function binomial(n, k) result(res)
+        ! Calculates binomial coefficient "n choose k"
+        
         implicit none
         integer, intent(in) :: n, k
         
-        double precision :: res
+        double precision    :: res
 
         res = fact(n) /(fact(k) * fact(n - k))
 
     end function binomial
 
-    function log2(x) result(res) ! Calculates the logarithm base 2 of x
-
+    function log2(x) result(res)
+        ! Calculates base-2 logarithm of x
+        
         implicit none
 
         double precision, intent(in) :: x
-        double precision :: res   
+        double precision             :: res   
 
         res = log(x) / log(2.)
 

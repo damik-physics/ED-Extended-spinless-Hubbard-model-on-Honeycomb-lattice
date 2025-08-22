@@ -1,4 +1,6 @@
 module types
+    ! Module containing derived type definitions for simulation parameters, geometry,
+    ! system state, threading, output control, diagonalization, and Hamiltonian data structures
     implicit none
     
 
@@ -75,7 +77,7 @@ module types
     end type diag_params
 
     type :: thread_params
-        ! Parallelization parameters
+        ! Parallelization parameters that are not set by the user
         integer :: dis_thrds ! Number of disorder threads
         integer :: v1_thrds ! Number of V1 threads
         integer :: v2_thrds ! Number of V2 threads
@@ -112,7 +114,7 @@ module types
     end type output
 
     type geometry
-        ! Parameters and arrays related to the basis and its construction, symmetrization and lattice geometry  
+        ! Parameters and arrays related to the lattice and basis and its construction, symmetrization and lattice geometry  
 
         integer(kind=8) :: dim ! Dimension of the basis
         ! Lattice parameters

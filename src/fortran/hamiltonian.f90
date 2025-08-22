@@ -1,4 +1,7 @@
 module hamiltonian 
+    ! Module for constructing Hamiltonian matrices in COO (coordinate) sparse format
+    ! for the extended Hubbard model including nearest-neighbor hopping, interaction terms,
+    ! and support for momentum sectors and irreducible representations
    
     use io_utils
     use basis
@@ -13,13 +16,12 @@ module hamiltonian
     end interface generate_offdiag_coo
 
     interface generate_diag_coo
-    module procedure diag_coo
-    module procedure diag_coo_irrep2d  
+        module procedure diag_coo
+        module procedure diag_coo_irrep2d  
     end interface generate_diag_coo
 
 
     contains 
-
 
     subroutine generate_hamiltonian(par, geo, ham, out, thrd, k1, k2)
         ! Generates the Hamiltonian matrix based on the parameters and geometry in COO format. 
@@ -28,21 +30,21 @@ module hamiltonian
         use ham_hdf5_io
         implicit none 
 
-        type(sim_params), intent(inout) :: par
-        type(geometry), intent(inout) :: geo
-        type(hamiltonian_params), intent(inout) :: ham
-        type(output), intent(inout) :: out
-        type(thread_params), intent(inout) :: thrd
-        integer, intent(in) :: k1, k2
+        type(sim_params),              intent(inout) :: par
+        type(geometry),                intent(inout) :: geo
+        type(hamiltonian_params),      intent(inout) :: ham
+        type(output),                  intent(inout) :: out
+        type(thread_params),           intent(inout) :: thrd
+        integer,                       intent(in)    :: k1, k2
 
-        character                     :: type*1 
-        integer                       :: flag_i, flag_2D
-        integer(kind=8)               :: nnz_diag_total
-        integer(kind=8), allocatable  :: rc_combined(:,:)
-        double precision              :: flag_dp
-        double precision, allocatable :: values_real_combined(:)
-        double complex,   allocatable :: values_complex_combined(:)
-        logical                       :: exist1, exist2, exist3
+        character                                  :: type*1 
+        integer                                    :: flag_i, flag_2D
+        integer(kind=8)                            :: nnz_diag_total
+        integer(kind=8),  allocatable              :: rc_combined(:,:)
+        double precision                           :: flag_dp
+        double precision, allocatable              :: values_real_combined(:)
+        double complex,   allocatable              :: values_complex_combined(:)
+        logical                                    :: exist1, exist2, exist3
 
         print*, 'Generating Hamiltonian ...'
         print*, ''
@@ -96,7 +98,6 @@ module hamiltonian
     end subroutine generate_hamiltonian
 
     subroutine offdiag_coo_i(threads, unit, sites, nbonds, bsites, dim, basis_list, ham, nnz)
-
         !-------------------------------------------------------------!
         !          Hopping procedure for real matrix entries          !
         !-------------------------------------------------------------!
@@ -104,16 +105,17 @@ module hamiltonian
         
         implicit none
 
-        integer, intent(in)                       :: threads, unit, sites, nbonds, bsites(2, nbonds) 
-        integer(kind=8), intent(in)               :: dim, basis_list(dim)
+        integer,                      intent(in)  :: threads, unit, sites, nbonds
+        integer,                      intent(in)  :: bsites(2, nbonds)
+        integer(kind=8),              intent(in)  :: dim, basis_list(dim)
                 
-        integer(kind=8), intent(out)              :: nnz
+        integer(kind=8),              intent(out) :: nnz
         integer(kind=8), allocatable, intent(out) :: ham(:,:)
 
         ! Local variables
-        integer                      :: id = 0, parity1 = 0, parity2 = 0
-        integer(kind=8)              :: i = 0, j = 0, s = 0, arrsize = 0, cntr2 = 0, loc = 0, pos = 0, cntrj = 0, newst = 0  
-        integer(kind=8), allocatable :: cntr(:), ham_temp(:,:)
+        integer                                   :: id, parity1, parity2
+        integer(kind=8)                           :: i, j, s, arrsize, cntr2, loc, pos, cntrj, newst  
+        integer(kind=8), allocatable              :: cntr(:), ham_temp(:,:)
             
         
         arrsize = 2*nbonds*dim ! Maximum number of non-zero elements in the Hamiltonian matrix. Each basis state can have at most 2*nbonds non-zero elements(one for each bond).
@@ -126,6 +128,7 @@ module hamiltonian
         ham_temp = 0 
         cntr     = 0
         nnz      = 0
+        id       = 0 
 
         !$omp parallel do default(firstprivate) shared(ham_temp, cntr, bsites, basis_list) num_threads(threads)
         do j = 1, dim
@@ -190,7 +193,6 @@ module hamiltonian
     end subroutine offdiag_coo_i
 
     subroutine offdiag_coo_dc(unit, tilted, symm, nHel, tilt, lx, ly, ucx, ucy, sites, nbonds, dim, basis_list, bsites, norm, xtransl, ytransl, mir, rot, refl, c6, t, k1, k2, rc, ham, nnz)
-
         !----------------------------------------------------------------!
         !          Hopping procedure for complex matrix entries          !
         !----------------------------------------------------------------!
@@ -200,21 +202,23 @@ module hamiltonian
 
         implicit none
 
-        integer,                       intent(in) :: unit, tilted, symm, nHel, tilt, lx, ly, ucx, ucy, sites, nbonds, k1, k2, bsites(2, nbonds), xtransl(2, sites), ytransl(2, sites), refl(6, sites), c6(sites)
-        integer(kind=8),               intent(in) :: dim, basis_list(dim)
-        double precision,              intent(in) :: t, norm(dim)
-        double precision,              intent(in) :: mir(6), rot(5)
+        integer,                       intent(in)    :: unit, tilted, symm, nHel, tilt, lx, ly, ucx, ucy, sites, nbonds, k1, k2
+        integer,                       intent(in)    :: bsites(2, nbonds), xtransl(2, sites), ytransl(2, sites)
+        integer,                       intent(in)    :: refl(6, sites), c6(sites)
+        integer(kind=8),               intent(in)    :: dim, basis_list(dim)
+        double precision,              intent(in)    :: t, norm(dim)
+        double precision,              intent(in)    :: mir(6), rot(5)
 
-        integer(kind=8),              intent(out) :: nnz
-        integer(kind=8), allocatable, intent(out) :: rc(:,:)
-        double complex,  allocatable, intent(out) :: ham(:)
+        integer(kind=8),               intent(out)   :: nnz
+        integer(kind=8), allocatable,  intent(out)   :: rc(:,:)
+        double complex,  allocatable,  intent(out)   :: ham(:)
         
         ! Local variables
-        integer                      :: dbl, parity1, parity2, l1, l2, l11, l22 
-        integer(kind=8)              :: arrsize, i, j, k, l, s, loc, rep, mask, newst, n_temp, cntr, cntrj
-        double precision             :: sign
-        integer(kind=8), allocatable :: rc_temp(:,:)
-        double complex,  allocatable :: ham_temp(:)
+        integer                                       :: dbl, parity1, parity2, l1, l2, l11, l22 
+        integer(kind=8)                               :: arrsize, i, j, k, l, s, loc, rep, mask, newst, n_temp, cntr, cntrj
+        double precision                              :: sign
+        integer(kind=8), allocatable                  :: rc_temp(:,:)
+        double complex,  allocatable                  :: ham_temp(:)
 
         arrsize = 6*sites*dim! Maximum number of non-zero elements in the Hamiltonian matrix. Each basis state can have at most 2*nbonds non-zero elements(one for each bond).
         
@@ -238,7 +242,7 @@ module hamiltonian
                     cycle 
                 end if 
                 if(tilted == 0) then 
-                    call representative_reg(newst, sites, ucx, ucy, symm, mir, rot, xtransl, ytransl, refl, c6, rep, l1, l2, sign) !Finds the representative of scattered state in momentum orbit and determines the number of translations 'ntrans' needed to map to representative.            
+                    call representative_rect(newst, sites, ucx, ucy, symm, mir, rot, xtransl, ytransl, refl, c6, rep, l1, l2, sign) !Finds the representative of scattered state in momentum orbit and determines the number of translations 'ntrans' needed to map to representative.            
                     l11 = ucx 
                     l22 = ucy
                 else if(tilted == 1) then 
@@ -294,12 +298,11 @@ module hamiltonian
 
         print*,'Generated hopping Hamiltonian.'
         print*,'Number of non-zero matrix elements: ', nnz
-        print*,''
+        print*, ''
 
     end subroutine offdiag_coo_dc
   
     subroutine offdiag_coo_dp(threads, tilted, nHel, tilt, lx, ly, ucx, ucy, sites, nbonds, dim, basis, bsites, norm, xtransl, ytransl, symm, id, mir, rot, refl, c6, t, rc, rcdi, parities, dplcts, ham, hamDi, nnz, nDi)
-
         !---------------------------------------------------------------------!
         !          Hopping procedure for irreducible representations          !
         !---------------------------------------------------------------------!
@@ -308,22 +311,24 @@ module hamiltonian
         ! The values of the matrix element are stored in double precision arrays.   
         
         implicit none
-        integer(kind=8), intent(in)  :: dim, basis(dim)
-        integer, intent(in)          :: threads, tilted, nHel, tilt, lx, ly, ucx, ucy, sites, nbonds, symm, bsites(2, nbonds), xtransl(2, sites), ytransl(2, sites), refl(6, sites), c6(sites)
-        double precision, intent(in) :: t, id, mir(6), rot(5), norm(dim)
+        integer(kind=8),               intent(in) :: dim, basis(dim)
+        integer,                       intent(in) :: threads, tilted, nHel, tilt, lx, ly, ucx, ucy, sites, nbonds, symm
+        integer,                       intent(in) :: bsites(2, nbonds), xtransl(2, sites), ytransl(2, sites)
+        integer,                       intent(in) :: refl(6, sites), c6(sites)
+        double precision,              intent(in) :: t, id, mir(6), rot(5), norm(dim)
         
-        integer(kind=8), intent(out)               :: nnz, nDi 
-        integer        , allocatable, intent(out)  :: parities(:), dplcts(:)
-        integer(kind=8), allocatable, intent(out)  :: rc(:,:), rcdi(:)
+        integer(kind=8),               intent(out) :: nnz, nDi 
+        integer,          allocatable, intent(out) :: parities(:), dplcts(:)
+        integer(kind=8),  allocatable, intent(out) :: rc(:,:), rcdi(:)
         double precision, allocatable, intent(out) :: ham(:), hamDi(:)
         
         !Local variables
-        integer                       :: dbl, order, info, s, k, l1, l2, parity
-        integer(kind=8)               :: i, j, loc, rep, pos, rowst, newst, state, cntr, cntrj, n_temp, arrsize
-        integer(kind=8), allocatable  :: rc_temp(:,:), rcdi_temp(:), cntr_di(:,:)
-        integer        , allocatable  :: parities_temp(:), dplcts_temp(:)
-        double precision              :: sign, signstate, h_add, signrep 
-        double precision, allocatable :: ham_temp(:), hamDi_temp(:)
+        integer                                    :: dbl, order, info, s, k, l1, l2, parity
+        integer(kind=8)                            :: i, j, loc, rep, pos, rowst, newst, state, cntr, cntrj, n_temp, arrsize
+        integer(kind=8),  allocatable              :: rc_temp(:,:), rcdi_temp(:), cntr_di(:,:)
+        integer,          allocatable              :: parities_temp(:), dplcts_temp(:)
+        double precision                           :: sign, signstate, h_add, signrep 
+        double precision, allocatable              :: ham_temp(:), hamDi_temp(:)
         
         if(symm == 1) then 
             order = 12
@@ -374,7 +379,7 @@ module hamiltonian
                 end if 
 
                 do s = 1, nbonds !Takes care of translations
-                    if(btest(state, bsites(1,s)-1) .and. .not.(btest(state, bsites(2,s)-1))) then !Hopping from 1 -> 2
+                    if(btest(state, bsites(1,s) - 1) .and. .not.(btest(state, bsites(2,s) - 1))) then !Hopping from 1 -> 2
                         newst  = ibclr(ibset(state, bsites(2, s) - 1), bsites(1, s) - 1)            
                         parity = popcnt(ibits(state, bsites(1,s), sites)) + popcnt(ibits(ibclr(state, bsites(1,s) - 1), bsites(2,s), sites))      
                     else if(btest(state, bsites(2,s)-1) .and. .not.(btest(state, bsites(1,s)-1))) then !Hopping from 2 -> 1
@@ -384,7 +389,7 @@ module hamiltonian
                         cycle 
                     end if 
                     if(tilted == 0) then 
-                        call representative_reg(newst, sites, Lx, Ly, symm, mir, rot, xtransl, ytransl, refl, c6, rep, l1, l2, signrep)
+                        call representative_rect(newst, sites, Lx, Ly, symm, mir, rot, xtransl, ytransl, refl, c6, rep, l1, l2, signrep)
                     else if(tilted == 1) then 
                         call representative_tilted(newst, sites, nHel, tilt, Lx, Ly, symm, mir, rot, xtransl, ytransl, refl, c6, rep, l1, l2, signrep)
                     end if 
@@ -437,13 +442,8 @@ module hamiltonian
 
         nnz = n_temp
 
-        if(allocated(rc))     deallocate(rc)
-        if(allocated(ham))    deallocate(ham)
-        if(allocated(rcdi))   deallocate(rcdi)
-        if(allocated(hamDi))  deallocate(hamDi)
-        if(allocated(parities)) deallocate(parities)
-        if(allocated(dplcts)) deallocate(dplcts)
-
+        if(allocated(ham)) deallocate(ham)
+        if(allocated(rc))  deallocate(rc)
         allocate(ham(nnz))
         allocate(rc(nnz,2))
         allocate(rcdi(nDi))
@@ -484,7 +484,6 @@ module hamiltonian
     end subroutine offdiag_coo_dp
 
     subroutine offdiag_coo_dc_irrep2d(threads, tilted, nHel, tilt, lx, ly, sites, nbonds, dim, basis, orbsize, orbits, phases, norm, bsites, xtransl, ytransl, symm, mir, rot, refl, c6, t, rc, rcdi, parities, dplcts, ham, hamDi, nnz, nDi)
-    
         !------------------------------------------------------------------------!
         !          Hopping procedure for 2D irreducible representations          !
         !------------------------------------------------------------------------!
@@ -493,11 +492,14 @@ module hamiltonian
 
         use params
         implicit none
-        integer, intent(in) :: orbsize, threads, tilted, nHel, tilt, lx, ly, sites, nbonds, symm, bsites(2, nbonds), xtransl(2, sites), ytransl(2, sites), refl(6, sites), c6(sites)
-        integer(kind=8), intent(in) :: dim, basis(dim)
-        integer(kind=8), allocatable, intent(in) :: orbits(:,:,:)
-        double precision, intent(in) :: t, mir(6), rot(5), norm(dim,2)
-        double complex, allocatable, intent(in) :: phases(:,:,:)
+        
+        integer,                      intent(in)  :: orbsize, threads, tilted, nHel, tilt, lx, ly, sites, nbonds, symm
+        integer,                      intent(in)  :: bsites(2, nbonds), xtransl(2, sites), ytransl(2, sites)
+        integer,                      intent(in)  :: refl(6, sites), c6(sites)
+        integer(kind=8),              intent(in)  :: dim, basis(dim)
+        integer(kind=8), allocatable, intent(in)  :: orbits(:,:,:)
+        double precision,             intent(in)  :: t, mir(6), rot(5), norm(dim,2)
+        double complex,  allocatable, intent(in)  :: phases(:,:,:)
         
         integer,         allocatable, intent(out) :: parities(:), dplcts(:)
         integer(kind=8),              intent(out) :: nnz, nDi 
@@ -505,16 +507,15 @@ module hamiltonian
         double complex,  allocatable, intent(out) :: ham(:), hamDi(:)
         
         !Local variables
-        integer :: s, c, d, o, l1, l2, parity, dbl, order, site1, site2
-        integer(kind=8) :: i, j, loc, rep, pos, rowst, rowIndx, colIndx, newst, state, cntr, cntrjc, n_temp, arrsize 
-        integer(kind=8), allocatable :: rc_temp(:,:), rcdi_temp(:), cntr_di(:,:)
-        integer        , allocatable :: parities_temp(:), dplcts_temp(:)
-        double precision, parameter :: tol = 1.0e-14
-        double precision :: sign, signrep 
-        double complex :: h_add, coeff, newcf 
-        double complex, allocatable :: ham_temp(:), hamDi_temp(:)
+        integer                                   :: s, c, d, o, l1, l2, parity, dbl, order, site1, site2
+        integer(kind=8)                           :: i, j, loc, rep, pos, rowst, rowIndx, colIndx, newst, state, cntr, cntrjc, n_temp, arrsize 
+        integer(kind=8),  allocatable             :: rc_temp(:,:), rcdi_temp(:), cntr_di(:,:)
+        integer,          allocatable             :: parities_temp(:), dplcts_temp(:)
+        double precision, parameter               :: tol = 1.0e-14
+        double precision                          :: sign, signrep 
+        double complex                            :: h_add, coeff, newcf 
+        double complex,   allocatable             :: ham_temp(:), hamDi_temp(:)
 
-        
         if(symm == 1) then 
             order = 12
         else 
@@ -572,7 +573,7 @@ module hamiltonian
                         cycle 
                     end if 
                     if(tilted == 0) then 
-                        call representative_reg(newst, sites, Lx, Ly, symm, mir, rot, xtransl, ytransl, refl, c6, rep, l1, l2, signrep)
+                        call representative_rect(newst, sites, Lx, Ly, symm, mir, rot, xtransl, ytransl, refl, c6, rep, l1, l2, signrep)
                     else if(tilted == 1) then 
                         call representative_tilted(newst, sites, nHel, tilt, Lx, Ly, symm, mir, rot, xtransl, ytransl, refl, c6, rep, l1, l2, signrep)
                     end if 
@@ -673,7 +674,7 @@ module hamiltonian
         end do
         hamDi = hamDi / order 
 
-        print*, 'Generated offdiagonal Hamiltonian'
+        print*, 'Generated hopping Hamiltonian.'
         print*, 'Number of non-zero matrix elements: ', nnz
         print*, 'Number of diagonal matrix elements: ', nDi
         print*, 'Number of representatives: ', dim
@@ -689,14 +690,15 @@ module hamiltonian
         ! Values of matrix elements (and local site occupation) are stored in integer(kind=8) arrays.  
         implicit none
 
-        integer, intent(in)          :: unit, sites, nbonds, nbonds2, bsites(2, nbonds), bsites2(2, nbonds2)
-        integer(kind=8), intent(in)  :: dim, basis(dim)
+        integer,                      intent(in)  :: unit, sites, nbonds, nbonds2
+        integer,                      intent(in)  :: bsites(2, nbonds), bsites2(2, nbonds2)
+        integer(kind=8),              intent(in)  :: dim, basis(dim)
 
-        integer(kind=8), intent(out)              :: nnz
+        integer(kind=8),              intent(out) :: nnz
         integer(kind=8), allocatable, intent(out) :: ham(:,:), occ(:,:)
 
         !Local variables
-        integer(kind=8) :: j, m, s, counter_v, counter_v2
+        integer(kind=8)                           :: j, m, s, counter_v, counter_v2
 
         if(allocated(occ))   deallocate(occ)
         if(allocated(ham))   deallocate(ham)
@@ -752,19 +754,19 @@ module hamiltonian
         ! Values of matrix elements are stored in double complex array.
         implicit none
 
-        integer, intent(in)                       :: sites, orbsize
-        integer(kind=8), intent(in)               :: dim
-        integer, allocatable, intent(in)          :: trisites(:,:), hexsites(:,:)
-        integer(kind=8),  allocatable, intent(in) :: orbits(:,:,:)
-        double precision, allocatable, intent(in) :: norm(:,:)
-        double complex,   allocatable, intent(in) :: phases(:,:,:)
+        integer,                       intent(in)  :: sites, orbsize
+        integer(kind=8),               intent(in)  :: dim
+        integer,          allocatable, intent(in)  :: trisites(:,:), hexsites(:,:)
+        integer(kind=8),  allocatable, intent(in)  :: orbits(:,:,:)
+        double precision, allocatable, intent(in)  :: norm(:,:)
+        double complex,   allocatable, intent(in)  :: phases(:,:,:)
         
-        integer(kind=8), allocatable, intent(out) :: occ(:,:)
-        double complex,  allocatable, intent(out) :: ham(:,:)
+        integer(kind=8),  allocatable, intent(out) :: occ(:,:)
+        double complex,   allocatable, intent(out) :: ham(:,:)
 
-        integer          :: m, s, c, o, site1, site2 
-        integer(kind=8)  :: j, arrsize, state, rowIndx
-        double precision :: cntr_v, cntr_v2
+        integer                                    :: m, s, c, o, site1, site2 
+        integer(kind=8)                            :: j, arrsize, state, rowIndx
+        double precision                           :: cntr_v, cntr_v2
         
         arrsize = 2 * dim !Each representative has two basis states in 2D irrep.
         if(allocated(occ)) deallocate(occ)
@@ -809,4 +811,4 @@ module hamiltonian
 
     end subroutine diag_coo_irrep2d
 
-end module hamiltonian 
+end module hamiltonian

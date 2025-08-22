@@ -63,7 +63,7 @@ program main
                         st%conf = conf_
                         call printing(st%conf, par%ti, st%k1, st%k2, st%v1, st%v2)
                         call diagonalize(par, geo, ham, diag, st, out)
-                        if(curr == 1) call current_correlations(par, geo, diag, out, st, thrd)                                 
+                        if(par%curr == 1) call current_correlations(par, geo, diag, out, st, thrd)                                 
 
                     end do !Disorder loops
                     !$omp end critical 

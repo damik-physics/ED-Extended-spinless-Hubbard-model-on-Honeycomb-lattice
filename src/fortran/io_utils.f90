@@ -1,5 +1,6 @@
 module io_utils 
-    ! Module for input/output utilities in Fortran. 
+    ! Module for input/output utilities including file I/O operations, parameter string generation,
+    ! spectrum saving, Hamiltonian I/O, and configuration printing functionality
     use types
     use functions 
     use file_utils
@@ -21,13 +22,14 @@ module io_utils
     contains 
 
     subroutine save_momenta(dir, cluster, unit, genCluster, sites, particles, bc, pattern, k1_max, k2_max)
-
+        ! Saves discrete momentum values (k1, k2) to file for momentum space calculations
+        
         implicit none 
         
         integer,          intent(in), optional :: unit, genCluster, sites, particles, k1_max, k2_max
         character(len=*), intent(in), optional :: dir, cluster, bc, pattern
 
-        integer   :: k1 = 0, k2 = 0 
+        integer                                :: k1, k2
 
         open(unit=unit, file=trim(dir)//'momenta.dat', status='replace')
         do k1 = 0, k1_max
@@ -45,14 +47,14 @@ module io_utils
         ! Saves the spectrum of eigenvalues and real eigenstates to disk.
         implicit none 
         character(len=*), intent(in) :: dir
-        integer,           intent(in) :: conf, unit, states, nev, nest 
-        integer(kind=8),   intent(in) :: dim  
-        character(len=*),  intent(in) :: par
-        logical,           intent(in) :: append, rvec 
-        double precision,  intent(in) :: en(dim), st(dim, nest) 
+        integer,          intent(in) :: conf, unit, states, nev, nest 
+        integer(kind=8),  intent(in) :: dim  
+        character(len=*), intent(in) :: par
+        logical,          intent(in) :: append, rvec 
+        double precision, intent(in) :: en(dim), st(dim, nest) 
 
-        integer         :: j = 0
-        character       :: file*256, appchar*20
+        integer                      :: j
+        character                    :: file*256, appchar*20
 
         100 format(1000(F40.30))
         
@@ -90,15 +92,15 @@ module io_utils
         ! Saves the spectrum of eigenvalues and complex eigenstates to disk.
         implicit none 
         character(len=*), intent(in) :: dir
-        integer,           intent(in) :: conf, unit, states, nev, nest 
-        integer(kind=8),   intent(in) :: dim  
-        character(len=*),  intent(in) :: par
-        logical,           intent(in) :: append, rvec 
-        double precision,  intent(in) :: en(dim) 
-        double complex,    intent(in) :: st(dim, nest) 
+        integer,          intent(in) :: conf, unit, states, nev, nest 
+        integer(kind=8),  intent(in) :: dim  
+        character(len=*), intent(in) :: par
+        logical,          intent(in) :: append, rvec 
+        double precision, intent(in) :: en(dim) 
+        double complex,   intent(in) :: st(dim, nest) 
 
-        integer         :: j = 0
-        character       :: file*256, appchar*20
+        integer                      :: j
+        character                    :: file*256, appchar*20
 
         100 format(1000(F40.30))
         
@@ -133,21 +135,22 @@ module io_utils
     end subroutine save_spectrum_dc
 
     subroutine save_ham(outdir, mat_type, unit, ti, sites, nnz, nDi, hamDi, ham_i, rc, ham_dp, ham_dc, occ)
+        ! Saves Hamiltonian matrix elements and site occupations to disk files in .dat format. To be replaced by I/O storage to binary HDF5 files in the future.
 
-        implicit none 
+        implicit none
 
-        integer,          intent(in)           :: ti, unit, sites  
-        integer(kind=8),  intent(in)           :: nnz, nDi       
-        integer(kind=8),  intent(in), optional :: hamDi(nDi, 2), ham_i(nnz, 3), rc(nnz, 2), occ(sites, nDi)
-        double precision, intent(in), optional :: ham_dp(nnz)
-        double complex,   intent(in), optional :: ham_dc(nnz) 
-        character(len=*), intent(in)           :: outdir, mat_type
+        integer,                       intent(in)           :: ti, unit, sites  
+        integer(kind=8),               intent(in)           :: nnz, nDi       
+        integer(kind=8),               intent(in), optional :: hamDi(nDi, 2), ham_i(nnz, 3), rc(nnz, 2), occ(sites, nDi)
+        double precision,              intent(in), optional :: ham_dp(nnz)
+        double complex,                intent(in), optional :: ham_dc(nnz) 
+        character(len=:), allocatable, intent(in)           :: outdir, mat_type
 
-        integer(kind=8) :: i = 0
-        character       :: dir*1024, file*1024
+        integer(kind=8)                                     :: i
+        character(len=:), allocatable                       :: dir, file
 
         print*, 'Saving Hamiltonian to disk...'
-        dir = trim(outdir) // "hamiltonians/"
+        dir  = trim(outdir) // "hamiltonians/"
         file = trim(dir) // 'hamiltonian_off_diagonal.dat'
         print*, 'Output directory: ', trim(dir)
         print*, 'File: ', trim(file)
@@ -170,7 +173,6 @@ module io_utils
         close(unit)
         
         file = trim(dir) // 'hamiltonian_diagonal' // '.dat'
-        ! file = trim(dir // "diagonal_hamiltonian_" // params)
         open(unit, file=trim(file), status='replace')
         write(unit,*) nDi 
         do i = 1, nDi
@@ -193,23 +195,25 @@ module io_utils
 
     end subroutine save_ham
 
-    subroutine loadham(mat_type, unit, ti, sites, nnz, nDi, hamDi, ham_i, rc, ham_dp, ham_dc, occupation, exist1, exist2, exist3)
+    subroutine loadham(mat_type, dir, unit, ti, sites, nnz, nDi, hamDi, ham_i, rc, ham_dp, ham_dc, occupation, exist1, exist2, exist3)
+        ! Loads previously saved Hamiltonian matrix elements from disk files in dat format. To be replaced by I/O storage to binary HDF5 files in the future.
         
         implicit none 
         
-        character(len=*), intent(in) :: mat_type
-        integer, intent(in) :: ti, unit, sites  
-        integer(kind=8), intent(out) :: nnz, nDi       
-        integer(kind=8), allocatable, intent(out), optional :: hamDi(:, :), ham_i(:, :), rc(:, :), occupation(:, :)
+        character(len=1),              intent(in)            :: mat_type
+        character(len=:), allocatable, intent(in)            :: dir
+        integer,                       intent(in)            :: ti, unit, sites  
+        integer(kind=8),               intent(out)           :: nnz, nDi       
+        integer(kind=8), allocatable,  intent(out), optional :: hamDi(:, :), ham_i(:, :), rc(:, :), occupation(:, :)
         double precision, allocatable, intent(out), optional :: ham_dp(:)
-        double complex, allocatable, intent(out), optional :: ham_dc(:) 
-        logical, intent(out) :: exist1, exist2, exist3
+        double complex, allocatable,   intent(out), optional :: ham_dc(:) 
+        logical,                       intent(out)           :: exist1, exist2, exist3
 
-        integer(kind=8) :: i = 0
-        character :: file*2024, dir*1024
-        
-        dir = trim("/hamiltonians/")
-        file = trim(dir) // "hamiltonian_off_diagonal"
+        integer(kind=8)                                      :: i
+        character(len=:),    allocatable                     :: file, base
+
+        base = trim("hamiltonians/")
+        file = trim(dir) // trim(base) // "hamiltonian_off_diagonal" // '.dat'
         inquire(file=trim(file), exist=exist1)
 
         if(exist1) then 
@@ -250,7 +254,7 @@ module io_utils
 
         if(.not.(exist1)) print*,'Off-diagonal Hamiltonian does not yet exist.'
 
-        file = trim(dir)//"hamiltonian_diagonal"
+        file = trim(dir) // trim(base) // "hamiltonian_diagonal" // ".dat"
         inquire(file=trim(file), exist=exist2)
 
         if(exist2) then 
@@ -268,7 +272,7 @@ module io_utils
         
         if(.not.(exist2)) print*,'Diagonal Hamiltonian does not yet exist.'
 
-        file = trim(dir)//"site_occupation"
+        file = trim(dir) // trim(base) // "site_occupation" // ".dat"
         inquire(file=trim(file), exist=exist3)
         if(exist3) then 
             open(unit, file=trim(file))
@@ -283,48 +287,41 @@ module io_utils
             print*,''
         end if 
 
-        if(.not.(exist3)) print*,'Site occupation does not yet exist.'
+        if(.not.(exist3)) print*,'Occupation does not yet exist.'
         if(.not.(exist3)) print*,''
 
         return 
 
     end subroutine loadham
 
-    subroutine save_currents(dir, sl, params, append, degflag, unit, nbonds, current, bondcurrent)
+    subroutine save_currents(dir, sl, append, unit, nbonds, current, bondcurrent)
+        ! Saves current and bond current data to .dat files with appropriate sublattice labeling. Obsolete due to I/O routines to csv file format.
         
         implicit none 
 
-        integer,          intent(in) :: degflag, unit, nbonds
-        double precision, intent(in) :: current, bondcurrent(nbonds)
-        character(len=*), intent(in) :: dir, sl, params
-        logical,          intent(in) :: append 
+        integer,                       intent(in) :: unit, nbonds
+        double precision,              intent(in) :: current, bondcurrent(nbonds)
+        character(len=:), allocatable, intent(in) :: dir, sl
+        logical,                       intent(in) :: append
 
-        character :: file*512, file2*512, appchar*20, dirq*512
+        character(len=:), allocatable :: file, file2, appchar, base
 
         100 format(1000(F30.20))
-
+        base = "correlations/"
         if(append) then 
             appchar = 'APPEND'
         else  
             appchar = 'SEQUENTIAL'
         end if 
 
-        if(degflag < 2) dirq = dir  
-        if(degflag == 2) dirq = trim_name(dir // "QD_")
-        dirq = trim_name(dirq)
         
         if(sl == "A") then 
-            file = trim_name(dirq // "current_A_" // params)
-            file = trim_name(file)
-            file2 = trim_name(dirq // "bondcurrent_A_" // params)
-            file2 = trim_name(file2)
+            file  = trim(dir) // trim(base) // "current_A_" // ".dat"
+            file2 = trim(dir) // trim(base) // "bondcurrent_A_" // ".dat"
         else if(sl == "B") then 
-            file = dirq // "current_B_" // params
-            file = trim_name(file)
-            file2 = dirq // "bondcurrent_B_" // params
-            file2 = trim_name(file2)
+            file  = trim(dir) // trim(base) // "current_B_" // ".dat"
+            file2 = trim(dir) // trim(base) // "bondcurrent_B_" // ".dat"
         end if 
-
 
         open(unit, file = file, access = appchar)
         write(unit, 100) current
@@ -337,19 +334,21 @@ module io_utils
 
     end subroutine save_currents
 
-    subroutine save_cdw(dir, params, append, unit, ucx, ucy, nbonds, rho, rhotot)
-        
+    subroutine save_cdw(dir, append, unit, ucx, ucy, nbonds, rho, rhotot)
+        ! Saves charge density wave (CDW) data for individual sites and total density to .dat files on disk. Obsolete due to I/O routines to csv file format.
+
         implicit none 
 
-        integer,          intent(in) :: unit, ucx, ucy, nbonds
-        double precision, intent(in) :: rho(ucx*ucy, 3), rhotot(nbonds, 3) 
-        character(len=*), intent(in) :: dir, params
-        logical,          intent(in) :: append 
+        integer,                       intent(in) :: unit, ucx, ucy, nbonds
+        double precision,              intent(in) :: rho(ucx*ucy, 3), rhotot(nbonds, 3) 
+        character(len=:), allocatable, intent(in) :: dir
+        logical,                       intent(in) :: append 
 
-        integer   :: i = 0
-        character :: file*256, file2*256, appchar*20
+        integer                                   :: i
+        character(len=:), allocatable             :: file, file2, appchar, base
 
         100 format(1000(F30.20))
+        base = "correlations/"
         
         if(append) then 
             appchar = 'APPEND'
@@ -357,17 +356,15 @@ module io_utils
             appchar = 'SEQUENTIAL'
         end if 
 
-        file = dir // "cdw_" // params
-        file = trim_name(file)
-        file2 = dir // "cdw_total_" // params
-        file2 = trim_name(file2)
-        
-        open(unit, file = file, access = appchar)
+        file = trim(dir) // trim(base) // "cdw_" // ".dat"
+        file2 = trim(dir) // trim(base) // "cdw_total_" // ".dat"
+
+        open(unit, file = trim(file), access = appchar)
         do i = 1, ucx*ucy
             write(unit,100) rho(i,1), rho(i,2), rho(i,3)    
         end do 
         close(unit)
-        open(unit, file = file2, access = appchar)
+        open(unit, file = trim(file2), access = appchar)
         do i = 1, nbonds
             write(unit,100) rhotot(i,1), rhotot(i,2), rhotot(i,3)    
         end do 
@@ -377,37 +374,35 @@ module io_utils
 
     end subroutine save_cdw
 
-    subroutine save_dpd_cf(dir, params, append, unit, sites, rhocn, rho)
-        ! Calculates the density-density correlation function(dd_cf) as well as density correlation function and saves them to disk.
+    subroutine save_dd_cf(dir, append, unit, sites, rhocn, rho)
+        ! Calculates the density-density correlation function (dd_cf) as well as density correlation function and saves them to disk as .dat files. Obsolete due to I/O routines to csv file format.
         implicit none
 
-        integer,          intent(in) :: unit, sites
-        double precision, intent(in) :: rhocn(sites), rho(sites) 
-        character(len=*), intent(in) :: dir, params
-        logical,          intent(in) :: append 
+        integer,                       intent(in) :: unit, sites
+        double precision,              intent(in) :: rhocn(sites), rho(sites) 
+        character(len=:), allocatable, intent(in) :: dir
+        logical,                       intent(in) :: append 
 
-        integer   :: i = 0
-        character :: file*400, file2*400, appchar*20
+        integer                                   :: i
+        character(len=:), allocatable             :: file, file2, appchar, base
 
         100 format(1000(F30.20))
-        
+        base = "correlations/"
         if(append) then 
             appchar = 'APPEND'
         else  
             appchar = 'SEQUENTIAL'
         end if 
 
-        file = dir // "dd_cf_" // params 
-        file = trim_name(file)
-        file2 = dir // "density_cf_" // params
-        file2 = trim_name(file2)
+        file  = dir // base // "dd_cf_" // ".dat" 
+        file2 = dir // base // "density_cf_" // ".dat"
 
-        open(unit, file = file, access = appchar)
+        open(unit, file = trim(file), access = appchar)
         do i = 1, sites
             write(unit,100) rhocn(i)
         end do 
         close(unit)
-        open(unit, file = file2, access = appchar)
+        open(unit, file = trim(file2), access = appchar)
         do i = 1, sites
             write(unit,100) rho(i)
         end do 
@@ -415,19 +410,20 @@ module io_utils
 
         return 
 
-    end subroutine save_dpd_cf
+    end subroutine save_dd_cf
 
     subroutine save_i(sa, unit, dir, name, pars, rows, cols, scalar, arr)
+        ! Generic subroutine to save integer scalars or arrays to .dat files. Obsolete due to I/O routines to csv file format.
         
         implicit none 
         
-        integer,          intent(in)           :: unit, scalar
-        integer(kind=8),  intent(in)           :: rows, cols
-        integer,          intent(in), optional :: arr(rows, cols)
-        character(len=*), intent(in)           :: sa, pars, name, dir
+        integer,                       intent(in)           :: unit, scalar
+        integer(kind=8),               intent(in)           :: rows, cols
+        integer,                       intent(in), optional :: arr(rows, cols)
+        character(len=*),              intent(in)           :: sa, pars, name, dir
 
-        integer(kind=8) :: j = 0
-        character       :: file*512
+        integer(kind=8)                                     :: j
+        character                                           :: file*512
 
         j = 0 
         
@@ -449,16 +445,17 @@ module io_utils
     end subroutine save_i
 
     subroutine save_i8(sa, unit, dir, name, pars, rows, cols, scalar, arr)
+        ! Generic subroutine to save 8-byte integer scalars or arrays to .dat files. Obsolete due to I/O routines to csv file format.
         
         implicit none 
         
-        integer,          intent(in)           :: unit
-        integer(kind=8),  intent(in)           :: scalar, rows, cols  
-        integer(kind=8),  intent(in), optional :: arr(rows, cols) 
-        character(len=*), intent(in)           :: sa, pars, name, dir
+        integer,                       intent(in)           :: unit
+        integer(kind=8),               intent(in)           :: scalar, rows, cols  
+        integer(kind=8),               intent(in), optional :: arr(rows, cols) 
+        character(len=*),              intent(in)           :: sa, pars, name, dir
 
-        integer(kind=8) :: j = 0
-        character       :: file*512
+        integer(kind=8)                                     :: j
+        character                                           :: file*512
 
         j = 0 
         file = trim_name(dir // name // pars)
@@ -480,18 +477,18 @@ module io_utils
     end subroutine save_i8
 
     subroutine save_dp(sa, unit, dir, name, pars, rows, cols, scalar, arr, transp)
-        
+        ! Generic subroutine to save double precision scalars or arrays to .dat files. Obsolete due to I/O routines to csv file format.
         implicit none 
         
-        integer,          intent(in)           :: unit
-        integer,          intent(in), optional :: transp
-        integer(kind=8),  intent(in)           :: rows, cols  
-        double precision, intent(in)           :: scalar
-        double precision, intent(in), optional :: arr(rows, cols) 
-        character(len=*), intent(in)           :: sa, pars, name, dir
+        integer,                       intent(in)           :: unit
+        integer,                       intent(in), optional :: transp
+        integer(kind=8),               intent(in)           :: rows, cols  
+        double precision,              intent(in)           :: scalar
+        double precision,              intent(in), optional :: arr(rows, cols) 
+        character(len=*),              intent(in)           :: sa, pars, name, dir
 
-        integer(kind=8) :: j = 0
-        character       :: file*512
+        integer(kind=8)                                     :: j
+        character                                           :: file*512
 
         j = 0 
         99 format(1000(F40.30))
@@ -527,18 +524,18 @@ module io_utils
     end subroutine save_dp
 
     subroutine save_dc(sa, unit, dir, name, pars, rows, cols, scalar, arr, transp)
-        
+        ! Generic subroutine to save double complex scalars or arrays to .dat files. Obsolete due to I/O routines to csv file format.
         implicit none 
         
-        integer,           intent(in)           :: unit
-        integer(kind=8),   intent(in)           :: rows, cols  
-        integer,           intent(in), optional :: transp
-        double complex,    intent(in)           :: scalar
-        double complex,    intent(in), optional :: arr(rows, cols) 
-        character(len=*),  intent(in)           :: sa, pars, name, dir
+        integer,                       intent(in)           :: unit
+        integer(kind=8),               intent(in)           :: rows, cols  
+        integer,                       intent(in), optional :: transp
+        double complex,                intent(in)           :: scalar
+        double complex,                intent(in), optional :: arr(rows, cols) 
+        character(len=*),              intent(in)           :: sa, pars, name, dir
 
-        integer(kind=8) :: j = 0
-        character       :: file*512
+        integer(kind=8)                                     :: j
+        character                                           :: file*512
 
         j = 0 
         100 format(1000(F40.30))
@@ -567,19 +564,17 @@ module io_utils
     end subroutine save_dc
 
     subroutine params_string(tilted, cluster, bc, ti, symm, irrep, sites, particles, k1, k2, refb, ndis, v1, v2, mass, dis, pattern, params, mat_type)
-
         ! Generates a string for the parameters of the Hamiltonian or energy and eigenstate files.
         ! The string is used to create the file names for the respective files.
 
         implicit none 
     
-        integer,          intent(in) :: tilted, ti, symm, sites, particles, k1, k2, refb, ndis
-        double precision, intent(in) :: v1, v2, mass, dis 
-        character(len=*), intent(in) :: pattern, cluster, bc, irrep 
+        integer,          intent(in)  :: tilted, ti, symm, sites, particles, k1, k2, refb, ndis
+        double precision, intent(in)  :: v1, v2, mass, dis 
+        character(len=*), intent(in)  :: pattern, cluster, bc, irrep 
+        character,        intent(out) :: params*512, mat_type*1 
 
-        character,        intent(out)           :: params*512, mat_type*1 
-
-        character :: string*256
+        character                     :: string*256
 
         if(tilted == 1) then 
             write(string, "(a,'_')") cluster 
@@ -608,17 +603,16 @@ module io_utils
     end subroutine params_string
 
     subroutine params_string_dd_cf(tilted, cluster, bc, ti, symm, irrep, sites, particles, k1, k2, ndis, refsite, v1, v2, mass, dis, pattern, params)
-                
-
         ! Generates a string for the params of the density-density correlation function(dd_cf) for the output file-name.
 
         implicit none 
-        integer,          intent(in) :: tilted, ti, symm, sites, particles, k1, k2, refsite, ndis
-        double precision, intent(in) :: v1, v2, mass, dis 
-        character(len=*), intent(in) :: pattern, cluster, bc, irrep 
-        character,        intent(out)           :: params*512 
+        
+        integer,          intent(in)  :: tilted, ti, symm, sites, particles, k1, k2, refsite, ndis
+        double precision, intent(in)  :: v1, v2, mass, dis 
+        character(len=*), intent(in)  :: pattern, cluster, bc, irrep 
+        character,        intent(out) :: params*512 
 
-        character :: string*256
+        character                     :: string*256
 
         if(tilted == 1) then 
             write(string, "(a,'_')") cluster 
@@ -647,8 +641,8 @@ module io_utils
         ! file named "occupation_<params>". 
         implicit none 
         
-        integer,          intent(in) :: ti, unit, sites  
-        character(len=*), intent(in) :: mat_type, params
+        integer,                       intent(in)            :: ti, unit, sites  
+        character(len=*),              intent(in)            :: mat_type, params
 
         integer,                       intent(out)           :: nnz, nDi       
         logical,                       intent(out)           :: exist1, exist2, exist3
@@ -656,9 +650,9 @@ module io_utils
         double precision, allocatable, intent(out), optional :: ham_dp(:)
         double complex,   allocatable, intent(out), optional :: ham_dc(:) 
 
-        integer   :: i = 0
-        character :: file*256, dir*256
-        
+        integer                                              :: i
+        character                                            :: file*256, dir*256
+
         dir = "hamiltonians/"
         dir = trim_name(dir)
 
@@ -707,10 +701,10 @@ module io_utils
         file = ""
         file = dir // "diagonal_hamiltonian_" // params
         file = trim_name(file)
-        inquire(file = file, exist = exist2)
+        inquire(file = trim(file), exist = exist2)
 
         if(exist2) then 
-            open(unit, file = file)
+            open(unit, file = trim(file))
             read(unit, *) nDi 
             if(allocated(hamDi)) deallocate(hamDi)
             allocate(hamDi(nDi, 2))
@@ -729,7 +723,7 @@ module io_utils
         file = trim_name(file)
         inquire(file = file, exist = exist3)
         if(exist3) then 
-            open(unit, file = file)
+            open(unit, file = trim(file))
             read(unit, *) nDi 
             if(allocated(occupation)) deallocate(occupation)
             allocate(occupation(sites, nDi))
@@ -749,10 +743,12 @@ module io_utils
     end subroutine load_ham
 
     subroutine print_configuration(conf, ti, k1, k2, v1, v2)
+        ! Print the current configuration parameters for debugging and monitoring
         implicit none
-        integer, intent(in)          :: conf, ti, k1, k2
+        
+        integer,          intent(in) :: conf, ti, k1, k2
         double precision, intent(in) :: v1, v2
-        ! Print the current configuration of the system
+
         print*, '----------------------------------'
         print*, 'Current Configuration: ', conf 
         if(ti == 1) print*, 'k1, k2:', k1, k2
@@ -763,12 +759,9 @@ module io_utils
     end subroutine print_configuration
 
     subroutine print_parameters(par, geo, thr, diag, out)
-        ! Print the parameters used in the simulation
-
-        
-
-
+        ! Print comprehensive simulation parameters for verification and logging
         implicit none
+        
         type(sim_params),    intent(in) :: par
         type(geometry),      intent(in) :: geo
         type(thread_params), intent(in) :: thr
@@ -816,7 +809,5 @@ module io_utils
         print*, '----------------------------------'
     
     end subroutine print_parameters
-
-
 
 end module io_utils

@@ -6,8 +6,8 @@ This project computes the **exact many-body spectrum and eigenstates** of the **
 - **Lanczos** and **full diagonalization** methods  
 - Calculation of various **ground-state observables**, such as:  
   - **Current-current correlation function**  
-  - **Density-density correlation function**  
-  - **Charge and spin correlations**  
+  - **Density-density correlation function (under construction)**  
+  - **Charge and spin correlations (under construction)**  
   <!-- Extension to include entanglement entropy, level spacing and inverse partition ratio is under work. -->
 - **Symmetrization under the** $C_{6v}$ **space group**(translations, rotations, and mirror symmetries)
 - **Hamiltonian diagonalization within individual irreducible representations**  
@@ -15,10 +15,6 @@ This project computes the **exact many-body spectrum and eigenstates** of the **
 
 ---
 
-## **Code Structure**  
-
-<!-- 📁 **Project Directory**   -->
-<!-- 📂 Extended-Hubbard-model/ ├── 📜 Makefile # Compilation script ├── 📜 main.f90 # Main program ├── 📜 variables.f90 # User-defined parameters ├── 📜 routines.f90 # Core subroutines and functions ├── 📂 output/ # Directory for simulation results └── 📜 README.md # This documentation file -->
 ## 📁 Project Directory
 
 ```text
@@ -32,8 +28,8 @@ This project computes the **exact many-body spectrum and eigenstates** of the **
 │   │   ├── basis.f90
 │   │   ├── hamiltonian.f90
 │   │   ├── ...
-│   └── python/            # Analysis scripts
-│       └── analyze_runs.py
+│   └── python/            # Plotting scripts
+│       └── plot_energy.py
 │
 ├── bin/                   # Compiled binaries
 │   └── exe
@@ -45,15 +41,15 @@ This project computes the **exact many-body spectrum and eigenstates** of the **
 │
 ├── output/                # Simulation results 
 │   └── run_YYYYMMDD_HHMMSS/
-│       ├── input.nml
+│       ├── input.nml      # User input parameters
+│       ├── parameters/parameters.json # Relevant run parameters 
 │       ├── lattice_data/
 │       ├── logs/
 │       ├── plots/
 │       ├── hamiltonians/
 │       ├── correlations/
 │       ├── spectra/
-│       ├── states/
-
+│       └── states/
 │
 └── README.md               # Project documentation
    
@@ -113,13 +109,34 @@ This creates a timestamped folder in output/ with results including:
 - Correlation data
 - Spectra, eigenstates, and plots
 
-### **Postprocessing** ###
+## Plotting Energy Data
 
-To analyze results or generate plots, use:
+The `plot_energy.py` script allows you to **visualize energy levels as a function of V2** for a chosen V1 and simulation parameters.
+
+**Features:**
+- Automatically selects the correct `run_*` folder based on the parameters provided (`parameters.json` in each run).
+- Reads `energy.csv` from `run_YYYYMMDD_HHMMSS/spectra/`.
+- Saves the plot by default in `run_YYYYMMDD_HHMMSS/plots/`.
+- Optional `--out` argument allows saving the plot to a custom location or filename.
+
+---
+
+### Usage
 
 ```bash
-python3 src/python/analyze_runs.py output/run_YYYYMMDD_HHMMSS/
+python src/python/plot_energy.py \
+    --output-dir output \
+    --filter ucx=3 ucy=3 cluster=18C irrep=A1 filling=0.5 \
+    --v1 1.0 --v2min 0.0 --v2max 1.0
 ```
+    
+
+
+- `--output-dir`: Top-level folder containing `run_*` directories.
+- `--filter`: Key=value pairs to select the run (e.g., `ucx=3 ucy=3 cluster=18C irrep=A1 filling=0.5`).
+- `--v1`: V1 value to plot.
+- `--v2min` / `--v2max`: Optional V2 range to include in the plot.
+- `--out`: Optional filename to save the figure elsewhere instead of the default run folder.
 
 ### **Roadmap** ###
 

@@ -6,4 +6,8 @@
 /old/*
 /dev/*
 /doc/*
-
+/output/*
+/.venv/
+*.png 
+*.csv 
+*.hdf5

@@ -3,7 +3,6 @@ module types
     ! system state, threading, output control, diagonalization, and Hamiltonian data structures
     implicit none
     
-
     type :: sim_params
         ! All input variables that set the simulation parameters
 

@@ -67,10 +67,15 @@ This project computes the **exact many-body spectrum and eigenstates** of the **
 - **` hamiltonian.f90`**: Hamiltonian definitions and matrix elements
 - **` lattice.f90`**: Lattice geometry and connectivity
 - **` symmetries.f90`**: Symmetry operations and irreps
+- **` observables.f90`**: Correlation functions (currently only current-current correlations)
 - **` types.f90`**: Derived types and data structures
 - **` functions.f90`**: Helper functions specific to the physics
-- **` parameters.f90`**: Input parameters and variable definitions
-- **` utils.f90`**: Utility routines: I/O, file handling, tests
+- **` params.f90`**: Simulation constants and variables not defined as derived types.
+- **` core_utilities.f90`**: Essential utility routines used throughout simulation.
+- **` io_utilities.f90`**: Subroutines used for I/O handling and data output. 
+- **` test_utilities.f90`**: Contains routines for unit testing and validation of core modules.
+- **` corr_writer.f90`**: Contains routines for storing correlation functions to CSV file.
+- **` ham_hdf5_io.f90`**: Not in usage yet. Contains routines for storing Hamiltonian arrays in HDF5 format.
 
 
 All files should be placed in the **same directory** before compilation.
@@ -122,3 +127,5 @@ Add support for:
 - entanglement entropy
 - Level spacing statistics
 - Inverse participation ratio(IPR)
+- Density-density correlations
+- Spin-spin correlations

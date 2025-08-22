@@ -4,7 +4,8 @@ module lattice
     use types
     use functions 
     use params
-    use io_utils
+    use io_utilities
+
     implicit none
     
 

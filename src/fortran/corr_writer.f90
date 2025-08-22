@@ -1,4 +1,7 @@
 module corr_writer
+    ! Module for writing correlation function data to CSV files. 
+    ! Provides interfaces for both real and complex correlation data.
+    ! The module supports appending data to existing files and creating new files with appropriate headers.
     implicit none
     private
 

@@ -1,7 +1,7 @@
-module test_utils 
+module test_utilities 
     ! Module for testing and validation of computational results including spectrum verification,
     ! matrix property checks, eigenstate normalization, and orthogonality testing
-    use file_utils
+    use core_utilities
     implicit none 
 
     interface check_spec 
@@ -450,4 +450,4 @@ module test_utils
 
     end subroutine check_symmetry_dense
 
-end module test_utils
+end module test_utilities

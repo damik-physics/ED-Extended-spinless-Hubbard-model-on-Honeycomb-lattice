@@ -3,7 +3,7 @@ module hamiltonian
     ! for the extended Hubbard model including nearest-neighbor hopping, interaction terms,
     ! and support for momentum sectors and irreducible representations
    
-    use io_utils
+    use io_utilities
     use basis
 
     implicit none 

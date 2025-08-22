@@ -1,10 +1,11 @@
-module file_utils
-    ! Module for file operations and utility functions including preprocessing, matrix conversions,
-    ! sparse matrix-vector multiplication, binary search, timing, and general file I/O operations
+module core_utilities
+    ! Module containing essential utilities for simulation setup, sparse matrix operations,
+    ! file I/O, mathematical functions, performance monitoring, and resource management
+    ! for the honeycomb Hubbard model simulation framework
     use params
     use types
     use symmetries
-    implicit none
+    implicit none 
     
     interface coo_to_csr
         module procedure coocsr_dp_i4, coocsr_dp_i8, coocsr_dc_i4, coocsr_dc_i8
@@ -493,137 +494,6 @@ module file_utils
 
         close(unit)
     end subroutine write_parameters_json
-
-    subroutine append_energy_csv(dir, ti, ndis, k1, k2, conf, v1, v2, energies, first_call)
-        ! Appends eigenvalue data to CSV file with appropriate headers based on simulation type
-        implicit none
-        character(len=*),             intent(in)    :: dir
-        integer,                      intent(in)    :: ti, ndis, k1, k2, conf
-        real(8),                      intent(in)    :: v1, v2
-        real(8), dimension(:),        intent(in)    :: energies
-        logical,                      intent(inout) :: first_call
-
-        character(len=:), allocatable                :: filepath
-        integer                                      :: unit, i
-        filepath = trim(dir) // "spectra/energy.csv"
-
-        open(newunit=unit, file=filepath, status='unknown', position='append', action='write')
-
-        ! Write header only once
-        if (first_call) then
-            write(unit, '(A)', advance='no') 'v1,v2'
-            if (ti == 0) write(unit, '(A)', advance='no') ',k1,k2'
-            if (ndis > 1) write(unit, '(A)', advance='no') ',conf'
-            do i = 0, size(energies) - 1
-                write(unit, '(A)', advance='no') ',E' // trim(adjustl(itoa(i)))
-            end do
-            write(unit, *) ''  ! Newline
-            first_call = .false.
-        end if
-
-        ! Write row
-        write(unit, '(F12.6,",",F12.6)', advance='no') v1, v2
-        if (ti == 0) write(unit, '(",",I0,",",I0)', advance='no') k1, k2
-        if (ndis > 1) write(unit, '(",",I0)', advance='no') conf
-        do i = 1, size(energies)
-            write(unit, '(",",F12.6)', advance='no') energies(i)
-        end do
-        write(unit, *) ''  ! Newline
-
-        close(unit)
-        contains
-            function itoa(i) result(str)
-                integer, intent(in) :: i
-                character(len=20) :: str
-                write(str, '(I0)') i
-            end function itoa
-    end subroutine append_energy_csv
-
-    subroutine append_states_csv_dp(dir, ti, ndis, k1, k2, conf, v1, v2, states)
-        ! Appends real eigenstate data to CSV file in row-wise format
-        implicit none
-        character(len=*),             intent(in), optional :: dir
-        integer,                      intent(in), optional :: ti, ndis, k1, k2, conf
-        double precision,             intent(in)           :: v1, v2
-        double precision,             intent(in)           :: states(:,:)
-       
-        character(len=512)                                 :: fname
-        integer                                            :: i, j, ios
-        logical                                            :: file_exists
-        fname = trim(dir)//'states/states.csv'
-        inquire(file=fname, exist=file_exists)
-
-        ! Write header if file does not exist
-        if (.not. file_exists) then
-            open(unit=30, file=fname, status='new', action='write', iostat=ios)
-            if (ios /= 0) stop 'Error opening states.csv'
-            write(30,'(A)', advance='no') 'v1,v2'
-            if (ti == 0) write(30, '(A)', advance='no') ',k1,k2'
-            if (ndis > 1) write(30,'(A)', advance='no') ',conf'
-            do j=1, size(states,2) ! Write column headers for eigenstate components (c1, c2, ...) 
-                write(30,'(A,I0)', advance='no') ',c', j
-            end do
-            write(30, *)
-            close(30)
-        end if
-
-        ! Append row-wise
-        open(unit=31, file=fname, status='old', action='write', position='append', iostat=ios)
-        if (ios /= 0) stop 'Error opening states.csv for append'
-        do j=1, size(states,2) ! Loop over number of eigenstates 
-            write(31, '(F8.4,",",F8.4)', advance='no') v1, v2
-            if (ti == 0) write(31, '(",",I0,",",I0)', advance='no') k1, k2
-            if (ndis > 1) write(31,'(",",I0)', advance='no') conf
-            do i=1, size(states,1) ! Loop over components of each eigenstate
-                write(31, '(",",F12.6)', advance='no') states(i,j)
-            end do
-            write(31,*)
-        end do
-        close(31)
-    end subroutine append_states_csv_dp
-
-    subroutine append_states_csv_dc(dir, ti, ndis, k1, k2, conf, v1, v2, states)
-        ! Appends complex eigenstate data to CSV file in row-wise format
-        implicit none
-        character(len=*),             intent(in), optional :: dir
-        integer,                      intent(in), optional :: ti, ndis, k1, k2, conf
-        double precision,             intent(in)           :: v1, v2
-        double complex,               intent(in)           :: states(:,:)
-
-        character(len=512)                                 :: fname
-        integer                                            :: i, j, ios
-        logical                                            :: file_exists
-        fname = trim(dir)//'states/states.csv'
-        inquire(file=fname, exist=file_exists)
-
-        ! Write header if file does not exist
-        if (.not. file_exists) then
-            open(unit=30, file=fname, status='new', action='write', iostat=ios)
-            if (ios /= 0) stop 'Error opening states.csv'
-            write(30,'(A)', advance='no') 'v1,v2'
-            if (ti == 0) write(30, '(A)', advance='no') ',k1,k2'
-            if (ndis > 1) write(30,'(A)', advance='no') ',conf'
-            do j=1, size(states,2)
-                write(30,'(A,I0)', advance='no') ',c', j
-            end do
-            write(30, *)
-            close(30)
-        end if
-
-        ! Append row-wise
-        open(unit=31, file=fname, status='old', action='write', position='append', iostat=ios)
-        if (ios /= 0) stop 'Error opening states.csv for append'
-        do j=1, size(states,2)
-            write(31, '(F8.4,",",F8.4)', advance='no') v1, v2
-            if (ti == 0) write(31, '(",",I0,",",I0)', advance='no') k1, k2
-            if (ndis > 1) write(31,'(",",I0)', advance='no') conf
-            do i=1, size(states,1)
-                write(31, '(",",(F12.6,F12.6))', advance='no') states(i,j)
-            end do
-            write(31,*)
-        end do
-        close(31)
-    end subroutine append_states_csv_dc
     
     subroutine cleanup(inner, geo, ham, diag)
         ! Deallocates dynamically allocated arrays to free memory
@@ -1234,4 +1104,5 @@ module file_utils
 
     end subroutine amux_dc
 
-end module file_utils
+    
+end module core_utilities

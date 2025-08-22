@@ -4,7 +4,7 @@ module observables
      
     use types
     use functions 
-    use file_utils
+    use core_utilities
     use corr_writer
     use symmetries
     implicit none

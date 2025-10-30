@@ -1,0 +1,184 @@
+# Enhanced Makefile for Advanced Honeycomb Hubbard Model
+# Supports multiple targets with advanced features
+
+FC = gfortran
+FFLAGS = -O3 -Wall -std=f2008 -fimplicit-none -fopenmp
+FFLAGS_DEBUG = -g -O0 -Wall -std=f2008 -fimplicit-none -fcheck=all -fbacktrace
+LIBS = -llapack -lblas -lgomp
+
+# Source files
+UTILITY_MODULES = hubbard_utils.f90
+CORE_MODULES = advanced_lattice.f90 sparse_matrix.f90 symmetry_operations.f90
+PROGRAMS = simple_hubbard.f90 enhanced_hubbard.f90
+
+# Object files
+UTIL_OBJS = $(UTILITY_MODULES:.f90=.o)
+CORE_OBJS = $(CORE_MODULES:.f90=.o)
+SIMPLE_OBJ = simple_hubbard.o
+ENHANCED_OBJ = enhanced_hubbard.o
+
+# Executables
+SIMPLE_TARGET = simple_hubbard
+ENHANCED_TARGET = enhanced_hubbard
+
+.PHONY: all simple enhanced debug clean run-simple run-enhanced test help
+
+# Default target
+all: simple enhanced
+
+# Simple version (original)
+simple: $(SIMPLE_TARGET)
+
+$(SIMPLE_TARGET): $(UTIL_OBJS) $(SIMPLE_OBJ)
+	$(FC) $(FFLAGS) -o $@ $^ $(LIBS)
+
+# Enhanced version with all features
+enhanced: $(ENHANCED_TARGET)
+
+$(ENHANCED_TARGET): $(UTIL_OBJS) $(CORE_OBJS) $(ENHANCED_OBJ)
+	$(FC) $(FFLAGS) -o $@ $^ $(LIBS)
+
+# Debug version
+debug: FFLAGS = $(FFLAGS_DEBUG)
+debug: enhanced
+	mv $(ENHANCED_TARGET) $(ENHANCED_TARGET)_debug
+
+# Compile modules with dependencies
+%.o: %.f90
+	$(FC) $(FFLAGS) -c $<
+
+# Module dependencies
+$(ENHANCED_OBJ): $(UTIL_OBJS) $(CORE_OBJS)
+advanced_lattice.o: 
+sparse_matrix.o: 
+symmetry_operations.o: advanced_lattice.o
+$(SIMPLE_OBJ): $(UTIL_OBJS)
+
+# Test targets
+test: test-simple test-enhanced
+
+test-simple: simple
+	@echo "Testing simple version..."
+	./$(SIMPLE_TARGET)
+
+test-enhanced: enhanced
+	@echo "Testing enhanced version with auto parameters..."
+	./$(ENHANCED_TARGET) auto
+
+# Run targets
+run-simple: simple
+	./$(SIMPLE_TARGET)
+
+run-enhanced: enhanced
+	./$(ENHANCED_TARGET)
+
+# Benchmark different lattice sizes
+benchmark: enhanced
+	@echo "=== Benchmarking Enhanced Hubbard Model ==="
+	@echo "2x2 lattice:"
+	@echo "2\n2" | ./$(ENHANCED_TARGET)
+	@echo ""
+	@echo "3x3 lattice:"
+	@echo "3\n3" | ./$(ENHANCED_TARGET)
+	@echo ""
+	@echo "4x4 lattice (if feasible):"
+	@echo "4\n4\ny" | timeout 60 ./$(ENHANCED_TARGET) || echo "Timeout or cancelled"
+
+# Performance profiling
+profile: FFLAGS += -pg
+profile: enhanced
+	./$(ENHANCED_TARGET) auto
+	gprof $(ENHANCED_TARGET) gmon.out > profile_report.txt
+	@echo "Profile report saved to profile_report.txt"
+
+# Memory check (requires valgrind)
+memcheck: debug
+	valgrind --leak-check=full --show-leak-kinds=all ./$(ENHANCED_TARGET)_debug auto
+
+# Generate documentation
+docs:
+	@echo "=== Module Documentation ==="
+	@echo ""
+	@echo "1. hubbard_utils.f90 - Utility functions for analysis and I/O"
+	@echo "2. advanced_lattice.f90 - Arbitrary lattice geometries (rectangular/tilted)"
+	@echo "3. sparse_matrix.f90 - CSR sparse storage and Lanczos diagonalization"
+	@echo "4. symmetry_operations.f90 - Translation invariance and C6v point group"
+	@echo "5. simple_hubbard.f90 - Basic implementation (educational)"
+	@echo "6. enhanced_hubbard.f90 - Full-featured implementation"
+	@echo ""
+	@echo "See README_enhanced.md for detailed usage instructions."
+
+# Compare simple vs enhanced results
+compare: simple enhanced
+	@echo "Comparing simple vs enhanced implementations..."
+	@echo "Simple version (3x3):"
+	./$(SIMPLE_TARGET) > simple_output.txt 2>&1 || true
+	@echo ""
+	@echo "Enhanced version (3x3, no symmetries):"
+	echo "3\n3" | ./$(ENHANCED_TARGET) > enhanced_output.txt 2>&1 || true
+	@echo ""
+	@echo "Output files: simple_output.txt, enhanced_output.txt"
+
+# Clean all generated files
+clean:
+	rm -f *.o *.mod $(SIMPLE_TARGET) $(ENHANCED_TARGET) $(ENHANCED_TARGET)_debug
+	rm -f *.dat *.txt gmon.out
+	rm -f simple_output.txt enhanced_output.txt profile_report.txt
+
+# Install dependencies (Ubuntu/Debian)
+install-deps:
+	@echo "Installing dependencies for Ubuntu/Debian..."
+	sudo apt update
+	sudo apt install -y gfortran liblapack-dev libblas-dev libgomp1
+
+# Install dependencies (macOS)
+install-deps-mac:
+	@echo "Installing dependencies for macOS..."
+	brew install gcc lapack
+
+# Help
+help:
+	@echo "Enhanced Honeycomb Hubbard Model - Build System"
+	@echo ""
+	@echo "Targets:"
+	@echo "  all         - Build both simple and enhanced versions"
+	@echo "  simple      - Build simple version (educational)"
+	@echo "  enhanced    - Build enhanced version (full features)"
+	@echo "  debug       - Build debug version with extra checks"
+	@echo ""
+	@echo "Testing:"
+	@echo "  test        - Run both versions with default parameters"
+	@echo "  test-simple - Test simple version only"
+	@echo "  test-enhanced - Test enhanced version only"
+	@echo "  compare     - Compare simple vs enhanced results"
+	@echo ""
+	@echo "Running:"
+	@echo "  run-simple  - Run simple version interactively"
+	@echo "  run-enhanced - Run enhanced version interactively"
+	@echo "  benchmark   - Benchmark enhanced version with different sizes"
+	@echo ""
+	@echo "Analysis:"
+	@echo "  profile     - Generate performance profile"
+	@echo "  memcheck    - Check for memory leaks (requires valgrind)"
+	@echo "  docs        - Show module documentation"
+	@echo ""
+	@echo "Maintenance:"
+	@echo "  clean       - Remove all generated files"
+	@echo "  install-deps - Install dependencies (Ubuntu/Debian)"
+	@echo "  install-deps-mac - Install dependencies (macOS)"
+	@echo "  help        - Show this help message"
+	@echo ""
+	@echo "Features in Enhanced Version:"
+	@echo "  ✓ Arbitrary lattice sizes (Lx × Ly)"
+	@echo "  ✓ Tilted and rectangular honeycomb geometries"
+	@echo "  ✓ Sparse matrix storage (CSR format)"
+	@echo "  ✓ Lanczos iterative diagonalization"
+	@echo "  ✓ Translation invariance symmetries"
+	@echo "  ✓ C6v point group symmetries"
+	@echo "  ✓ Multiple momentum sectors"
+	@echo "  ✓ Memory-efficient large system handling"
+	@echo ""
+	@echo "Usage Examples:"
+	@echo "  make enhanced && ./enhanced_hubbard"
+	@echo "  make test"
+	@echo "  make benchmark"

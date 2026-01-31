@@ -1,10 +1,12 @@
 module diagonalization
-    use functions
-    use test_utilities
-    use core_utilities, only: spmv        
+
     use types
     use params
+    use functions
+    use core_utilities, only: spmv        
     use io_utilities
+    use test_utilities
+
 
 
 

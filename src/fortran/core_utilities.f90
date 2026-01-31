@@ -2,8 +2,8 @@ module core_utilities
     ! Module containing essential utilities for simulation setup, sparse matrix operations,
     ! file I/O, mathematical functions, performance monitoring, and resource management
     ! for the honeycomb Hubbard model simulation framework
-    use params
     use types
+    use params
     use symmetries
     implicit none 
     

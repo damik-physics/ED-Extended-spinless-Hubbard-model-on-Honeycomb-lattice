@@ -3,10 +3,10 @@ program main
     use types
     use params    
     use functions
+    use core_utilities
     use io_utilities
     use lattice 
     use basis
-    use core_utilities
     use hamiltonian
     use diagonalization
     use observables

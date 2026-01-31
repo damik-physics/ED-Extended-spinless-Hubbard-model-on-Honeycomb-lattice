@@ -27,7 +27,7 @@ module hamiltonian
         ! Generates the Hamiltonian matrix based on the parameters and geometry in COO format. 
         ! Diagonal and offdiagonal parts are generated separately.
         ! The option of reading/writing the Hamiltonian from/to HDF5 format is under construction.
-        use ham_hdf5_io
+        ! use ham_hdf5_io
         implicit none 
 
         type(sim_params),              intent(inout) :: par

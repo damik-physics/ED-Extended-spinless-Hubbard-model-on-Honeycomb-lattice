@@ -2,8 +2,8 @@ module lattice
     ! Module for constructing honeycomb lattice geometries including rectangular and tilted clusters,
     ! defining nearest-neighbor and next-nearest-neighbor bonds, coordinate systems, and momentum discretization
     use types
-    use functions 
     use params
+    use functions 
     use io_utilities
 
     implicit none

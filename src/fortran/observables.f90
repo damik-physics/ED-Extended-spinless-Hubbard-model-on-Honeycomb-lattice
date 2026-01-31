@@ -4,9 +4,9 @@ module observables
      
     use types
     use functions 
+    use symmetries
     use core_utilities
     use corr_writer
-    use symmetries
     implicit none
 
     interface current_cf

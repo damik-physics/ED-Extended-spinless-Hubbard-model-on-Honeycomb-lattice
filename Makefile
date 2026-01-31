@@ -5,6 +5,9 @@
 # Compiler & flags
 FC := ifx
 
+# Default target
+.DEFAULT_GOAL := all
+
 # Environment variables
 MKL_INC := $(MKLROOT)/include
 
@@ -38,16 +41,16 @@ MKL_MOD_SRC := $(MKL_INC)/mkl_spblas.f90 $(MKL_INC)/mkl_solvers_ee.f90
 MKL_MOD_OBJS := $(patsubst $(MKL_INC)/%.f90,$(BUILD_DIR)/%.o,$(MKL_MOD_SRC))
 
 # Your Fortran source files
-SRC := src/fortran/params.f90 \
+SRC := src/fortran/types.f90 \
+       src/fortran/params.f90 \
        src/fortran/functions.f90 \
-       src/fortran/io_utilities.f90 \
        src/fortran/corr_writer.f90 \
+       src/fortran/symmetries.f90 \
+       src/fortran/core_utilities.f90 \
+       src/fortran/io_utilities.f90 \
        src/fortran/basis.f90 \
        src/fortran/lattice.f90 \
-       src/fortran/symmetries.f90 \
-       src/fortran/ham_hdf5_io.f90 \
        src/fortran/hamiltonian.f90 \
-       src/fortran/core_utilities.f90 \
        src/fortran/diagonalization.f90 \
        src/fortran/observables.f90 \
        src/fortran/test_utilities.f90 \
@@ -56,15 +59,15 @@ SRC := src/fortran/params.f90 \
 OBJ := $(patsubst $(SRC_DIR)/%.f90,$(BUILD_DIR)/%.o,$(SRC))
 
 # Manual module dependencies
-$(BUILD_DIR)/io_utilities.o: $(BUILD_DIR)/types.o $(BUILD_DIR)/functions.o $(BUILD_DIR)/core_utilities.o
 $(BUILD_DIR)/symmetries.o: $(BUILD_DIR)/types.o $(BUILD_DIR)/params.o $(BUILD_DIR)/functions.o
-$(BUILD_DIR)/basis.o: $(BUILD_DIR)/types.o $(BUILD_DIR)/params.o $(BUILD_DIR)/functions.o $(BUILD_DIR)/symmetries.o
-$(BUILD_DIR)/hamiltonian.o: $(BUILD_DIR)/params.o $(BUILD_DIR)/io_utilities.o $(BUILD_DIR)/ham_hdf5_io.o $(BUILD_DIR)/basis.o 
-$(BUILD_DIR)/lattice.o: $(BUILD_DIR)/types.o $(BUILD_DIR)/params.o $(BUILD_DIR)/functions.o $(BUILD_DIR)/io_utilities.o
 $(BUILD_DIR)/core_utilities.o: $(BUILD_DIR)/params.o $(BUILD_DIR)/types.o $(BUILD_DIR)/symmetries.o   
+$(BUILD_DIR)/io_utilities.o: $(BUILD_DIR)/types.o $(BUILD_DIR)/params.o $(BUILD_DIR)/functions.o $(BUILD_DIR)/core_utilities.o
+$(BUILD_DIR)/lattice.o: $(BUILD_DIR)/types.o $(BUILD_DIR)/params.o $(BUILD_DIR)/functions.o $(BUILD_DIR)/io_utilities.o
+$(BUILD_DIR)/basis.o: $(BUILD_DIR)/types.o $(BUILD_DIR)/params.o $(BUILD_DIR)/functions.o $(BUILD_DIR)/symmetries.o
+$(BUILD_DIR)/hamiltonian.o: $(BUILD_DIR)/io_utilities.o $(BUILD_DIR)/basis.o 
 $(BUILD_DIR)/test_utilities.o: $(BUILD_DIR)/core_utilities.o   
-$(BUILD_DIR)/diagonalization.o: $(BUILD_DIR)/types.o $(BUILD_DIR)/functions.o $(BUILD_DIR)/params.o $(BUILD_DIR)/core_utilities.o $(BUILD_DIR)/test_utilities.o $(BUILD_DIR)/io_utilities.o 
-$(BUILD_DIR)/observables.o: $(BUILD_DIR)/types.o $(BUILD_DIR)/functions.o $(BUILD_DIR)/core_utilities.o $(BUILD_DIR)/corr_writer.o $(BUILD_DIR)/symmetries.o
+$(BUILD_DIR)/diagonalization.o: $(BUILD_DIR)/types.o $(BUILD_DIR)/params.o $(BUILD_DIR)/functions.o $(BUILD_DIR)/core_utilities.o  $(BUILD_DIR)/io_utilities.o $(BUILD_DIR)/test_utilities.o 
+$(BUILD_DIR)/observables.o: $(BUILD_DIR)/types.o $(BUILD_DIR)/functions.o $(BUILD_DIR)/symmetries.o $(BUILD_DIR)/core_utilities.o $(BUILD_DIR)/corr_writer.o 
 
 # Executable
 EXE := $(BIN_DIR)/exe

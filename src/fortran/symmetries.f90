@@ -1,9 +1,10 @@
 module symmetries
     ! Module for handling symmetries in the C6v point group and translations in a 2D lattice. 
     ! This module provides functions to calculate characters, perform translations, and find representatives of states under symmetries.
+    use types
     use params
     use functions
-    use types
+    
     implicit none
 
     interface representative

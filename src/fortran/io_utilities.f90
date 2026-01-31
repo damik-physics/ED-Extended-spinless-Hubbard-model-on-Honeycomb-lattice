@@ -2,9 +2,10 @@ module io_utilities
     ! Module for input/output utilities including file I/O operations, parameter string generation,
     ! spectrum saving, Hamiltonian I/O, and configuration printing functionality
     use types
+    use params
     use functions 
     use core_utilities
-    use params 
+     
         
     implicit none 
 

@@ -1,19 +1,14 @@
-*.dat
-/exe/*
+# Untracked directories
+build/*
+dev/*
+exe/*
+output/*
+.venv/*
+
+# Untracked file extensions
 *.mod
 *.o
-/build/*
-/old/*
-/dev/*
-/doc/*
-/output/*
-/.venv/
 *.png 
 *.csv 
 *.hdf5
-*enhanced*
-*simplified*
-*simple*
-*ENHANCEMENT*
-*advanced*
-*hubbard*
+*.dat

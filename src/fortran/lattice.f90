@@ -419,11 +419,13 @@ module lattice
             ! nby = int(nx/2) * ny !total number of y bonds
             nby = par%ucx * ny !total number of y bonds
         end if
+
+
         geo%nnnBonds = nbx + nby
 
         if(allocated(bsites_temp)) deallocate(bsites_temp)
         allocate(bsites_temp(2,geo%nnnBonds))
-        allocate(xy(4,geo%nnnBonds))
+        allocate(geo%xy(4,geo%nnnBonds))
 
         do y1 = 0, ny - 1
             do x1 = 0, nx - 1
@@ -547,6 +549,7 @@ module lattice
         if(allocated(geo%xtransl)) deallocate(geo%xtransl)
         if(allocated(geo%ytransl)) deallocate(geo%ytransl)
         if(allocated(geo%nnnVec)) deallocate(geo%nnnVec)
+        if(allocated(geo%sitecoord)) deallocate(geo%sitecoord)
         
         allocate(geo%xtransl(2, nn))
         allocate(geo%ytransl(2, nn))
@@ -561,6 +564,7 @@ module lattice
         allocate(cntrAsites(nn))
         allocate(cntrBsites(nn))
         allocate(geo%nnnVec(2, nn))
+        allocate(geo%sitecoord(2, nn))
 
 
         geo%hexsites  = 0

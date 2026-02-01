@@ -42,36 +42,113 @@ module core_utilities
         call read_input(par)
         call setup_output_directory(out%outdir)
         call create_output_subdirs(out%outdir)
-        call nsteps(par%v1min, par%v1max, par%dv1, thrd%ndv1)
-        call nsteps(par%v2min, par%v2max, par%dv2, thrd%ndv2)
-        call characters(par%symm, par%irrep, geo) ! Set characters according to chosen irrep 
+        call set_step_number(par%v1min, par%v1max, par%dv1, thrd%ndv1)
+        call set_step_number(par%v2min, par%v2max, par%dv2, thrd%ndv2)
+        call step_units(1, thrd%ndv1, thrd%ndv2, thrd%units_2)
+        call set_characters(par%symm, par%irrep, geo) ! Set characters according to chosen irrep 
         call timing(out%outdir, 0)
-        call setvars(par, geo, thrd)  
-        call nsteps(par%v1min, par%v1max, par%dv1, thrd%ndv1)
-        call nsteps(par%v2min, par%v2max, par%dv2, thrd%ndv2)
-        call stepunits(1, thrd%ndv1, thrd%ndv2, thrd%units_2)
-        call threadunits(thrd%ndv1, thrd%ndv2, thrd%units)
+        call set_sites_particles(par, geo)
+        call set_threading(par)
+        call thread_units(thrd%ndv1, thrd%ndv2, thrd%units)
         call write_parameters_json(out%outdir, par)
         st%first_call = .true. ! Flag to indicate if this is the first call to I/O writing.
 
     end subroutine preprocess
 
-    subroutine setvars(par, geo, thrd)
-        ! Sets basic simulation variables including lattice size based on cluster type
+    ! subroutine read_input(par)
+
+    !     implicit none
+
+    !     type(sim_params), intent(out) :: par
+    !     type(locals)                  :: loc
+
+    !     call init_params(par)
+    !     call params_to_locals(par, loc)
+    !     call read_namelist(loc)
+    !     call locals_to_params(par, loc)  
+
+    ! end subroutine read_input
+
+    subroutine read_input(par)
+        ! Reads simulation parameters from input.nml namelist file and initializes
+        ! derived type components with default or user-specified values
+        implicit none
+        type(sim_params), intent(out) :: par
+
+        namelist /params_nml/ par      
+        call init_params(par) ! Initialize default values
+        
+        open(unit=10, file='input.nml', status='old', action='read')
+        read(10, nml=params_nml) ! Override default values with input values from input.nlm
+        close(10)
+    end subroutine
+
+    subroutine init_params(par)
+        ! Initializes all simulation parameters to their default values
+        implicit none
+        type(sim_params), intent(inout) :: par
+        
+        par%ucx       = 3
+        par%ucy       = 3
+        par%bc        = 'p'
+        par%irrep     = 'A1'
+        par%p1        = 1
+        par%p2        = 1
+        par%p3        = 1
+        par%cluster   = '18A'
+        
+        par%nDis      = 1
+        par%t         = 1.0d0
+        par%dis       = 0.0d0
+        par%mass      = 0.0d0
+        par%filling   = 0.5
+        par%dv1       = 0.1d0
+        par%v1min     = 0.0d0
+        par%v1max     = 1.0d0
+        par%dv2       = 0.1d0
+        par%v2min     = 0.0d0
+        par%v2max     = 1.0d0
+
+        par%othrds    = 1
+        par%mthrds    = 1
+
+        par%tilted    = 1
+        par%ti        = 1
+        par%k0        = 1
+        par%symm      = 0
+        par%corr      = 0
+        par%curr      = 0
+        par%refbonds  = 0
+        par%states    = 1
+        par%feast     = 0
+        par%arpack    = 1
+        par%mkl       = 0
+        par%exact     = 0
+        par%dimthresh = 1000
+        par%otf       = 0
+        par%degflag   = 1
+        par%g_fact    = 2
+
+        par%rvec      = .true.
+        par%nevext    = 10
+        par%nev0      = 200
+        par%nevmax    = 230
+        par%nst       = 10
+        par%ncv0      = 120
+
+    end subroutine init_params   
+
+    subroutine set_sites_particles(par, geo)
+        ! Sets lattice size based on cluster type
         ! and particle number based on filling fraction
         implicit none
 
         type(sim_params)    :: par
         type(geometry)      :: geo
-        type(thread_params) :: thrd
         character*10        :: clusterl
-        integer             :: threads
 
-        !$ call omp_set_num_threads(thrd%othrds)
-        !call mkl_set_num_threads(thrd%mthrds)
-
-        if(par%tilted == 0) then 
-            geo%sites = 2*par%ucx*par%ucy 
+        if(par%tilted == 0) then ! rectangular lattice
+            geo%sites = 2 * par%ucx * par%ucy 
         else if(par%cluster(1:2) == "16") then 
             geo%sites = 16 
         else if(par%cluster(1:2) == "18") then 
@@ -92,8 +169,21 @@ module core_utilities
 
         return
 
-    end subroutine setvars
+    end subroutine set_sites_particles
+    
+    subroutine set_threading(par)
+        ! Sets lattice size based on cluster type
+        ! and particle number based on filling fraction
+        implicit none
 
+        type(sim_params) :: par
+
+        !$ call omp_set_num_threads(thrd%othrds)
+        call mkl_set_num_threads(par%mthrds)
+        return
+    
+    end subroutine set_threading
+        
     subroutine tune_lanczos_parameters(unit, thresh, exact, nevext, nestext, ncv0, dim, full, nev, ncv, nest)
         ! Automatically tunes Lanczos diagonalization parameters based on matrix dimension
         ! and chooses between sparse and dense diagonalization methods
@@ -131,7 +221,7 @@ module core_utilities
 
     end subroutine tune_lanczos_parameters
 
-    subroutine stepunits(ndu, ndv, ndv2, units)
+    subroutine step_units(ndu, ndv, ndv2, units)
         ! Assigns unique unit numbers for file I/O operations in nested parameter loops
         implicit none
         integer,              intent(in)  :: ndu, ndv, ndv2
@@ -152,9 +242,9 @@ module core_utilities
             end do
         end do
 
-    end subroutine stepunits
+    end subroutine step_units
 
-    subroutine threadunits(ndv, ndv2, units)
+    subroutine thread_units(ndv, ndv2, units)
         ! Assigns unit numbers for parallel file operations across different thread configurations
         implicit none
         integer,              intent(in)  :: ndv, ndv2
@@ -179,7 +269,7 @@ module core_utilities
 
         return 
 
-    end subroutine threadunits
+    end subroutine thread_units
 
     subroutine set_thrds(par, th)
         ! Calculates optimal thread distribution across different parallelization levels
@@ -204,307 +294,6 @@ module core_utilities
 
     end subroutine set_thrds
     
-    subroutine read_input(par)
-        ! Reads simulation parameters from input.nml namelist file and initializes
-        ! derived type components with default or user-specified values
-        implicit none
-
-        type(sim_params), intent(out) :: par
-        type(locals)                  :: loc
-
-        call init_params(par)
-        call params_to_locals(par, loc)
-        call read_namelist(loc)
-        call locals_to_params(par, loc)  
-
-    end subroutine read_input
-
-    subroutine init_params(par)
-        ! Initializes all simulation parameters to their default values
-        implicit none
-        type(sim_params), intent(inout) :: par
-        
-        par%ucx = 3
-        par%ucy = 3
-        par%bc = 'p'
-        par%irrep = 'A1'
-        par%p1 = 1
-        par%p2 = 1
-        par%p3 = 1
-        par%cluster = '18A'
-        
-        par%nDis = 1
-        par%t = 1.0d0
-        par%dis = 0.0d0
-        par%mass = 0.0d0
-        par%filling = 0.5
-        par%dv1 = 0.1d0
-        par%v1min = 0.0d0
-        par%v1max = 1.0d0
-        par%dv2 = 0.1d0
-        par%v2min = 0.0d0
-        par%v2max = 1.0d0
-
-        par%othrds = 1
-        par%mthrds = 1
-
-        par%tilted = 1
-        par%ti = 1
-        par%k0 = 1
-        par%symm = 0
-        par%corr = 0
-        par%curr = 0
-        par%refbonds = 0
-        par%states = 1
-        par%feast = 0
-        par%arpack = 1
-        par%mkl = 0
-        par%exact = 0
-        par%dimthresh = 1000
-        par%otf = 0
-        par%degflag = 1
-        par%g_fact = 2
-
-        par%rvec = .true.
-        par%nevext = 10
-        par%nev0   = 200
-        par%nevmax = 230
-        par%nst = 10
-        par%ncv0 = 120
-
-    end subroutine init_params   
-    
-    subroutine read_namelist(loc)
-        ! Read input parameters from input.nml file into locals buffer, overriding the initialized default values
-        implicit none
-        type(locals), intent(inout) :: loc
-        
-        ! Local variables for namelist (cannot use derived type components directly)
-        integer          :: ucx, ucy, tilted, ti, k0, symm, p1, p2, p3
-        integer          :: otf, corr, curr, refbonds
-        integer          :: states, feast, arpack, mkl, exact, degflag, dimthresh, nevext, nst, ncv0, nev0, nevmax, othrds, mthrds, nDis, g_fact
-        double precision :: t, dis, mass, filling, dv1, v1min, v1max, dv2, v2min, v2max, deg
-        logical          :: rvec
-        character(len=1) :: bc
-        character(len=2) :: irrep
-        character(len=3) :: cluster
-        integer          :: ios
-        
-        namelist /params_nml/ ucx, ucy, tilted, cluster, bc, ti, k0, symm, irrep, p1, p2, p3, &
-                            corr, curr, refbonds, states, deg, feast, arpack, mkl, exact, &
-                            dimthresh, rvec, nevext, nst, ncv0, nev0, nevmax, otf, degflag, &
-                            othrds, mthrds, nDis, dis, mass, filling, t, g_fact, &
-                            dv1, v1min, v1max, dv2, v2min, v2max
-
-        ! Extract from locals type to individual variables
-        ucx       = loc%ucx
-        ucy       = loc%ucy
-        bc        = loc%bc
-        irrep     = loc%irrep
-        p1        = loc%p1
-        p2        = loc%p2
-        p3        = loc%p3
-        cluster   = loc%cluster
-        nDis      = loc%nDis
-        t         = loc%t
-        dis       = loc%dis
-        mass      = loc%mass
-        filling   = loc%filling
-        dv1       = loc%dv1
-        v1min     = loc%v1min
-        v1max     = loc%v1max
-        dv2       = loc%dv2
-        v2min     = loc%v2min
-        v2max     = loc%v2max
-        othrds    = loc%othrds
-        mthrds    = loc%mthrds
-        tilted    = loc%tilted
-        ti        = loc%ti
-        k0        = loc%k0
-        symm      = loc%symm
-        corr      = loc%corr
-        curr      = loc%curr
-        refbonds  = loc%refbonds
-        states    = loc%states
-        deg       = loc%deg
-        feast     = loc%feast
-        arpack    = loc%arpack
-        mkl       = loc%mkl
-        exact     = loc%exact
-        dimthresh = loc%dimthresh
-        otf       = loc%otf
-        degflag   = loc%degflag
-        g_fact    = loc%g_fact
-        rvec      = loc%rvec
-        nevext    = loc%nevext
-        nev0      = loc%nev0
-        nevmax    = loc%nevmax
-        nst       = loc%nst
-        ncv0      = loc%ncv0
-
-        ! Read namelist from file
-        open(unit=10, file='input.nml', status='old', action='read', iostat=ios)
-        if(ios == 0) then
-            read(10, nml=params_nml)
-            close(10)
-        else
-            print *, 'No input.nml found, using defaults.'
-        end if
-
-        ! Store back into locals type
-        loc%ucx       = ucx
-        loc%ucy       = ucy
-        loc%bc        = bc
-        loc%irrep     = irrep
-        loc%p1        = p1
-        loc%p2        = p2
-        loc%p3        = p3
-        loc%cluster   = cluster
-        loc%nDis      = nDis
-        loc%t         = t
-        loc%dis       = dis
-        loc%mass      = mass
-        loc%filling   = filling
-        loc%dv1       = dv1
-        loc%v1min     = v1min
-        loc%v1max     = v1max
-        loc%dv2       = dv2
-        loc%v2min     = v2min
-        loc%v2max     = v2max
-        loc%othrds    = othrds
-        loc%mthrds    = mthrds
-        loc%tilted    = tilted
-        loc%ti        = ti
-        loc%k0        = k0
-        loc%symm      = symm
-        loc%corr      = corr
-        loc%curr      = curr
-        loc%refbonds  = refbonds
-        loc%states    = states
-        loc%deg       = deg
-        loc%feast     = feast
-        loc%arpack    = arpack
-        loc%mkl       = mkl
-        loc%exact     = exact
-        loc%dimthresh = dimthresh
-        loc%otf       = otf
-        loc%degflag   = degflag
-        loc%g_fact    = g_fact
-        loc%rvec      = rvec
-        loc%nevext    = nevext
-        loc%nev0      = nev0
-        loc%nevmax    = nevmax
-        loc%nst       = nst
-        loc%ncv0      = ncv0
-
-    end subroutine read_namelist
-
-    subroutine params_to_locals(par, loc)
-        ! Transfers values from sim_params derived type to locals derived type
-        implicit none
-        type(sim_params), intent(in)  :: par
-        type(locals),     intent(out) :: loc
-
-        loc%ucx       = par%ucx
-        loc%ucy       = par%ucy
-        loc%bc        = par%bc
-        loc%irrep     = par%irrep
-        loc%cluster   = par%cluster
-        loc%tilted    = par%tilted
-        loc%t         = par%t
-        loc%ti        = par%ti
-        loc%dis       = par%dis
-        loc%mass      = par%mass
-        loc%filling   = par%filling
-        loc%k0        = par%k0
-        loc%dv1       = par%dv1
-        loc%v1min     = par%v1min
-        loc%v1max     = par%v1max
-        loc%dv2       = par%dv2
-        loc%v2min     = par%v2min
-        loc%v2max     = par%v2max
-        loc%symm      = par%symm
-        loc%p1        = par%p1
-        loc%p2        = par%p2
-        loc%p3        = par%p3
-        loc%otf       = par%otf
-        loc%corr      = par%corr
-        loc%curr      = par%curr
-        loc%refbonds  = par%refbonds
-        loc%states    = par%states
-        loc%rvec      = par%rvec
-        loc%feast     = par%feast
-        loc%arpack    = par%arpack
-        loc%mkl       = par%mkl
-        loc%exact     = par%exact
-        loc%degflag   = par%degflag
-        loc%deg       = par%deg
-        loc%dimthresh = par%dimthresh
-        loc%nevext    = par%nevext
-        loc%nev0      = par%nev0
-        loc%nevmax    = par%nevmax
-        loc%nst       = par%nst
-        loc%ncv0      = par%ncv0
-        loc%othrds    = par%othrds
-        loc%mthrds    = par%mthrds
-        loc%nDis      = par%nDis
-        loc%g_fact    = par%g_fact
-
-    end subroutine params_to_locals
-
-    subroutine locals_to_params(par, loc)
-        ! Transfers values from locals derived type to sim_params derived type
-        implicit none
-        type(sim_params), intent(out) :: par
-        type(locals),     intent(in)  :: loc
-
-        par%ucx       = loc%ucx
-        par%ucy       = loc%ucy
-        par%bc        = loc%bc
-        par%irrep     = loc%irrep
-        par%cluster   = loc%cluster
-        par%tilted    = loc%tilted
-        par%t         = loc%t
-        par%ti        = loc%ti
-        par%dis       = loc%dis
-        par%mass      = loc%mass
-        par%filling   = loc%filling
-        par%k0        = loc%k0
-        par%dv1       = loc%dv1
-        par%v1min     = loc%v1min
-        par%v1max     = loc%v1max
-        par%dv2       = loc%dv2
-        par%v2min     = loc%v2min
-        par%v2max     = loc%v2max
-        par%symm      = loc%symm
-        par%p1        = loc%p1
-        par%p2        = loc%p2
-        par%p3        = loc%p3
-        par%otf       = loc%otf
-        par%corr      = loc%corr
-        par%curr      = loc%curr
-        par%refbonds  = loc%refbonds
-        par%states    = loc%states
-        par%rvec      = loc%rvec
-        par%feast     = loc%feast
-        par%arpack    = loc%arpack
-        par%mkl       = loc%mkl
-        par%exact     = loc%exact
-        par%degflag   = loc%degflag
-        par%deg       = loc%deg
-        par%dimthresh = loc%dimthresh
-        par%nevext    = loc%nevext
-        par%nev0      = loc%nev0
-        par%nevmax    = loc%nevmax
-        par%nst       = loc%nst
-        par%ncv0      = loc%ncv0
-        par%othrds    = loc%othrds
-        par%mthrds    = loc%mthrds
-        par%nDis      = loc%nDis
-        par%g_fact    = loc%g_fact
-
-    end subroutine locals_to_params
-
     subroutine setup_output_directory(outdir)
         ! Creates timestamped output directory and copies input file for record-keeping
         implicit none
@@ -687,7 +476,6 @@ module core_utilities
         real,             save       :: start, finish
         character                    :: file*512
 
-
         if(start_end == 0) then
             call cpu_time(start)
             call date_and_time(date=datei,time=timei,values=values_i)
@@ -729,7 +517,7 @@ module core_utilities
         end if
     end subroutine timing
 
-    subroutine nsteps(min, max, delta, steps)
+    subroutine set_step_number(min, max, delta, steps)
         ! Calculates the number of steps in a parameter range given min, max, and step size
         implicit none
         
@@ -743,7 +531,7 @@ module core_utilities
         end if
 
 
-    end subroutine nsteps
+    end subroutine set_step_number
     
     subroutine binary_search(dim, s, basis, loc)
         ! Performs binary search to find the location of state s in the sorted basis array
